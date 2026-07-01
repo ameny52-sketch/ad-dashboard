@@ -1,0 +1,1089 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NewStart 광고 효율 대시보드 · UI 개선</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root{
+      --bg:#eef2f7;--card:#fff;--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;
+      --blue:#2563eb;--red:#dc2626;--green:#16a34a;--amber:#d97706;--orange:#ea580c;
+      --shadow:0 18px 48px rgba(15,23,42,.08);--shadow-sm:0 8px 20px rgba(15,23,42,.06)
+    }
+    *{box-sizing:border-box} body{margin:0;color:var(--ink);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:radial-gradient(circle at 15% 0%,rgba(37,99,235,.12),transparent 30%),radial-gradient(circle at 85% 8%,rgba(249,115,22,.10),transparent 28%),linear-gradient(180deg,#f8fafc 0%,var(--bg) 100%)}
+    .wrap{max-width:1520px;margin:0 auto;padding:28px 24px 42px}.hero{display:flex;align-items:center;justify-content:space-between;gap:20px;background:linear-gradient(135deg,#111827,#1e3a8a 58%,#2563eb);color:#fff;border-radius:24px;padding:26px 28px;box-shadow:0 24px 60px rgba(30,64,175,.22);margin-bottom:18px;overflow:hidden;position:relative}.hero:after{content:"";position:absolute;right:-80px;top:-90px;width:280px;height:280px;border-radius:50%;background:rgba(255,255,255,.12)}
+    h1{font-size:30px;letter-spacing:-.04em;margin:0 0 8px}.hero p{margin:0;color:rgba(255,255,255,.78);font-size:14px;line-height:1.55}.hero-actions{display:flex;gap:10px;align-items:center;z-index:1;flex-wrap:wrap;justify-content:flex-end}.badge,.date-badge{border-radius:999px;padding:8px 12px;font-weight:900;font-size:12px}.badge{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25)}.date-badge{background:#fff;color:#1e3a8a;box-shadow:var(--shadow-sm)}
+    .panel{background:rgba(255,255,255,.94);border:1px solid rgba(226,232,240,.95);border-radius:22px;box-shadow:var(--shadow);padding:20px;margin-bottom:18px;backdrop-filter:blur(10px)}.section-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}.section-title h2{font-size:17px;margin:0;letter-spacing:-.02em}.hint{font-size:12px;color:var(--muted);line-height:1.5}.grid{display:grid;gap:14px}.chart-grid{grid-template-columns:1.1fr .9fr}.upload-panel{position:sticky;top:12px;z-index:20;padding:14px 16px}.upload-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.upload-btn{display:inline-flex;align-items:center;gap:8px;border:0;border-radius:12px;padding:10px 18px;font-weight:900;cursor:pointer;white-space:nowrap;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;box-shadow:0 10px 22px rgba(37,99,235,.25)}.upload-btn:hover{transform:translateY(-1px)}.hero-upload{background:#fff;color:#1e3a8a;box-shadow:var(--shadow-sm);padding:11px 16px}.hero-upload:hover{background:#eff6ff}.upload-btn:disabled{opacity:.55;cursor:not-allowed;transform:none!important}
+    .file-badge,#status{font-size:12px;font-weight:800;padding:7px 11px;border-radius:999px;background:#f8fafc;color:var(--muted);border:1px solid var(--line)}.file-badge.ok{background:#ecfdf5;color:#15803d;border-color:#bbf7d0}.file-badge.ok:before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#22c55e;margin-right:6px;vertical-align:1px}#status{margin-left:auto;color:#475569}
+    .filters{display:grid;grid-template-columns:150px 150px minmax(260px,1fr) 180px 120px;gap:12px;align-items:end} label{display:block;margin-bottom:6px;font-size:12px;color:var(--muted);font-weight:900} input,select,button{font:inherit} input[type=date],input[type=text],select{width:100%;height:42px;border:1px solid #dbe4ef;border-radius:14px;background:#fff;padding:10px 12px} input:focus,select:focus{outline:2px solid rgba(37,99,235,.18);border-color:#93c5fd}.ghost{height:42px;border:0;border-radius:12px;background:#f1f5f9;color:#334155;font-weight:900;cursor:pointer;padding:0 14px}.ghost:hover{background:#e2e8f0}
+    .kpi-head{display:flex;justify-content:space-between;align-items:center;padding-bottom:14px;border-bottom:1px solid var(--line);margin-bottom:16px}.kpi-head h2{margin:0;font-size:18px}.seg-wrap{display:flex;background:#eef2f7;border-radius:12px;padding:4px;gap:4px}.seg{border:0;background:transparent;padding:8px 16px;border-radius:10px;font-weight:900;cursor:pointer}.seg.active{background:#2563eb;color:#fff}.kpi-row{display:grid;grid-template-columns:repeat(6,minmax(150px,1fr));gap:12px}.kpi{background:linear-gradient(180deg,#fff,#f8fafc);border:1px solid var(--line);border-radius:16px;padding:14px;transition:.15s transform,.15s box-shadow}.kpi:hover{transform:translateY(-2px);box-shadow:var(--shadow-sm)}.kpi .name{font-size:11px;color:var(--muted);font-weight:900}.kpi .value{font-size:22px;font-weight:950;letter-spacing:-.04em;margin-top:7px}.kpi .sub{font-size:11px;color:var(--muted);margin-top:4px;min-height:14px}.kpi.dbcost{background:#fff7f7;border:2px solid #fecaca}.kpi.dbcost .value{color:#dc2626;font-size:26px}
+    .insights{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.insight{border:1px solid var(--line);border-radius:16px;background:#fff;padding:14px}.insight b{display:block;font-size:13px;margin-bottom:7px}.insight div{font-size:13px;color:#334155;line-height:1.5}.good{color:var(--green);font-weight:900}.bad{color:var(--red);font-weight:900}.warn{color:var(--amber);font-weight:900}.pill{display:inline-block;border-radius:999px;padding:3px 8px;background:#dbeafe;color:#1d4ed8;font-weight:900;font-size:12px}.pill.banner{background:#ffedd5;color:#c2410c}.pill.danger{background:#fee2e2;color:#991b1b}.pill.good{background:#dcfce7;color:#166534}
+    canvas{width:100%;max-height:340px}.legend-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}.legend-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}.legend-dot{width:12px;height:12px;border-radius:4px}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.tab{border:0;border-radius:12px;background:#f1f5f9;color:#374151;padding:10px 14px;font-size:13px;font-weight:900;cursor:pointer}.tab:hover{background:#e2e8f0}.tab.active{background:#0f172a;color:#fff;box-shadow:0 8px 16px rgba(15,23,42,.16)}.export-actions{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}.export-actions .ghost{height:auto;font-size:12px;padding:8px 12px}
+    .table-box{overflow:auto;border:1px solid #dbe4ef;border-radius:18px;max-height:680px;background:#fff}.table-box.hour-mode{max-height:none;overflow:visible;border:0;background:transparent}.empty{padding:36px;text-align:center;color:var(--muted)} table{width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap;background:#fff} th,td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:right;height:42px} th{position:sticky;top:0;background:#f8fafc;z-index:2;font-size:12px;color:#334155;cursor:pointer;user-select:none} th.sort-asc::after{content:" ▲"} th.sort-desc::after{content:" ▼"} th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){text-align:left} tbody tr:nth-child(even) td{background:#fbfdff} tbody tr:hover td{background:#eff6ff!important}.totals-row td{position:sticky;top:42px;background:#ecfdf5!important;font-weight:950;color:#166534;z-index:2;border-top:2px solid #86efac;border-bottom:2px solid #86efac}.row-danger td{background:#fff1f2!important}.row-warn td{background:#fffbeb!important}.clickable-row{cursor:pointer}.clickable-row:hover td{background:#fff7ed!important}
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center}.modal-overlay.open{display:flex}.modal-box{background:#fff;border-radius:24px;box-shadow:0 24px 60px rgba(0,0,0,.25);width:min(1180px,96vw);max-height:92vh;display:flex;flex-direction:column;overflow:hidden}.modal-header{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--line);background:#f8fafc}.modal-header h3{margin:0;font-size:16px;font-weight:950;flex:1}.modal-close{background:none;border:0;font-size:22px;cursor:pointer;color:var(--muted);line-height:1;padding:0 4px}.modal-body{overflow:auto;flex:1;padding:0;background:#fff}
+    .creative-preview{display:block;padding:18px 20px;border-bottom:1px solid var(--line);background:#fff}.creative-image-box{border:1px solid var(--line);border-radius:20px;background:#e5e7eb;min-height:360px;max-height:68vh;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}.creative-image-box img{display:block;width:auto;height:auto;max-width:100%;max-height:68vh;object-fit:contain}.creative-image-missing{padding:38px;text-align:center;color:var(--muted);font-size:13px;line-height:1.7}.creative-summary{display:grid;grid-template-columns:repeat(6,minmax(120px,1fr));gap:10px;align-content:start;margin-top:14px}.creative-title{grid-column:1/-1;border:1px solid var(--line);border-radius:16px;background:#f8fafc;padding:13px}.creative-title b{display:block;font-size:13px;margin-bottom:5px}.creative-title span{font-size:12px;color:var(--muted);word-break:break-all}.mini-kpi{border:1px solid var(--line);border-radius:14px;padding:12px;background:linear-gradient(180deg,#fff,#f8fafc)}.mini-kpi .label{font-size:11px;color:var(--muted);font-weight:900}.mini-kpi .num{font-size:18px;font-weight:950;margin-top:5px}.modal-table-wrap{padding:0 20px 20px}.modal-table-wrap .table-box{max-height:none;overflow:visible}@media(max-width:900px){.creative-image-box{min-height:220px}.creative-summary{grid-template-columns:repeat(2,1fr)}.modal-box{width:96vw}.modal-table-wrap{padding:0 12px 14px}}
+
+    .hour-ai{border:1px solid #bfdbfe;border-radius:20px;background:linear-gradient(135deg,#eff6ff,#fff);padding:18px;margin-bottom:14px;box-shadow:var(--shadow-sm)}.hour-ai h3{margin:0 0 10px;font-size:17px;letter-spacing:-.02em}.hour-ai ul{margin:0;padding-left:19px;color:#334155;font-size:13px;line-height:1.7}.hour-ai li+li{margin-top:4px}.hour-insights{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}.hour-card{border:1px solid var(--line);border-radius:16px;background:#fff;padding:14px}.hour-card b{display:block;font-size:13px;margin-bottom:7px}.hour-card div{font-size:13px;color:#334155;line-height:1.5}.hour-chart-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:14px}.hour-chart-box{border:1px solid var(--line);border-radius:18px;background:#fff;padding:14px;min-height:292px}.hour-chart-box .section-title{margin-bottom:8px}.hour-chart-box .section-title h2{font-size:15px}.hour-chart-box canvas{height:220px!important;max-height:220px}.hour-chart-wide{grid-column:1/-1;min-height:342px}.hour-chart-wide canvas{height:268px!important;max-height:268px}@media(max-width:1000px){.hour-insights{grid-template-columns:repeat(2,1fr)}.hour-chart-grid{grid-template-columns:1fr}.hour-chart-box,.hour-chart-wide{min-height:auto}.hour-chart-box canvas,.hour-chart-wide canvas{height:240px!important;max-height:240px}}@media(max-width:700px){.hour-insights{grid-template-columns:1fr}}
+
+
+    .daily-summary{border:1px solid #bfdbfe;border-radius:20px;background:linear-gradient(135deg,#eff6ff,#fff);padding:16px;margin-bottom:14px;box-shadow:var(--shadow-sm)}
+    .daily-summary-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}.daily-summary-head h3{margin:0;font-size:17px;letter-spacing:-.02em}.daily-summary-head .hint{margin-top:4px}
+    .daily-kpi-row{display:grid;grid-template-columns:repeat(5,minmax(130px,1fr));gap:10px;margin-bottom:12px}.daily-kpi{border:1px solid var(--line);border-radius:15px;background:#fff;padding:12px}.daily-kpi .label{font-size:11px;color:var(--muted);font-weight:900}.daily-kpi .num{font-size:20px;font-weight:950;letter-spacing:-.035em;margin-top:5px}.daily-kpi .delta{font-size:11px;margin-top:5px;font-weight:900;color:var(--muted)}.daily-kpi.core{border:2px solid #fecaca;background:#fff7f7}.daily-kpi.core .num{color:#dc2626;font-size:23px}
+    .daily-judge{border-radius:14px;background:#f8fafc;border:1px solid var(--line);padding:11px 13px;font-size:13px;font-weight:900;color:#334155;margin-bottom:12px;line-height:1.45}.daily-mini-chart{border:1px solid var(--line);border-radius:16px;background:#fff;padding:12px}.daily-mini-chart canvas{height:210px!important;max-height:210px}
+    .banner-section-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:18px 0 10px}.banner-section-title h3{margin:0;font-size:16px;letter-spacing:-.02em}
+    .banner-area{border:1px solid var(--line);border-radius:22px;background:#fff;padding:18px;margin-bottom:16px;box-shadow:var(--shadow-sm)}
+    .banner-area.summary{background:linear-gradient(180deg,#fff7ed 0%,#fff 72%);border-color:#fed7aa}
+    .banner-area.data{background:#fff}
+    .banner-area-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding-bottom:12px;margin-bottom:14px;border-bottom:1px solid var(--line)}
+    .banner-area-head h3{margin:0;font-size:18px;letter-spacing:-.03em}
+    .banner-area-head .hint{margin-top:4px}
+    .banner-area.summary .ai-panel.banner{margin-bottom:0;box-shadow:none}
+    .banner-area.data .daily-summary{margin-bottom:14px;box-shadow:none}
+    .banner-area.data .table-box{margin-top:8px}
+    @media(max-width:700px){.banner-area{padding:14px}.banner-area-head{display:block}}
+    @media(max-width:1000px){.daily-kpi-row{grid-template-columns:repeat(2,1fr)}}@media(max-width:620px){.daily-kpi-row{grid-template-columns:1fr}.daily-summary-head{display:block}}
+
+    .main-nav{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 18px;background:rgba(255,255,255,.76);border:1px solid rgba(226,232,240,.95);border-radius:18px;padding:8px;box-shadow:var(--shadow-sm);backdrop-filter:blur(10px)}
+    .main-tab{border:0;border-radius:13px;background:transparent;color:#334155;padding:12px 18px;font-weight:950;cursor:pointer;font-size:14px}.main-tab:hover{background:#f1f5f9}.main-tab.active{background:#0f172a;color:#fff;box-shadow:0 10px 18px rgba(15,23,42,.16)}
+    .main-view[hidden]{display:none!important}.data-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}.data-title h2{margin:0;font-size:18px}.tab[data-hidden="true"],.export-actions [data-hidden="true"]{display:none!important}
+    @media(max-width:1100px){.chart-grid,.filters{grid-template-columns:1fr}.kpi-row,.insights{grid-template-columns:repeat(2,1fr)}.hero{display:block}.hero-actions{justify-content:flex-start;margin-top:16px}.upload-panel{position:static}#status{margin-left:0}}
+    @media(max-width:700px){.wrap{padding:16px}.kpi-row,.insights{grid-template-columns:1fr}.tabs{overflow:auto;flex-wrap:nowrap}.tab{white-space:nowrap}.export-actions{width:100%;margin-left:0}.hero{padding:22px}h1{font-size:25px}}
+  
+
+    /* v10: 테이블 내부 스크롤 제거, 페이지 전체 스크롤 사용 */
+    .table-box{max-height:none!important;overflow:visible!important;}
+    .modal-table-wrap .table-box{max-height:none!important;}
+    th{position:static!important;}
+    .totals-row td{position:static!important;}
+
+    /* v13: 검색/키워드 탭 AI 분석 카드 */
+    .ai-panel{border:1px solid #bfdbfe;border-radius:20px;background:linear-gradient(135deg,#eff6ff 0%,#fff 62%);padding:16px;margin-bottom:14px;box-shadow:var(--shadow-sm)}
+    .ai-panel.keyword{border-color:#fed7aa;background:linear-gradient(135deg,#fff7ed 0%,#fff 62%)}
+    .ai-panel.banner{border-color:#fed7aa;background:linear-gradient(135deg,#fff7ed 0%,#fff 62%)}
+    .ai-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
+    .ai-head h3{margin:0;font-size:17px;letter-spacing:-.02em}.ai-head .hint{margin-top:4px}
+    .ai-status{border-radius:999px;padding:6px 10px;font-size:12px;font-weight:950;background:#dbeafe;color:#1d4ed8;white-space:nowrap}
+    .ai-status.good{background:#dcfce7;color:#166534}.ai-status.warn{background:#fef3c7;color:#92400e}.ai-status.bad{background:#fee2e2;color:#991b1b}
+    .ai-main{border:1px solid var(--line);border-radius:15px;background:#fff;padding:13px 14px;font-size:14px;font-weight:950;line-height:1.5;margin-bottom:10px}
+    .ai-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+    .ai-item{border:1px solid var(--line);border-radius:14px;background:#fff;padding:11px 12px;font-size:13px;color:#334155;line-height:1.45}
+    .ai-item b{display:block;color:#0f172a;margin-bottom:4px;font-size:12px}
+    .keyword-rank-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:10px}
+    .rank-card{border:1px solid var(--line);border-radius:15px;background:#fff;padding:12px}.rank-card b{display:block;font-size:12px;margin-bottom:6px}.rank-card .name{font-size:15px;font-weight:950;letter-spacing:-.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rank-card .meta{font-size:12px;color:#64748b;margin-top:5px;line-height:1.45}
+    .table-box table{border:1px solid #dbe4ef;border-radius:18px;overflow:hidden}
+
+    .pager-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:12px 0 10px;padding:12px 14px;border:1px solid var(--line);border-radius:16px;background:#fff;box-shadow:var(--shadow-sm)}
+    .pager-left,.pager-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .pager-info{font-size:13px;color:#334155;font-weight:900}.pager-info .muted{color:var(--muted);font-weight:800}
+    .pager-size{height:36px;border:1px solid #dbe4ef;border-radius:12px;background:#f8fafc;padding:0 10px;font-weight:900;color:#334155}
+    .pager-btn{height:36px;border:0;border-radius:12px;background:#f1f5f9;color:#334155;font-weight:950;cursor:pointer;padding:0 12px}
+    .pager-btn:hover:not(:disabled){background:#e2e8f0}.pager-btn.active{background:#0f172a;color:#fff}.pager-btn:disabled{opacity:.45;cursor:not-allowed}
+    @media(max-width:900px){.ai-list,.keyword-rank-grid{grid-template-columns:1fr}.ai-head{display:block}.ai-status{display:inline-block;margin-top:8px}}
+
+
+
+    /* 월별 비교 레이아웃 정리 */
+    #monthlyView .table-box{border:0;background:transparent;box-shadow:none;overflow:visible;max-height:none}
+    .monthly-grid{display:grid;grid-template-columns:repeat(5,minmax(150px,1fr));gap:12px;margin:12px 0 16px}
+    .monthly-card{background:linear-gradient(180deg,#fff,#f8fafc);border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:var(--shadow-sm);min-height:118px}
+    .monthly-card .label{font-size:12px;color:var(--muted);font-weight:900;margin-bottom:6px}
+    .monthly-card .value{font-size:22px;font-weight:950;letter-spacing:-.04em;margin-bottom:4px;color:var(--ink)}
+    .monthly-card .delta{font-size:14px;font-weight:950;margin-bottom:2px}
+    .monthly-card .delta.good{color:var(--green)}
+    .monthly-card .delta.bad{color:var(--red)}
+    .monthly-card .delta.warn{color:var(--amber)}
+    .monthly-card .hint{font-size:11px;color:var(--muted);line-height:1.4}
+    .monthly-ai{border:1px solid #bfdbfe;border-radius:18px;background:linear-gradient(135deg,#eff6ff,#fff);padding:16px 18px;margin:0 0 16px;box-shadow:var(--shadow-sm)}
+    .monthly-ai h3{margin:0 0 8px;font-size:16px;letter-spacing:-.02em}
+    .monthly-ai div{font-size:14px;line-height:1.65;color:#334155}
+    .monthly-chart-box{border:1px solid var(--line);border-radius:18px;background:#fff;padding:16px;margin-bottom:16px;box-shadow:var(--shadow-sm)}
+    .monthly-chart-box canvas{height:280px!important;max-height:280px}
+    .monthly-media-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:16px}
+    .monthly-table-wrap{border:1px solid var(--line);border-radius:18px;background:#fff;overflow:hidden;box-shadow:var(--shadow-sm)}
+    @media(max-width:1100px){.monthly-grid{grid-template-columns:repeat(2,1fr)}.monthly-media-grid{grid-template-columns:1fr}}
+    @media(max-width:700px){.monthly-grid{grid-template-columns:1fr}.monthly-card .value{font-size:20px}}
+
+
+    /* header UI cleanup */
+    .hero{padding:22px 26px;margin-bottom:14px}
+    .hero-title{z-index:1}
+    .hero h1{margin:0;font-size:28px;line-height:1.18}
+    .hero p,.hero .badge{display:none!important}
+    .hero-actions{gap:8px}
+    .hero-actions .primary-load{order:1;background:#fff;color:#1e3a8a;padding:11px 18px;box-shadow:0 10px 22px rgba(15,23,42,.12)}
+    .hero-actions .primary-load:hover{background:#eff6ff}
+    .hero-actions .compact-upload{order:2;background:rgba(255,255,255,.13);color:#fff;border:1px solid rgba(255,255,255,.28);box-shadow:none;padding:8px 11px;font-size:12px}
+    .hero-actions .compact-upload:hover{background:rgba(255,255,255,.20)}
+    .hero-actions .date-badge{order:3;padding:8px 11px}
+    @media(max-width:700px){.hero{padding:20px}.hero h1{font-size:24px}.hero-actions{margin-top:14px}.hero-actions .primary-load{width:100%;justify-content:center}.hero-actions .compact-upload{flex:1;justify-content:center}.hero-actions .date-badge{flex:1;text-align:center}}
+
+
+    /* v25: UI/readability polish - 기능 로직 변경 없음 */
+    :root{
+      --bg:#f3f6fb;--card:#fff;--ink:#0b1220;--muted:#667085;--line:#e6ebf2;
+      --blue:#2563eb;--blue-dark:#1e40af;--red:#dc2626;--green:#16a34a;--amber:#d97706;--orange:#ea580c;
+      --soft-blue:#eff6ff;--soft-orange:#fff7ed;--soft-green:#ecfdf5;
+      --radius-xl:24px;--radius-lg:18px;--radius-md:14px;
+      --shadow:0 18px 44px rgba(15,23,42,.07);--shadow-sm:0 8px 18px rgba(15,23,42,.055);
+    }
+    body{
+      color:var(--ink);
+      background:
+        radial-gradient(circle at 12% -6%,rgba(37,99,235,.14),transparent 30%),
+        radial-gradient(circle at 88% 0%,rgba(234,88,12,.12),transparent 26%),
+        linear-gradient(180deg,#fbfdff 0%,#f3f6fb 48%,#eef3f9 100%);
+      -webkit-font-smoothing:antialiased;
+      text-rendering:optimizeLegibility;
+    }
+    .wrap{max-width:1480px;padding:24px 22px 46px}
+    .hero{
+      min-height:86px;
+      border-radius:26px;
+      padding:22px 26px;
+      background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 54%,#2563eb 100%);
+      box-shadow:0 22px 54px rgba(30,64,175,.20);
+      border:1px solid rgba(255,255,255,.12);
+    }
+    .hero:before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(255,255,255,.08),transparent 42%);pointer-events:none}
+    .hero:after{right:-70px;top:-120px;width:310px;height:310px;background:rgba(255,255,255,.10)}
+    .hero h1{font-size:29px;font-weight:950;letter-spacing:-.045em}
+    .hero-actions{position:relative}
+    .hero-actions .primary-load{height:42px;border-radius:13px;font-size:13px;font-weight:950;padding:0 17px}
+    .hero-actions .compact-upload{height:38px;border-radius:13px;font-size:12px;font-weight:900;padding:0 12px;opacity:.95}
+    .hero-actions .date-badge{height:38px;display:inline-flex;align-items:center;border-radius:13px;font-size:12px}
+    .main-nav{
+      position:sticky;top:10px;z-index:30;
+      margin-bottom:16px;padding:7px;border-radius:20px;
+      background:rgba(255,255,255,.88);
+      box-shadow:0 12px 30px rgba(15,23,42,.07);
+    }
+    .main-tab{border-radius:14px;padding:11px 17px;color:#42526b;transition:.15s ease}
+    .main-tab.active{background:#101828;color:#fff;box-shadow:0 10px 20px rgba(15,23,42,.16)}
+    .panel,.banner-area,.monthly-card,.monthly-chart-box,.monthly-table-wrap,.hour-card,.hour-chart-box,.insight,.daily-kpi,.mini-kpi,.rank-card,.ai-item{
+      border-color:var(--line);
+    }
+    .panel{border-radius:24px;padding:18px;box-shadow:var(--shadow);background:rgba(255,255,255,.96)}
+    .section-title,.data-title,.banner-area-head,.daily-summary-head,.ai-head{align-items:center}
+    .section-title h2,.data-title h2,.banner-area-head h3,.ai-head h3,.daily-summary-head h3{font-weight:950;letter-spacing:-.035em}
+    .hint{color:#738095}
+    .kpi-head{padding-bottom:13px;margin-bottom:14px}
+    .kpi-head h2{font-weight:950;letter-spacing:-.035em}
+    .seg-wrap{background:#f2f5f9;border:1px solid var(--line)}
+    .seg{padding:7px 15px;color:#44546a}
+    .seg.active{background:#101828;color:#fff;box-shadow:0 7px 14px rgba(15,23,42,.13)}
+    .kpi-row{grid-template-columns:repeat(6,minmax(130px,1fr));gap:10px}
+    .kpi{border-radius:18px;padding:14px 15px;box-shadow:none}
+    .kpi .name,.daily-kpi .label,.mini-kpi .label,.monthly-card .label{letter-spacing:-.01em;color:#6b778c}
+    .kpi .value{font-size:23px;line-height:1.15}
+    .kpi.dbcost{background:linear-gradient(180deg,#fff7f7,#fff);border:1px solid #fecaca;box-shadow:0 10px 22px rgba(220,38,38,.07)}
+    .kpi.dbcost .value{font-size:27px}
+    .insights{gap:10px}.insight{border-radius:18px;box-shadow:var(--shadow-sm)}
+    .tabs{align-items:center;padding:6px;background:#f8fafc;border:1px solid var(--line);border-radius:18px}
+    .tab{border-radius:13px;padding:9px 13px;color:#44546a;background:transparent}
+    .tab:hover{background:#eef2f7}.tab.active{background:#101828;color:#fff}
+    .export-actions .ghost{background:#fff;border:1px solid var(--line);box-shadow:none;color:#475569}
+    .export-actions .ghost:hover{background:#f1f5f9}
+    .ai-panel,.hour-ai,.daily-summary,.monthly-ai{border-radius:22px;box-shadow:var(--shadow-sm)}
+    .ai-panel{padding:15px;background:linear-gradient(135deg,#f0f7ff 0%,#fff 66%)}
+    .ai-panel.keyword,.ai-panel.banner{background:linear-gradient(135deg,#fff7ed 0%,#fff 66%)}
+    .ai-main{border-radius:16px;font-size:13.5px}
+    .ai-list{gap:9px}.ai-item{border-radius:16px}
+    .keyword-rank-grid{gap:10px}.rank-card{border-radius:17px}
+    .daily-summary{padding:15px;background:linear-gradient(135deg,#f0f7ff,#fff 64%)}
+    .daily-kpi-row{gap:9px}.daily-kpi{border-radius:17px}
+    .daily-kpi .num{font-size:21px;line-height:1.2}.daily-kpi.core{border:1px solid #fecaca;box-shadow:0 8px 18px rgba(220,38,38,.06)}
+    .banner-area{border-radius:24px;padding:16px}
+    .banner-area-head{padding-bottom:11px;margin-bottom:12px}
+    .banner-area.summary{background:linear-gradient(180deg,#fff7ed 0%,#fff 76%)}
+    .table-box{border-radius:20px;background:transparent}
+    .table-box table,.monthly-table-wrap table{border-collapse:separate;border-spacing:0;border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:0 8px 18px rgba(15,23,42,.035)}
+    th{background:#f8fafc;color:#475569;font-size:12px;font-weight:950;height:40px}
+    td{height:40px;color:#1f2937}
+    th,td{padding:9px 11px;border-bottom:1px solid #edf1f6}
+    tbody tr:nth-child(even) td{background:#fcfdff}
+    tbody tr:hover td{background:#eef6ff!important}
+    .totals-row td{background:#ecfdf5!important;color:#14532d;border-top:1px solid #bbf7d0;border-bottom:1px solid #bbf7d0}
+    td,.kpi .value,.daily-kpi .num,.mini-kpi .num,.monthly-card .value{font-variant-numeric:tabular-nums}
+    .good{color:#15803d}.bad{color:#dc2626}.warn{color:#b45309}
+    .pill{border-radius:999px;padding:4px 9px;font-size:11.5px}
+    canvas{max-height:320px}
+    .daily-mini-chart canvas{height:200px!important;max-height:200px}
+    .hour-chart-box canvas{height:210px!important;max-height:210px}.hour-chart-wide canvas{height:252px!important;max-height:252px}
+    .monthly-chart-box canvas{height:260px!important;max-height:260px}
+    .modal-overlay{background:rgba(15,23,42,.55);backdrop-filter:blur(3px)}
+    .modal-box{border-radius:26px;border:1px solid rgba(255,255,255,.22)}
+    .modal-header{padding:15px 19px;background:#f8fafc}.modal-body{background:#fff}
+    .creative-image-box{background:#e5e7eb;border-radius:22px;min-height:340px}
+    .creative-image-box img{max-width:100%;max-height:68vh;object-fit:contain}
+    .pager-bar{border-radius:18px;box-shadow:0 8px 18px rgba(15,23,42,.04)}
+    .pager-btn,.pager-size{border-radius:12px}
+    @media(max-width:1200px){.kpi-row{grid-template-columns:repeat(3,1fr)}}
+    @media(max-width:900px){
+      .wrap{padding:16px 14px 36px}.main-nav{top:6px;overflow:auto;flex-wrap:nowrap}.main-tab{white-space:nowrap}
+      .kpi-row,.insights,.daily-kpi-row{grid-template-columns:repeat(2,1fr)}
+      .hero h1{font-size:24px}.panel{padding:15px}.tabs{overflow:auto;flex-wrap:nowrap}.tab{white-space:nowrap}
+    }
+    @media(max-width:620px){
+      .hero-actions .primary-load,.hero-actions .compact-upload,.hero-actions .date-badge{width:100%;justify-content:center}
+      .kpi-row,.insights,.daily-kpi-row{grid-template-columns:1fr}
+      .section-title,.data-title,.banner-area-head,.daily-summary-head,.ai-head{display:block}
+    }
+
+
+    /* v26: 시간대별 그래프 토글 UI */
+    .hour-chart-grid.toggle-mode{display:block;margin-bottom:14px}
+    .hour-chart-switch{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 12px;padding:10px;border:1px solid var(--line);border-radius:16px;background:#fff;box-shadow:var(--shadow-sm)}
+    .hour-chart-switch-label{font-size:12px;font-weight:950;color:var(--muted);margin-right:2px}
+    .hour-chart-toggle{border:0;border-radius:12px;background:#f1f5f9;color:#334155;padding:9px 12px;font-size:12px;font-weight:950;cursor:pointer;white-space:nowrap}
+    .hour-chart-toggle:hover{background:#e2e8f0}
+    .hour-chart-toggle.active{background:#0f172a;color:#fff;box-shadow:0 8px 16px rgba(15,23,42,.14)}
+    .hour-chart-grid.toggle-mode .hour-chart-box{min-height:356px;margin-bottom:0}
+    .hour-chart-grid.toggle-mode .hour-chart-box canvas{height:286px!important;max-height:286px}
+    .hour-chart-grid.toggle-mode .hour-chart-box[hidden]{display:none!important}
+    @media(max-width:700px){.hour-chart-switch{overflow:auto;flex-wrap:nowrap}.hour-chart-toggle{flex:0 0 auto}.hour-chart-grid.toggle-mode .hour-chart-box canvas{height:240px!important;max-height:240px}}
+
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <div class="hero-title">
+      <h1>NewStart 광고 효율 대시보드</h1>
+    </div>
+    <div class="hero-actions">
+      <input id="multiFile" type="file" accept=".xlsx,.xls,.csv" multiple hidden />
+      <button class="upload-btn hero-upload primary-load" type="button" id="githubLoadBtn">🔄 최신 데이터</button>
+      <button class="upload-btn hero-upload compact-upload" type="button" id="uploadBtn">📂 파일 불러오기</button>
+      <div class="date-badge" id="todayLabel">오늘</div>
+      <div style="display:none">
+        <div class="file-badge" id="badge-db">DB관리 엑셀 — 미로드</div>
+        <div class="file-badge" id="badge-ad">검색광고 CSV — 미로드</div>
+        <div class="file-badge" id="badge-banner">배너 소재 CSV — 미로드</div>
+        <span id="status">파일을 선택해주세요.</span>
+      </div>
+    </div>
+  </header>
+
+  <div style="display:none">
+    <input id="startDate" type="date">
+    <input id="endDate" type="date">
+    <input id="keywordSearch" type="text">
+    <select id="sortBy"><option value="cost_desc">광고비 높은순</option><option value="db_cost_desc">DB단가 높은순</option><option value="db_cost_asc">DB단가 낮은순</option><option value="db_desc">DB수 높은순</option><option value="click_desc">클릭수 높은순</option><option value="date_desc">날짜 최신순</option></select>
+    <button id="resetBtn" type="button">초기화</button>
+  </div>
+
+  <nav class="main-nav" aria-label="대시보드 메뉴">
+    <button class="main-tab active" type="button" data-main-tab="summary">🏠 전체 광고 요약</button>
+    <button class="main-tab" type="button" data-main-tab="search">🔍 검색광고</button>
+    <button class="main-tab" type="button" data-main-tab="banner">🖼 배너광고</button>
+    <button class="main-tab" type="button" data-main-tab="monthly">📅 월별 비교</button>
+  </nav>
+
+  <div class="main-view" id="summaryView">
+  <section class="panel">
+    <div class="section-title"><h2>자동 진단</h2><span class="hint">고비용·무DB 항목을 우선 확인하세요.</span></div>
+    <div class="insights" id="insightArea"><div class="empty" style="grid-column:1/-1">파일을 업로드하면 진단이 표시됩니다.</div></div>
+  </section>
+
+  <section class="panel">
+    <div class="kpi-head"><h2>광고 성과 KPI</h2><div id="kpiMode" class="seg-wrap"><button class="seg active" data-mode="total">전체</button><button class="seg" data-mode="search">검색</button><button class="seg" data-mode="banner">배너</button></div></div>
+    <div class="kpi-row" id="kpiTotal"></div>
+  </section>
+
+  <section class="grid chart-grid">
+    <div class="panel">
+      <div class="section-title"><h2>일별 DB수</h2><span class="hint">정상DB 기준 · 검색/배너/기타 누적</span></div>
+      <canvas id="dailyDbChart"></canvas>
+      <div class="legend-row"><div class="legend-item"><div class="legend-dot" style="background:#2563eb"></div>검색광고 DB</div><div class="legend-item"><div class="legend-dot" style="background:#ea580c"></div>배너광고 DB</div><div class="legend-item"><div class="legend-dot" style="background:#9ca3af"></div>기타 DB</div></div>
+    </div>
+    <div class="panel">
+      <div class="section-title"><h2>매체별 DB단가</h2><span class="hint">검색 vs 배너 비교</span></div>
+      <canvas id="mediaCostChart"></canvas>
+    </div>
+  </section>
+
+  </div>
+
+  <section class="panel main-view" id="dataView" hidden>
+    <div class="data-title"><h2 id="dataViewTitle">검색광고 데이터</h2><span class="hint" id="dataViewHint">일별·시간대별·키워드별 검색광고 성과를 확인합니다.</span></div>
+    <div class="tabs">
+      <button class="tab active" data-tab="dailyKeyword">일별 검색 광고 성과</button>
+      <button class="tab" data-tab="hourlyEfficiency">시간대별 효율</button>
+      <button class="tab" data-tab="keywordSummary">키워드별 성과</button>
+      <button class="tab" data-tab="bannerDaily" data-hidden="true">일별 배너 성과</button>
+      <button class="tab" data-tab="bannerCreative" data-hidden="true">배너별 성과</button>
+      <div class="export-actions"><button class="ghost" type="button" id="exportDailyBtn">⬇ 일별 검색</button><button class="ghost" type="button" id="exportKeywordBtn">⬇ 키워드별</button><button class="ghost" type="button" id="exportBannerBtn" data-hidden="true">⬇ 배너별</button></div>
+    </div>
+    <div id="tableArea" class="table-box"><div class="empty">파일을 업로드하면 표가 표시됩니다.</div></div>
+  </section>
+
+  <section class="panel main-view" id="monthlyView" hidden>
+    <div class="data-title"><h2>월별 데이터 비교</h2><span class="hint">업로드된 기간을 월 단위로 나눠 광고비·DB수·DB단가를 비교합니다.</span></div>
+    <div id="monthlyArea" class="table-box"><div class="empty">2개월 이상 데이터가 있으면 월별 비교가 표시됩니다.</div></div>
+  </section>
+</div>
+
+<div class="modal-overlay" id="bannerModal">
+  <div class="modal-box">
+    <div class="modal-header"><h3 id="modalTitle">소재 일별 데이터</h3><button class="modal-close" type="button" id="modalClose">✕</button></div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+let dbRows=[], adRows=[], bannerRows=[], currentTab='dailyKeyword', charts={};
+let keywordPage=1, keywordPageSize=50;
+const $=id=>document.getElementById(id);
+const n=v=>Number(String(v??'').replace(/[^0-9.-]/g,''))||0;
+const fmt=v=>Number(v||0).toLocaleString('ko-KR');
+const won=v=>Math.round(v||0).toLocaleString('ko-KR')+'원';
+const pct=v=>isFinite(v)?(v*100).toFixed(1)+'%':'-';
+const cleanKw=v=>String(v??'').replace(/\s+/g,'').trim();
+const isNum=v=>v!==null&&v!==undefined&&isFinite(v);
+const moneyOrDash=v=>isNum(v)?won(v):'-';
+const effectiveDbCost=(cost,db)=>db?cost/db:(cost>0?cost:null);
+const escapeHtml=v=>String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+const GITHUB_IMAGE_BASE='https://raw.githubusercontent.com/ameny52-sketch/ad-dashboard-data/main/';
+let IMAGE_VERSION=Date.now();
+const preloadedBannerImageUrls=new Map();
+function githubRawImage(name){return GITHUB_IMAGE_BASE+name.split('/').map(encodeURIComponent).join('/')+'?v='+IMAGE_VERSION;}
+function unique(arr){return [...new Set(arr.filter(Boolean))];}
+function creativeImageCandidateNames(code, creativeName=''){
+  const raw=String(code||'').trim().toLowerCase();
+  const name=String(creativeName||'').trim();
+  const nameLower=name.toLowerCase();
+  const bases=unique([
+    raw,
+    `${raw}_preview`,
+    `${raw}-preview`,
+    name,
+    nameLower,
+    `${name}_preview`,
+    `${nameLower}_preview`
+  ]);
+  const exts=['png','jpg','jpeg','webp'];
+  const candidates=[];
+  bases.forEach(base=>exts.forEach(ext=>candidates.push(`${base}.${ext}`)));
+  return unique([...candidates.map(x=>`images/${x}`), ...candidates]);
+}
+function creativeImageCandidatePaths(code, creativeName=''){
+  return creativeImageCandidateNames(code,creativeName).map(githubRawImage);
+}
+function creativeImageMarkup(code, creativeName=''){
+  const raw=String(code||'').trim().toLowerCase();
+  const name=String(creativeName||'').trim();
+  const safe=escapeHtml(raw);
+  let paths=creativeImageCandidatePaths(raw,name);
+  const cached=preloadedBannerImageUrls.get(raw);
+  if(cached) paths=unique([cached,...paths]);
+  return `<div class="creative-image-box"><img src="${paths[0]}" alt="${safe} 소재 이미지" data-code="${safe}" data-name="${escapeHtml(name)}" data-idx="0" data-paths="${paths.join('|')}" onerror="handleCreativeImageError(this)"></div>`;
+}
+function handleCreativeImageError(img){
+  const paths=String(img.dataset.paths||'').split('|').filter(Boolean);
+  let idx=Number(img.dataset.idx||0)+1;
+  if(idx<paths.length){img.dataset.idx=String(idx); img.src=paths[idx]; return;}
+  const code=escapeHtml(img.dataset.code||img.alt.replace(' 소재 이미지',''));
+  const name=escapeHtml(img.dataset.name||'');
+  img.parentElement.innerHTML=`<div class="creative-image-missing">소재 프리뷰 이미지를 찾을 수 없습니다.<br><b>images/${code}.jpg</b>, <b>images/${code}.png</b><br>${name?`또는 <b>images/${name}.jpg</b><br>`:''}파일명을 확인 후 GitHub 저장소 images 폴더에 올려주세요.</div>`;
+}
+function preloadFirstValidImage(code, creativeName=''){
+  const raw=String(code||'').trim().toLowerCase();
+  const paths=creativeImageCandidatePaths(raw,creativeName);
+  return new Promise(resolve=>{
+    let idx=0;
+    const tryNext=()=>{
+      if(idx>=paths.length){resolve(null);return;}
+      const url=paths[idx++];
+      const img=new Image();
+      img.onload=()=>{preloadedBannerImageUrls.set(raw,url);resolve(url);};
+      img.onerror=tryNext;
+      img.src=url;
+    };
+    tryNext();
+  });
+}
+async function preloadBannerImages(){
+  const map=new Map();
+  bannerRows.forEach(r=>{if(r.inTypeCode&&!map.has(r.inTypeCode)) map.set(r.inTypeCode,r.creativeName||'');});
+  if(!map.size) return;
+  const before=preloadedBannerImageUrls.size;
+  await Promise.allSettled([...map.entries()].map(([code,name])=>preloadFirstValidImage(code,name)));
+  console.log(`[배너 이미지 프리로드] ${preloadedBannerImageUrls.size}/${map.size}개 캐시 완료`);
+  if(preloadedBannerImageUrls.size>before && $('status')) $('status').textContent += ` · 이미지 ${preloadedBannerImageUrls.size}개 캐시`;
+}
+
+
+function normalizeDevice(v){const s=String(v??'').trim().toLowerCase(); if(!s) return '기타'; if(s.includes('모바일')||s.includes('mobile')||s==='mo'||s==='m') return '모바일'; if(s.includes('pc')||s==='p'||s.includes('desktop')) return 'PC'; return '기타';}
+function dateKey(v){if(!v) return ''; if(v instanceof Date&&!isNaN(v)) return v.toISOString().slice(0,10); if(typeof v==='number'){const d=XLSX.SSF.parse_date_code(v); if(d) return `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`;} const s=String(v).trim(); let m=s.match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})/); if(m) return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`; m=s.match(/(\d{4})-(\d{1,2})-(\d{1,2})/); if(m) return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`; return '';}
+function hourKey(v){
+  if(v===null||v===undefined||v==='') return '';
+  if(v instanceof Date&&!isNaN(v)) return String(v.getHours()).padStart(2,'0');
+  if(typeof v==='number'){
+    const d=XLSX.SSF.parse_date_code(v);
+    if(d&&d.H!==undefined) return String(d.H).padStart(2,'0');
+  }
+  const s=String(v).trim();
+  const isPM=/오후|PM/i.test(s);
+  const isAM=/오전|AM/i.test(s);
+  const to24=h=>{
+    h=Number(h);
+    if(isPM && h<12) h+=12;
+    if(isAM && h===12) h=0;
+    return String(Math.min(23,Math.max(0,h))).padStart(2,'0');
+  };
+  let m=s.match(/(?:오전|오후|AM|PM)?\s*(\d{1,2})\s*시/i);
+  if(m) return to24(m[1]);
+  m=s.match(/(?:오전|오후|AM|PM)?\s*(\d{1,2}):\d{2}/i);
+  if(m) return to24(m[1]);
+  m=s.match(/^\d{1,2}$/);
+  if(m) return to24(s);
+  return '';
+}
+function extractInType(name){const s=String(name||''); const m=s.match(/\d+[x*]\d+_(.+)$/i); return m?m[1].toLowerCase():s.toLowerCase();}
+function groupBy(arr,keyFn,initFn,addFn){const map=new Map(); for(const r of arr){const k=keyFn(r); if(!map.has(k)) map.set(k,initFn(r)); addFn(map.get(k),r);} return [...map.values()];}
+
+function parseAdCSV(file){return new Promise((resolve,reject)=>Papa.parse(file,{encoding:'UTF-8',skipEmptyLines:true,complete:res=>{const rows=res.data||[]; if(!rows.length) return resolve([]); let hi=rows.findIndex(r=>r.includes('일별')&&r.includes('키워드')); if(hi<0) hi=0; const headers=rows[hi].map(h=>String(h).trim());
+  // 네이버 CSV 버전에 따라 PC/모바일 컬럼명이 조금씩 달라질 수 있어 자동 탐색합니다.
+  const deviceCol=headers.find(h=>/PC\s*\/\s*모바일|PC.*모바일|모바일.*PC|디바이스|기기/i.test(h))||'PC/모바일 매체';
+  const dateCol=headers.find(h=>h==='일별'||h.includes('일별')||h.includes('날짜'))||'일별';
+  const hourCol=headers.find(h=>h.includes('시간대')||h==='시간')||'';
+  const keywordCol=headers.find(h=>h==='키워드'||h.includes('키워드'))||'키워드';
+  const out=[]; for(let i=hi+1;i<rows.length;i++){const row=rows[i]; if(!row||row.length<4) continue; const obj={}; headers.forEach((h,j)=>obj[h]=row[j]); const date=dateKey(obj[dateCol]); const hour=hourKey(hourCol?obj[hourCol]:''); const keyword=String(obj[keywordCol]??'').trim(); const kwKey=cleanKw(keyword); if(!date||!kwKey) continue; out.push({date,hour,campaign:obj['캠페인']||'',device:normalizeDevice(obj[deviceCol]),keyword,kwKey,impressions:n(obj['노출수']),clicks:n(obj['클릭수']),ctr:n(obj['클릭률(%)'])/100,avgCpc:n(obj['평균 CPC']),cost:n(obj['총비용'])});} resolve(out);},error:reject}));}
+function parseBannerCSV(file){return new Promise((resolve,reject)=>Papa.parse(file,{encoding:'UTF-8',skipEmptyLines:true,complete:res=>{const rows=res.data||[]; if(!rows.length) return resolve([]); const headers=rows[0].map(h=>String(h).trim()); const out=[]; for(let i=1;i<rows.length;i++){const row=rows[i]; if(!row||row.length<4) continue; const obj={}; headers.forEach((h,j)=>obj[h]=row[j]); const date=dateKey(obj['기간']); if(!date) continue; const creativeName=String(obj['광고 소재 이름']||'').trim(); const inTypeCode=extractInType(creativeName); out.push({date,creativeName,inTypeCode,impressions:n(obj['노출수']),clicks:n(obj['클릭수']),cost:n(obj['총비용']),ctr:n(obj['클릭률(%)'])/100,cpc:n(obj['평균 CPC'])});} resolve(out);},error:reject}));}
+function parseDBExcel(file){return new Promise((resolve,reject)=>{const reader=new FileReader(); reader.onload=e=>{try{const wb=XLSX.read(e.target.result,{type:'array',cellDates:true}); const sheet=wb.Sheets['DB관리']||wb.Sheets[wb.SheetNames[0]]; const rows=XLSX.utils.sheet_to_json(sheet,{defval:''}); if(!rows.length) return resolve([]); const cols=Object.keys(rows[0]); const candidates=['기기','기기구분','디바이스','유입기기','유입구분','PC/모바일','PC/모바일 매체','매체구분','device','Device']; let deviceCol=candidates.find(c=>cols.includes(c)); if(!deviceCol){deviceCol=cols.find(col=>rows.slice(0,80).map(r=>normalizeDevice(r[col])).filter(v=>v==='PC'||v==='모바일').length>=2);} const out=rows.map(r=>{const kw=String(r['키워드']??'').trim(); const deviceRaw=deviceCol?r[deviceCol]:(r['기기']??r['기기구분']??r['유입구분']??''); return {date:dateKey(r['유입일시']),hour:hourKey(r['유입일시']),media:String(r['유입매체']??'').trim()||'미분류',path:String(r['상담경로']??'').trim()||'미분류',detail:String(r['세부경로']??r['세부상담경로']??'').trim()||'미분류',judge:String(r['DB판정']??'').trim(),keyword:kw,kwKey:cleanKw(kw),inType:String(r['InType']??r['inType']??r['in_type']??'').trim().toLowerCase(),device:normalizeDevice(deviceRaw)};}); resolve(out);}catch(err){reject(err)}}; reader.onerror=reject; reader.readAsArrayBuffer(file);});}
+function getDateRange(){return {start:$('startDate').value,end:$('endDate').value};}
+
+function buildSearchData(){
+  // 중요: 검색광고 기본 집계는 항상 날짜+키워드 기준으로 DB를 매칭합니다.
+  // 시간대별 광고 파일을 올려도 일별/키워드별 DB수가 기존과 달라지지 않도록 하기 위함입니다.
+  const normal=dbRows.filter(r=>r.judge==='정상DB'&&r.date&&r.kwKey);
+  const dbMap=new Map(), pcDbMap=new Map(), moDbMap=new Map();
+  normal.forEach(r=>{
+    const k=r.date+'||'+r.kwKey;
+    dbMap.set(k,(dbMap.get(k)||0)+1);
+    if(r.device==='PC') pcDbMap.set(k,(pcDbMap.get(k)||0)+1);
+    else if(r.device==='모바일') moDbMap.set(k,(moDbMap.get(k)||0)+1);
+  });
+  const adAgg=groupBy(adRows,r=>r.date+'||'+r.kwKey,r=>({date:r.date,hour:'',keyword:r.keyword,kwKey:r.kwKey,impressions:0,clicks:0,cost:0,pcImp:0,pcClicks:0,pcCost:0,moImp:0,moClicks:0,moCost:0}),(a,r)=>{a.impressions+=r.impressions; a.clicks+=r.clicks; a.cost+=r.cost; if(r.device==='PC'){a.pcImp+=r.impressions; a.pcClicks+=r.clicks; a.pcCost+=r.cost;} else if(r.device==='모바일'){a.moImp+=r.impressions; a.moClicks+=r.clicks; a.moCost+=r.cost;}});
+  return adAgg.map(a=>{
+    const k=a.date+'||'+a.kwKey;
+    const db=dbMap.get(k)||0, pcDb=pcDbMap.get(k)||0, moDb=moDbMap.get(k)||0;
+    let pcCost=a.pcCost, moCost=a.moCost;
+    // 검색광고 CSV가 PC/모바일로 분리되어 있지 않은 경우에는 광고비가 전체 비용으로만 들어옵니다.
+    // 이때 PC/모바일 비용이 모두 0으로 보이지 않도록, 정상DB의 PC/모바일 비율로 광고비를 배분합니다.
+    if((pcCost+moCost)===0 && db>0 && (pcDb||moDb)){
+      pcCost=a.cost*(pcDb/db);
+      moCost=a.cost*(moDb/db);
+    }
+    return {...a,pcCost,moCost,ctr:a.impressions?a.clicks/a.impressions:0,cpc:a.clicks?a.cost/a.clicks:0,db,pcDb,moDb,dbCost:effectiveDbCost(a.cost,db),dbCostPc:effectiveDbCost(pcCost,pcDb),dbCostMo:effectiveDbCost(moCost,moDb),conv:a.clicks?db/a.clicks:0};
+  });
+}
+function buildBannerData(){const normal=dbRows.filter(r=>r.judge==='정상DB'&&r.date&&!r.kwKey&&r.inType); const dbMap=new Map(); normal.forEach(r=>{const k=r.date+'||'+r.inType; dbMap.set(k,(dbMap.get(k)||0)+1);}); const agg=groupBy(bannerRows,r=>r.date+'||'+r.inTypeCode,r=>({date:r.date,creativeName:r.creativeName,inTypeCode:r.inTypeCode,impressions:0,clicks:0,cost:0}),(a,r)=>{a.impressions+=r.impressions; a.clicks+=r.clicks; a.cost+=r.cost;}); return agg.map(a=>{const db=dbMap.get(a.date+'||'+a.inTypeCode)||0; return {...a,ctr:a.impressions?a.clicks/a.impressions:0,cpc:a.clicks?a.cost/a.clicks:0,db,dbCost:effectiveDbCost(a.cost,db),conv:a.clicks?db/a.clicks:0};});}
+function buildDailyMediaDB(){const {start,end}=getDateRange(); const normal=dbRows.filter(r=>r.judge==='정상DB'&&r.date&&(!start||r.date>=start)&&(!end||r.date<=end)); const searchSet=new Set(adRows.map(r=>r.date+'||'+r.kwKey)); const bannerSet=new Set(bannerRows.map(r=>r.date+'||'+r.inTypeCode)); const map=new Map(); const ensure=d=>map.get(d)||map.set(d,{search:0,banner:0,other:0}).get(d); normal.forEach(r=>{const d=ensure(r.date); if(r.kwKey&&searchSet.has(r.date+'||'+r.kwKey)) d.search++; else if(!r.kwKey&&r.inType&&bannerSet.has(r.date+'||'+r.inType)) d.banner++; else d.other++;}); return [...map.entries()].map(([date,v])=>({date,...v})).sort((a,b)=>a.date.localeCompare(b.date));}
+function filtered(){let rows=buildSearchData(); const {start,end}=getDateRange(), q=cleanKw($('keywordSearch').value); rows=rows.filter(r=>(!start||r.date>=start)&&(!end||r.date<=end)&&(!q||r.kwKey.includes(q))); const sort=$('sortBy').value; rows.sort((a,b)=>sort==='db_cost_desc'?((b.dbCost??-1)-(a.dbCost??-1)):sort==='db_cost_asc'?((a.dbCost??999999999)-(b.dbCost??999999999)):sort==='db_desc'?b.db-a.db:sort==='click_desc'?b.clicks-a.clicks:sort==='date_desc'?b.date.localeCompare(a.date):b.cost-a.cost); return rows;}
+function filteredBanner(){let rows=buildBannerData(); const {start,end}=getDateRange(); return rows.filter(r=>(!start||r.date>=start)&&(!end||r.date<=end)).sort((a,b)=>b.cost-a.cost);}
+function summarizeKeyword(rows){return groupBy(rows,r=>r.kwKey,r=>({keyword:r.keyword,kwKey:r.kwKey,impressions:0,clicks:0,cost:0,db:0,pcDb:0,moDb:0,pcCost:0,moCost:0}),(a,r)=>{a.impressions+=r.impressions; a.clicks+=r.clicks; a.cost+=r.cost; a.db+=r.db; a.pcDb+=r.pcDb; a.moDb+=r.moDb; a.pcCost+=r.pcCost; a.moCost+=r.moCost;}).map(a=>({...a,ctr:a.impressions?a.clicks/a.impressions:0,cpc:a.clicks?a.cost/a.clicks:0,dbCost:effectiveDbCost(a.cost,a.db),dbCostPc:effectiveDbCost(a.pcCost,a.pcDb),dbCostMo:effectiveDbCost(a.moCost,a.moDb),conv:a.clicks?a.db/a.clicks:0})).sort((a,b)=>b.cost-a.cost);}
+function summarizeBannerCreative(rows){return groupBy(rows,r=>r.inTypeCode,r=>({creativeName:r.creativeName,inTypeCode:r.inTypeCode,impressions:0,clicks:0,cost:0,db:0}),(a,r)=>{a.impressions+=r.impressions; a.clicks+=r.clicks; a.cost+=r.cost; a.db+=r.db;}).map(a=>({...a,ctr:a.impressions?a.clicks/a.impressions:0,cpc:a.clicks?a.cost/a.clicks:0,dbCost:effectiveDbCost(a.cost,a.db),conv:a.clicks?a.db/a.clicks:0})).sort((a,b)=>b.cost-a.cost);}
+function setDefaultDates(){const dates=[...adRows,...bannerRows,...dbRows].map(r=>r.date).filter(Boolean).sort(); if(dates.length){$('startDate').value=dates[0]; $('endDate').value=dates[dates.length-1];}}
+function kpiCard(name,value,sub,cls=''){return `<div class="kpi ${cls}"><div class="name">${name}</div><div class="value">${value}</div><div class="sub">${sub}</div></div>`;}
+function renderKPIs(searchRows){const banner=filteredBanner(); const sum=rows=>({cost:rows.reduce((s,r)=>s+r.cost,0),imp:rows.reduce((s,r)=>s+r.impressions,0),clk:rows.reduce((s,r)=>s+r.clicks,0),db:rows.reduce((s,r)=>s+r.db,0)}); const s=sum(searchRows), b=sum(banner); window._kpiData={total:{cost:s.cost+b.cost,imp:s.imp+b.imp,clk:s.clk+b.clk,db:s.db+b.db},search:s,banner:b}; updateKpiCards(window._kpiMode||'total');}
+function updateKpiCards(mode){window._kpiMode=mode; document.querySelectorAll('.seg').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode)); const d=window._kpiData?.[mode]||{cost:0,imp:0,clk:0,db:0}; const ctr=d.imp?d.clk/d.imp:0, dbCost=effectiveDbCost(d.cost,d.db), conv=d.clk?d.db/d.clk:0; $('kpiTotal').innerHTML=[kpiCard('💰 광고비',won(d.cost),''),kpiCard('📥 DB수',fmt(d.db),''),kpiCard('💵 DB단가',dbCost?won(dbCost):'-','핵심 KPI','dbcost'),kpiCard('🎯 DB전환율',pct(conv),'클릭→DB'),kpiCard('👆 클릭수',fmt(d.clk),''),kpiCard('📈 CTR',pct(ctr),'')].join('');}
+function renderInsights(searchRows){const ks=summarizeKeyword(searchRows); const noDb=ks.filter(r=>r.cost>0&&!r.db).sort((a,b)=>b.cost-a.cost)[0]; const highCost=ks.filter(r=>isNum(r.dbCost)).sort((a,b)=>b.dbCost-a.dbCost)[0]; const best=ks.filter(r=>r.db>=1&&isNum(r.dbCost)).sort((a,b)=>a.dbCost-b.dbCost)[0]; const card=(title,html)=>`<div class="insight"><b>${title}</b><div>${html}</div></div>`; $('insightArea').innerHTML=[card('🚨 무DB 고비용 키워드',noDb?`<span class="pill danger">${noDb.keyword}</span><br>광고비 ${won(noDb.cost)}, 클릭 ${fmt(noDb.clicks)}회 · 우선 점검 권장`:'해당 항목이 없습니다.'),card('⚠️ DB단가 최고 키워드',highCost?`<span class="pill">${highCost.keyword}</span><br>DB단가 <span class="bad">${won(highCost.dbCost)}</span>, DB ${fmt(highCost.db)}건`:'DB가 발생한 키워드가 없습니다.'),card('✅ 효율 우수 키워드',best?`<span class="pill good">${best.keyword}</span><br>DB단가 <span class="good">${won(best.dbCost)}</span>, DB ${fmt(best.db)}건`:'비교 가능한 키워드가 없습니다.')].join('');}
+
+const stackTotalPlugin={id:'stackTotal',afterDatasetsDraw(chart){const {ctx,data}=chart; const last=chart.getDatasetMeta(data.datasets.length-1); data.labels.forEach((_,i)=>{const total=data.datasets.reduce((s,ds)=>s+(ds.data[i]||0),0); if(!total||!last.data[i]) return; ctx.save(); ctx.fillStyle='#111827'; ctx.font='bold 11px system-ui,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='bottom'; ctx.fillText(total,last.data[i].x,last.data[i].y-3); ctx.restore();});}};
+function renderCharts(){['dailyDb','mediaCost'].forEach(k=>{if(charts[k]){charts[k].destroy(); delete charts[k];}}); const daily=buildDailyMediaDB(); charts.dailyDb=new Chart($('dailyDbChart'),{type:'bar',data:{labels:daily.map(r=>r.date),datasets:[{label:'검색광고 DB',data:daily.map(r=>r.search),backgroundColor:'#2563eb',stack:'db'},{label:'배너광고 DB',data:daily.map(r=>r.banner),backgroundColor:'#ea580c',stack:'db'},{label:'기타 DB',data:daily.map(r=>r.other),backgroundColor:'#9ca3af',stack:'db'}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true,ticks:{precision:0}}}},plugins:[stackTotalPlugin]}); const s=window._kpiData?.search||{cost:0,db:0}, b=window._kpiData?.banner||{cost:0,db:0}; charts.mediaCost=new Chart($('mediaCostChart'),{type:'bar',data:{labels:['검색','배너'],datasets:[{label:'DB단가',data:[effectiveDbCost(s.cost,s.db)||0,effectiveDbCost(b.cost,b.db)||0],backgroundColor:['#2563eb','#ea580c']}]},options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>won(c.raw)}}},scales:{y:{beginAtZero:true,ticks:{callback:v=>fmt(v)}}}}});}
+function table(headers,rows,totals=''){if(!rows.length) return '<div class="empty">조건에 맞는 데이터가 없습니다.</div>'; return '<table><thead><tr>'+headers.map((h,i)=>`<th data-col="${i}">${h}</th>`).join('')+'</tr>'+(totals?'<tr class="totals-row">'+totals+'</tr>':'')+'</thead><tbody>'+rows.join('')+'</tbody></table>';}
+function rowClass(r){if(r.cost>0&&!r.db) return 'row-danger'; if(isNum(r.dbCost)&&r.dbCost>=300000) return 'row-warn'; return '';}
+function buildHourlyData(){
+  const {start,end}=getDateRange(), q=cleanKw($('keywordSearch').value);
+  const base=Array.from({length:24},(_,h)=>({hour:String(h).padStart(2,'0'),impressions:0,clicks:0,cost:0,db:0,pcDb:0,moDb:0,pcCost:0,moCost:0}));
+  const map=new Map(base.map(r=>[r.hour,r]));
+  // 광고비/클릭은 검색광고 CSV의 시간대 컬럼 기준으로 합산합니다.
+  adRows.filter(r=>r.hour&&(!start||r.date>=start)&&(!end||r.date<=end)&&(!q||r.kwKey.includes(q))).forEach(r=>{
+    const a=map.get(r.hour); if(!a) return;
+    a.impressions+=r.impressions; a.clicks+=r.clicks; a.cost+=r.cost;
+    if(r.device==='PC') a.pcCost+=r.cost;
+    else if(r.device==='모바일') a.moCost+=r.cost;
+  });
+  // DB는 DB관리 엑셀의 유입일시 시간 기준으로 합산합니다. 일별/키워드별 DB수에는 영향을 주지 않습니다.
+  dbRows.filter(r=>r.judge==='정상DB'&&r.date&&r.kwKey&&r.hour&&(!start||r.date>=start)&&(!end||r.date<=end)&&(!q||r.kwKey.includes(q))).forEach(r=>{
+    const a=map.get(r.hour); if(!a) return;
+    a.db++;
+    if(r.device==='PC') a.pcDb++;
+    else if(r.device==='모바일') a.moDb++;
+  });
+  return base.map(a=>{
+    let pcCost=a.pcCost, moCost=a.moCost;
+    if((pcCost+moCost)===0 && a.db>0 && (a.pcDb||a.moDb)){
+      pcCost=a.cost*(a.pcDb/a.db);
+      moCost=a.cost*(a.moDb/a.db);
+    }
+    return {...a,pcCost,moCost,ctr:a.impressions?a.clicks/a.impressions:0,cpc:a.clicks?a.cost/a.clicks:0,conv:a.clicks?a.db/a.clicks:0,dbCost:effectiveDbCost(a.cost,a.db),dbCostPc:effectiveDbCost(pcCost,a.pcDb),dbCostMo:effectiveDbCost(moCost,a.moDb)};
+  });
+}
+function hourLabel(h){return `${h}시~${String(Number(h)+1).padStart(2,'0')}시`;}
+function metricLabel(type, value){
+  if(!isNum(value)) return '-';
+  if(type==='won') return won(value);
+  if(type==='pct') return pct(value);
+  return fmt(value);
+}
+function setHourlyChartView(target){
+  const area=$('tableArea');
+  if(!area) return;
+  area.querySelectorAll('.hour-chart-toggle').forEach(btn=>btn.classList.toggle('active',btn.dataset.chartTarget===target));
+  area.querySelectorAll('[data-chart-box]').forEach(box=>{box.hidden=box.dataset.chartBox!==target;});
+  const chartKey={hourlyDbCostChart:'hourlyDbCost',hourlyEfficiencyChart:'hourlyEfficiency',hourlyCpcChart:'hourlyCpc',hourlyCtrChart:'hourlyCtr',hourlyConvChart:'hourlyConv'}[target];
+  if(charts[chartKey]) setTimeout(()=>charts[chartKey].resize(),0);
+}
+function attachHourlyChartToggle(){
+  const area=$('tableArea');
+  if(!area) return;
+  const fallback='hourlyDbCostChart';
+  const selected=area.querySelector(`.hour-chart-toggle[data-chart-target="${window._hourlyChartActive||fallback}"]`)?(window._hourlyChartActive||fallback):fallback;
+  area.querySelectorAll('.hour-chart-toggle').forEach(btn=>btn.addEventListener('click',()=>{window._hourlyChartActive=btn.dataset.chartTarget; setHourlyChartView(window._hourlyChartActive);}));
+  window._hourlyChartActive=selected;
+  setHourlyChartView(selected);
+}
+function renderHourlyEfficiency(searchRows){
+  const hourly=buildHourlyData();
+  const used=hourly.filter(r=>r.cost>0||r.clicks>0||r.db>0);
+  if(!used.length){$('tableArea').innerHTML='<div class="empty">시간대별 데이터가 없습니다. 검색광고 CSV에 시간대 컬럼이 있는지 확인해주세요.</div>'; return;}
+
+  const hourName=r=>hourLabel(r.hour);
+  const best=used.filter(r=>r.db>0&&isNum(r.dbCost)).sort((a,b)=>a.dbCost-b.dbCost)[0];
+  const worst=used.filter(r=>r.cost>0).sort((a,b)=>(b.dbCost??0)-(a.dbCost??0))[0];
+  const maxDb=used.slice().sort((a,b)=>b.db-a.db)[0];
+  const highCpc=used.filter(r=>r.clicks>0).sort((a,b)=>b.cpc-a.cpc)[0];
+  const bestCtr=used.filter(r=>r.impressions>0).sort((a,b)=>b.ctr-a.ctr)[0];
+  const bestConv=used.filter(r=>r.clicks>0&&r.db>0).sort((a,b)=>b.conv-a.conv)[0];
+  const noDbSpend=used.filter(r=>r.cost>0&&!r.db).sort((a,b)=>b.cost-a.cost)[0];
+
+  const aiLines=[];
+  if(best) aiLines.push(`<b>${hourName(best)}</b>는 DB단가가 <span class="good">${moneyOrDash(best.dbCost)}</span>로 가장 좋아 예산 유지/확대 후보입니다.`);
+  if(worst) aiLines.push(`<b>${hourName(worst)}</b>는 DB단가가 <span class="bad">${moneyOrDash(worst.dbCost)}</span>로 가장 높아 입찰가 하향 또는 노출 제한 검토가 필요합니다.`);
+  if(highCpc) aiLines.push(`<b>${hourName(highCpc)}</b>는 CPC가 <span class="warn">${won(highCpc.cpc)}</span>로 높아 경쟁이 강한 시간대로 보입니다.`);
+  if(bestConv) aiLines.push(`<b>${hourName(bestConv)}</b>는 클릭 대비 DB전환율이 <span class="good">${pct(bestConv.conv)}</span>로 높아 랜딩/상담 연결 효율이 좋은 시간대입니다.`);
+  if(noDbSpend) aiLines.push(`<b>${hourName(noDbSpend)}</b>는 광고비 ${won(noDbSpend.cost)}를 사용했지만 DB가 없어 우선 점검 대상입니다.`);
+  if(!aiLines.length) aiLines.push('분석 가능한 시간대 데이터가 부족합니다. 광고비, 클릭, DB가 쌓이면 자동 요약이 표시됩니다.');
+
+  const card=(title,html)=>`<div class="hour-card"><b>${title}</b><div>${html}</div></div>`;
+  const aiSummary=`<div class="hour-ai"><h3>🤖 AI 분석 요약</h3><ul>${aiLines.map(x=>`<li>${x}</li>`).join('')}</ul></div>`;
+  const insights='<div class="hour-insights">'+[
+    card('✅ 효율 좋은 시간',best?`<span class="pill good">${hourName(best)}</span><br>DB단가 <span class="good">${moneyOrDash(best.dbCost)}</span>, DB ${fmt(best.db)}건`:'DB가 발생한 시간대가 없습니다.'),
+    card('🚨 비효율 시간',worst?`<span class="pill danger">${hourName(worst)}</span><br>광고비 ${won(worst.cost)}, DB ${fmt(worst.db)}건 · DB단가 <span class="bad">${moneyOrDash(worst.dbCost)}</span>`:'비교 가능한 시간대가 없습니다.'),
+    card('📥 DB 집중 시간',maxDb?`<span class="pill">${hourName(maxDb)}</span><br>DB ${fmt(maxDb.db)}건, 전환율 ${pct(maxDb.conv)}`:'DB 데이터가 없습니다.'),
+    card('💸 CPC 최고 시간',highCpc?`<span class="pill">${hourName(highCpc)}</span><br>CPC <span class="warn">${won(highCpc.cpc)}</span>, 클릭 ${fmt(highCpc.clicks)}회`:'클릭 데이터가 없습니다.')
+  ].join('')+'</div>';
+
+  const t=used.reduce((a,r)=>{['impressions','clicks','cost','db','pcDb','moDb','pcCost','moCost'].forEach(k=>a[k]+=r[k]); return a;},{impressions:0,clicks:0,cost:0,db:0,pcDb:0,moDb:0,pcCost:0,moCost:0});
+  const totals=`<td>합계</td><td>${fmt(t.impressions)}</td><td>${fmt(t.clicks)}</td><td>${pct(t.impressions?t.clicks/t.impressions:0)}</td><td>${t.clicks?won(t.cost/t.clicks):'-'}</td><td>${won(t.cost)}</td><td>${fmt(t.db)}</td><td>${pct(t.clicks?t.db/t.clicks:0)}</td><td>${moneyOrDash(effectiveDbCost(t.cost,t.db))}</td><td>${won(t.pcCost)}</td><td>${fmt(t.pcDb)}</td><td>${moneyOrDash(effectiveDbCost(t.pcCost,t.pcDb))}</td><td>${won(t.moCost)}</td><td>${fmt(t.moDb)}</td><td>${moneyOrDash(effectiveDbCost(t.moCost,t.moDb))}</td>`;
+  const rows=used.map(r=>`<tr class="${rowClass(r)}"><td>${hourName(r)}</td><td>${fmt(r.impressions)}</td><td>${fmt(r.clicks)}</td><td>${pct(r.ctr)}</td><td>${won(r.cpc)}</td><td>${won(r.cost)}</td><td class="good">${fmt(r.db)}</td><td>${pct(r.conv)}</td><td class="${isNum(r.dbCost)?'bad':''}">${moneyOrDash(r.dbCost)}</td><td>${won(r.pcCost)}</td><td class="good">${fmt(r.pcDb)}</td><td>${moneyOrDash(r.dbCostPc)}</td><td>${won(r.moCost)}</td><td class="good">${fmt(r.moDb)}</td><td>${moneyOrDash(r.dbCostMo)}</td></tr>`);
+  const chartHtml=`<div class="hour-chart-grid toggle-mode">
+    <div class="hour-chart-switch" aria-label="시간대별 그래프 선택">
+      <button class="hour-chart-toggle active" type="button" data-chart-target="hourlyDbCostChart">DB단가</button>
+      <button class="hour-chart-toggle" type="button" data-chart-target="hourlyEfficiencyChart">DB수·광고비</button>
+      <button class="hour-chart-toggle" type="button" data-chart-target="hourlyCpcChart">CPC</button>
+      <button class="hour-chart-toggle" type="button" data-chart-target="hourlyCtrChart">CTR</button>
+      <button class="hour-chart-toggle" type="button" data-chart-target="hourlyConvChart">전환율</button>
+    </div>
+    <div class="hour-chart-box hour-chart-wide" data-chart-box="hourlyDbCostChart"><div class="section-title"><h2>시간대별 DB단가</h2><span class="hint">핵심 효율 지표 · 각 점 위에 금액 표시</span></div><canvas id="hourlyDbCostChart"></canvas></div>
+    <div class="hour-chart-box hour-chart-wide" data-chart-box="hourlyEfficiencyChart"><div class="section-title"><h2>DB수·광고비</h2><span class="hint">막대: DB수 / 선: 광고비</span></div><canvas id="hourlyEfficiencyChart"></canvas></div>
+    <div class="hour-chart-box hour-chart-wide" data-chart-box="hourlyCpcChart"><div class="section-title"><h2>시간대별 CPC</h2><span class="hint">클릭당 평균 비용</span></div><canvas id="hourlyCpcChart"></canvas></div>
+    <div class="hour-chart-box hour-chart-wide" data-chart-box="hourlyCtrChart"><div class="section-title"><h2>시간대별 CTR</h2><span class="hint">노출 대비 클릭률</span></div><canvas id="hourlyCtrChart"></canvas></div>
+    <div class="hour-chart-box hour-chart-wide" data-chart-box="hourlyConvChart"><div class="section-title"><h2>시간대별 전환율</h2><span class="hint">클릭 대비 DB전환율</span></div><canvas id="hourlyConvChart"></canvas></div>
+  </div>`;
+  $('tableArea').classList.add('hour-mode');
+  $('tableArea').innerHTML=aiSummary+insights+chartHtml+table(['시간대','노출','클릭','CTR','CPC','광고비','DB수','전환율','DB단가','PC비용','PC DB수','DB단가(PC)','모바일비용','모바일 DB수','DB단가(모바일)'],rows,totals);
+
+  ['hourlyEfficiency','hourlyDbCost','hourlyCpc','hourlyCtr','hourlyConv'].forEach(k=>{if(charts[k]){charts[k].destroy(); delete charts[k];}});
+  const labels=used.map(r=>r.hour+'시');
+  const moneyTick=v=>fmt(v);
+  const compactWon=v=>{
+    v=Number(v)||0;
+    if(v>=10000) return Math.round(v/10000)+'만';
+    return fmt(v);
+  };
+  const valueLabelsPlugin={
+    id:'valueLabels',
+    afterDatasetsDraw(chart,args,pluginOptions){
+      const opts=pluginOptions||{};
+      if(opts.display===false) return;
+      const ctx=chart.ctx;
+      const formatter=opts.formatter||((v)=>fmt(v));
+      const datasetIndexes=opts.datasetIndexes||chart.data.datasets.map((_,i)=>i);
+      ctx.save();
+      ctx.font=opts.font||'bold 10px system-ui,sans-serif';
+      ctx.fillStyle=opts.color||'#0f172a';
+      ctx.textAlign='center';
+      ctx.textBaseline='bottom';
+      datasetIndexes.forEach(dsIndex=>{
+        const meta=chart.getDatasetMeta(dsIndex);
+        if(!meta||meta.hidden) return;
+        meta.data.forEach((el,i)=>{
+          const raw=chart.data.datasets[dsIndex].data[i];
+          const v=Number(raw)||0;
+          if(!v && opts.hideZero!==false) return;
+          const text=formatter(raw,dsIndex,i);
+          if(!text || text==='-') return;
+          const x=el.x;
+          const y=Math.max(12,(el.y||0)-(opts.offset||6));
+          ctx.fillText(text,x,y);
+        });
+      });
+      ctx.restore();
+    }
+  };
+  const commonChartOptions=(formatter, extra={})=>({
+    responsive:true,
+    maintainAspectRatio:false,
+    layout:{padding:{top:22,right:8,left:8,bottom:0}},
+    plugins:{legend:{display:false},valueLabels:{formatter,hideZero:true},tooltip:extra.tooltip||{}},
+    scales:extra.scales||{y:{beginAtZero:true,ticks:{callback:moneyTick}}}
+  });
+  charts.hourlyDbCost=new Chart($('hourlyDbCostChart'),{type:'line',data:{labels,datasets:[{label:'DB단가',data:used.map(r=>r.dbCost||0),borderColor:'#dc2626',backgroundColor:'#dc2626',tension:.25,pointRadius:3}]},options:commonChartOptions(v=>compactWon(v),{tooltip:{callbacks:{label:c=>`DB단가: ${won(c.raw)}`}},scales:{y:{beginAtZero:true,ticks:{callback:moneyTick}}}}),plugins:[valueLabelsPlugin]});
+  charts.hourlyEfficiency=new Chart($('hourlyEfficiencyChart'),{type:'bar',data:{labels,datasets:[{type:'bar',label:'DB수',data:used.map(r=>r.db),backgroundColor:'#16a34a',yAxisID:'y',order:1},{type:'line',label:'광고비',data:used.map(r=>r.cost),borderColor:'#2563eb',backgroundColor:'#2563eb',yAxisID:'y1',tension:.25,pointRadius:3,pointHoverRadius:5,order:0}]},options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:22,right:8,left:8,bottom:0}},plugins:{legend:{position:'bottom'},valueLabels:{datasetIndexes:[0],formatter:v=>fmt(v)+'건',hideZero:true},tooltip:{callbacks:{label:c=>c.dataset.label==='광고비'?`광고비: ${won(c.raw)}`:`DB수: ${fmt(c.raw)}건`}}},scales:{y:{beginAtZero:true,ticks:{precision:0}},y1:{beginAtZero:true,position:'right',grid:{drawOnChartArea:false},ticks:{callback:moneyTick}}}},plugins:[valueLabelsPlugin]});
+  charts.hourlyCpc=new Chart($('hourlyCpcChart'),{type:'line',data:{labels,datasets:[{label:'CPC',data:used.map(r=>r.cpc||0),borderColor:'#d97706',backgroundColor:'#d97706',tension:.25,pointRadius:3}]},options:commonChartOptions(v=>compactWon(v),{tooltip:{callbacks:{label:c=>`CPC: ${won(c.raw)}`}},scales:{y:{beginAtZero:true,ticks:{callback:moneyTick}}}}),plugins:[valueLabelsPlugin]});
+  charts.hourlyCtr=new Chart($('hourlyCtrChart'),{type:'line',data:{labels,datasets:[{label:'CTR',data:used.map(r=>+(r.ctr*100).toFixed(2)),borderColor:'#2563eb',backgroundColor:'#2563eb',tension:.25,pointRadius:3}]},options:commonChartOptions(v=>Number(v).toFixed(1)+'%',{tooltip:{callbacks:{label:c=>`CTR: ${Number(c.raw).toFixed(2)}%`}},scales:{y:{beginAtZero:true,ticks:{callback:v=>v+'%'}}}}),plugins:[valueLabelsPlugin]});
+  charts.hourlyConv=new Chart($('hourlyConvChart'),{type:'line',data:{labels,datasets:[{label:'전환율',data:used.map(r=>+(r.conv*100).toFixed(2)),borderColor:'#16a34a',backgroundColor:'#16a34a',tension:.25,pointRadius:3}]},options:commonChartOptions(v=>Number(v).toFixed(1)+'%',{tooltip:{callbacks:{label:c=>`전환율: ${Number(c.raw).toFixed(2)}%`}},scales:{y:{beginAtZero:true,ticks:{callback:v=>v+'%'}}}}),plugins:[valueLabelsPlugin]});
+  attachHourlyChartToggle();
+  enableTableSort();
+}
+
+
+function rateDelta(curr, prev){
+  if(!isNum(curr)||!isNum(prev)||prev===0) return null;
+  return (curr-prev)/prev;
+}
+function deltaHtml(curr, prev, type='num', lowerIsGood=false){
+  const d=rateDelta(curr,prev);
+  if(d===null) return '전일 비교 없음';
+  const up=d>0, same=Math.abs(d)<0.0001;
+  const good=same?false:(lowerIsGood?!up:up);
+  const cls=same?'':(good?'good':'bad');
+  const sign=up?'+':'';
+  return `<span class="${cls}">전일 대비 ${sign}${(d*100).toFixed(1)}%</span>`;
+}
+function renderDailySearchSummary(daily,t){
+  window._dailySummaryRows=daily;
+  const latest=daily[daily.length-1]||{cost:0,db:0,clicks:0,dbCost:null,cpc:0,conv:0,date:''};
+  const prev=daily[daily.length-2]||null;
+  const latestDbCost=effectiveDbCost(latest.cost,latest.db);
+  const prevDbCost=prev?effectiveDbCost(prev.cost,prev.db):null;
+  const latestCpc=latest.clicks?latest.cost/latest.clicks:0;
+  const prevCpc=prev&&prev.clicks?prev.cost/prev.clicks:0;
+  const latestConv=latest.clicks?latest.db/latest.clicks:0;
+  const prevConv=prev&&prev.clicks?prev.db/prev.clicks:0;
+  const kpi=(label,num,delta,core='')=>`<div class="daily-kpi ${core}"><div class="label">${label}</div><div class="num">${num}</div><div class="delta">${delta}</div></div>`;
+  let judge='데이터가 더 쌓이면 전일 대비 판단이 표시됩니다.';
+  if(prev){
+    const costD=rateDelta(latest.cost,prev.cost)||0, dbD=rateDelta(latest.db,prev.db)||0, dbCostD=rateDelta(latestDbCost,prevDbCost)||0;
+    if(dbCostD<=-0.05) judge=`✅ DB단가가 전일 대비 ${Math.abs(dbCostD*100).toFixed(1)}% 개선되었습니다. 현재 효율은 좋은 흐름입니다.`;
+    else if(dbCostD>=0.05 && costD>0 && dbD<=0) judge=`🚨 광고비는 증가했지만 DB수가 늘지 않아 DB단가가 ${Math.abs(dbCostD*100).toFixed(1)}% 악화되었습니다.`;
+    else if(dbD>0 && costD<=0) judge=`✅ 광고비 증가 없이 DB수가 늘었습니다. 예산 유지 또는 확대 검토가 가능합니다.`;
+    else if(latest.cost>0&&!latest.db) judge='🚨 광고비가 사용됐지만 DB가 없습니다. 키워드·랜딩·상담 연결을 우선 점검하세요.';
+    else judge='🟡 전일 대비 큰 변화는 없습니다. DB단가와 DB수 흐름을 유지 관찰하세요.';
+  }
+  return `<div class="daily-summary">
+    <div class="daily-summary-head"><div><h3>오늘 요약</h3><div class="hint">가장 최근 일자 기준 · 광고비, DB수, DB단가, CPC, 전환율</div></div><span class="pill">${latest.date||'최근 데이터'}</span></div>
+    <div class="daily-kpi-row">
+      ${kpi('💰 광고비',won(latest.cost),prev?deltaHtml(latest.cost,prev.cost,'won',false):'전일 비교 없음')}
+      ${kpi('📥 DB수',fmt(latest.db)+'건',prev?deltaHtml(latest.db,prev.db,'num',false):'전일 비교 없음')}
+      ${kpi('💵 DB단가',moneyOrDash(latestDbCost),prev?deltaHtml(latestDbCost,prevDbCost,'won',true):'전일 비교 없음','core')}
+      ${kpi('👆 CPC',won(latestCpc),prev?deltaHtml(latestCpc,prevCpc,'won',true):'전일 비교 없음')}
+      ${kpi('🎯 전환율',pct(latestConv),prev?deltaHtml(latestConv,prevConv,'pct',false):'전일 비교 없음')}
+    </div>
+    <div class="daily-judge">${judge}</div>
+    <div class="daily-mini-chart"><div class="section-title"><h2>일별 DB수 + DB단가 추이</h2><span class="hint">막대: DB수 / 선: DB단가</span></div><canvas id="dailySearchMiniChart"></canvas></div>
+  </div>`;
+}
+function renderDailyMiniChart(daily){
+  if(charts.dailySearchMini){charts.dailySearchMini.destroy(); delete charts.dailySearchMini;}
+  const el=$('dailySearchMiniChart'); if(!el||!daily.length) return;
+  charts.dailySearchMini=new Chart(el,{type:'bar',data:{labels:daily.map(r=>r.date),datasets:[{type:'bar',label:'DB수',data:daily.map(r=>r.db),backgroundColor:'#16a34a',yAxisID:'y',order:1},{type:'line',label:'DB단가',data:daily.map(r=>effectiveDbCost(r.cost,r.db)||0),borderColor:'#dc2626',backgroundColor:'#dc2626',yAxisID:'y1',tension:.25,pointRadius:3,order:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>c.dataset.label==='DB단가'?`DB단가: ${won(c.raw)}`:`DB수: ${fmt(c.raw)}건`}}},scales:{y:{beginAtZero:true,ticks:{precision:0}},y1:{beginAtZero:true,position:'right',grid:{drawOnChartArea:false},ticks:{callback:v=>fmt(v)}}}}});
+}
+
+
+
+function summarizeBannerDaily(rows){
+  return groupBy(rows,r=>r.date,r=>({date:r.date,impressions:0,clicks:0,cost:0,db:0}),(a,r)=>{a.impressions+=r.impressions; a.clicks+=r.clicks; a.cost+=r.cost; a.db+=r.db;}).map(a=>({...a,ctr:a.impressions?a.clicks/a.impressions:0,cpc:a.clicks?a.cost/a.clicks:0,conv:a.clicks?a.db/a.clicks:0,dbCost:effectiveDbCost(a.cost,a.db)})).sort((a,b)=>a.date.localeCompare(b.date));
+}
+function renderBannerAiAnalysis(daily,creative,t){
+  const latest=daily[daily.length-1]||null;
+  const prev=daily[daily.length-2]||null;
+  const totalDbCost=effectiveDbCost(t.cost,t.db);
+  const best=creative.filter(r=>r.db>0&&isNum(r.dbCost)).sort((a,b)=>a.dbCost-b.dbCost)[0];
+  const worstNoDb=creative.filter(r=>r.cost>0&&!r.db).sort((a,b)=>b.cost-a.cost)[0];
+  const spendTop=creative.slice().sort((a,b)=>b.cost-a.cost)[0];
+  let status='보통', statusCls='warn', main='배너 소재별 광고비와 DB단가를 기준으로 소재 유지/교체 판단을 확인하세요.';
+  if(t.cost>0&&!t.db){status='위험'; statusCls='bad'; main='배너 광고비가 사용됐지만 DB가 발생하지 않았습니다. 소재·랜딩·타겟 점검이 필요합니다.';}
+  else if(best && totalDbCost && best.dbCost<=totalDbCost*0.75){status='좋음'; statusCls='good'; main=`${escapeHtml(best.creativeName)} 소재가 평균보다 낮은 DB단가로 성과를 만들고 있습니다. 우수 소재 중심으로 유지/확대를 검토하세요.`;}
+  else if(worstNoDb){status='주의'; statusCls='bad'; main=`${escapeHtml(worstNoDb.creativeName)} 소재는 광고비 ${won(worstNoDb.cost)}를 사용했지만 DB가 없습니다. 우선 교체 또는 노출 축소 후보입니다.`;}
+  else if(latest&&prev){
+    const d=rateDelta(effectiveDbCost(latest.cost,latest.db),effectiveDbCost(prev.cost,prev.db));
+    if(d!==null&&d<=-0.05){status='좋음'; statusCls='good'; main=`최근 일자 기준 DB단가가 전일 대비 ${Math.abs(d*100).toFixed(1)}% 개선되었습니다.`;}
+    else if(d!==null&&d>=0.05){status='주의'; statusCls='bad'; main=`최근 일자 기준 DB단가가 전일 대비 ${Math.abs(d*100).toFixed(1)}% 상승했습니다. 소재별 효율 확인이 필요합니다.`;}
+  }
+  const rank=(title,r,extra,cls='')=>`<div class="rank-card ${cls}"><b>${title}</b><div class="name">${r?escapeHtml(r.creativeName):'-'}</div><div class="meta">${r?extra(r):'데이터 없음'}</div></div>`;
+  return `<div class="ai-panel banner">
+    <div class="ai-head"><div><h3>🤖 배너광고 AI 분석</h3><div class="hint">소재 운영 판단용 · 효율 TOP/WORST/광고비 집중 소재</div></div><span class="ai-status ${statusCls}">${status}</span></div>
+    <div class="ai-main">${main}</div>
+    <div class="daily-kpi-row">
+      <div class="daily-kpi"><div class="label">💰 광고비</div><div class="num">${won(t.cost)}</div><div class="delta">배너 총 광고비</div></div>
+      <div class="daily-kpi"><div class="label">📥 DB수</div><div class="num">${fmt(t.db)}건</div><div class="delta">정상DB 기준</div></div>
+      <div class="daily-kpi core"><div class="label">💵 DB단가</div><div class="num">${moneyOrDash(totalDbCost)}</div><div class="delta">핵심 KPI</div></div>
+      <div class="daily-kpi"><div class="label">👆 클릭수</div><div class="num">${fmt(t.clicks)}</div><div class="delta">CTR ${pct(t.impressions?t.clicks/t.impressions:0)}</div></div>
+      <div class="daily-kpi"><div class="label">🎯 전환율</div><div class="num">${pct(t.clicks?t.db/t.clicks:0)}</div><div class="delta">클릭→DB</div></div>
+    </div>
+    <div class="keyword-rank-grid">
+      ${rank('✅ 효율 TOP 소재',best,r=>`DB단가 ${moneyOrDash(r.dbCost)} · DB ${fmt(r.db)}건`,'')}
+      ${rank('🚨 주의 소재',worstNoDb,r=>`광고비 ${won(r.cost)} · DB 0건`,'')}
+      ${rank('💰 광고비 TOP 소재',spendTop,r=>`광고비 ${won(r.cost)} · DB단가 ${moneyOrDash(r.dbCost)}`,'')}
+    </div>
+    <div class="daily-mini-chart" style="margin-top:12px"><div class="section-title"><h2>소재별 DB수 + DB단가</h2><span class="hint">막대: DB수 / 선: DB단가</span></div><canvas id="bannerCreativeMiniChart"></canvas></div>
+  </div>`;
+}
+function renderBannerCreativeMiniChart(rows){
+  if(charts.bannerCreativeMini){charts.bannerCreativeMini.destroy(); delete charts.bannerCreativeMini;}
+  const el=$('bannerCreativeMiniChart'); if(!el||!rows.length) return;
+  const top=rows.slice().sort((a,b)=>b.cost-a.cost).slice(0,12);
+  charts.bannerCreativeMini=new Chart(el,{type:'bar',data:{labels:top.map(r=>r.inTypeCode||r.creativeName),datasets:[{type:'bar',label:'DB수',data:top.map(r=>r.db),backgroundColor:'#ea580c',yAxisID:'y',order:1},{type:'line',label:'DB단가',data:top.map(r=>r.dbCost||0),borderColor:'#dc2626',backgroundColor:'#dc2626',yAxisID:'y1',tension:.25,pointRadius:3,order:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>c.dataset.label==='DB단가'?`DB단가: ${won(c.raw)}`:`DB수: ${fmt(c.raw)}건`}}},scales:{y:{beginAtZero:true,ticks:{precision:0}},y1:{beginAtZero:true,position:'right',grid:{drawOnChartArea:false},ticks:{callback:v=>fmt(v)}}}}});
+}
+function renderBannerDailySummary(daily,t){
+  window._bannerDailyRows=daily;
+  return `<div class="daily-summary"><div class="daily-summary-head"><div><h3>일별 배너 성과 요약</h3><div class="hint">날짜별 배너 광고비, DB수, DB단가 흐름</div></div><span class="pill banner">배너 일별</span></div>
+    <div class="daily-mini-chart"><div class="section-title"><h2>일별 배너 DB수 + DB단가 추이</h2><span class="hint">막대: DB수 / 선: DB단가</span></div><canvas id="bannerDailyMiniChart"></canvas></div></div>`;
+}
+function renderBannerDailyMiniChart(daily){
+  if(charts.bannerDailyMini){charts.bannerDailyMini.destroy(); delete charts.bannerDailyMini;}
+  const el=$('bannerDailyMiniChart'); if(!el||!daily.length) return;
+  charts.bannerDailyMini=new Chart(el,{type:'bar',data:{labels:daily.map(r=>r.date),datasets:[{type:'bar',label:'DB수',data:daily.map(r=>r.db),backgroundColor:'#ea580c',yAxisID:'y',order:1},{type:'line',label:'DB단가',data:daily.map(r=>r.dbCost||0),borderColor:'#dc2626',backgroundColor:'#dc2626',yAxisID:'y1',tension:.25,pointRadius:3,order:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>c.dataset.label==='DB단가'?`DB단가: ${won(c.raw)}`:`DB수: ${fmt(c.raw)}건`}}},scales:{y:{beginAtZero:true,ticks:{precision:0}},y1:{beginAtZero:true,position:'right',grid:{drawOnChartArea:false},ticks:{callback:v=>fmt(v)}}}}});
+}
+
+function renderSearchAiAnalysis(daily,t){
+  const latest=daily[daily.length-1]||null, prev=daily[daily.length-2]||null;
+  if(!latest) return '';
+  const dbCost=effectiveDbCost(latest.cost,latest.db);
+  const prevDbCost=prev?effectiveDbCost(prev.cost,prev.db):null;
+  const dbCostD=prev?rateDelta(dbCost,prevDbCost):null;
+  const costD=prev?rateDelta(latest.cost,prev.cost):null;
+  const dbD=prev?rateDelta(latest.db,prev.db):null;
+  const pcCostPer=latest.cost?latest.pcCost/latest.cost:0, moCostPer=latest.cost?latest.moCost/latest.cost:0;
+  const pcDbCost=effectiveDbCost(latest.pcCost,latest.pcDb), moDbCost=effectiveDbCost(latest.moCost,latest.moDb);
+  let status='보통', statusCls='warn', main='데이터가 더 쌓이면 검색광고 흐름을 자동 판단합니다.';
+  if(latest.cost>0&&!latest.db){status='위험'; statusCls='bad'; main='광고비가 사용됐지만 DB가 발생하지 않았습니다. 오늘은 키워드·랜딩·상담 연결을 우선 점검하는 것이 좋습니다.';}
+  else if(prev && dbCostD!==null && dbCostD<=-0.05){status='좋음'; statusCls='good'; main=`DB단가가 전일 대비 ${Math.abs(dbCostD*100).toFixed(1)}% 개선되었습니다. 현재 검색광고 효율은 좋은 흐름입니다.`;}
+  else if(prev && dbCostD!==null && dbCostD>=0.05){status='주의'; statusCls='bad'; main=`DB단가가 전일 대비 ${Math.abs(dbCostD*100).toFixed(1)}% 상승했습니다. 광고비 증가 대비 DB 증가가 충분한지 확인이 필요합니다.`;}
+  else if(prev && dbD!==null && dbD>0 && costD!==null && costD<=0){status='좋음'; statusCls='good'; main='광고비 증가 없이 DB수가 늘었습니다. 효율이 안정적인 날입니다.';}
+  else if(prev){main='전일 대비 큰 변화는 없습니다. DB단가와 DB수 흐름을 유지 관찰하면 됩니다.';}
+  const betterDevice=(isNum(pcDbCost)&&isNum(moDbCost))?(pcDbCost<moDbCost?'PC':'모바일'):null;
+  const item=(title,body)=>`<div class="ai-item"><b>${title}</b>${body}</div>`;
+  return `<div class="ai-panel">
+    <div class="ai-head"><div><h3>🤖 검색광고 AI 분석</h3><div class="hint">일별 성과 기준 · 오늘 운영 판단용</div></div><span class="ai-status ${statusCls}">${status}</span></div>
+    <div class="ai-main">${main}</div>
+    <div class="ai-list">
+      ${item('핵심 효율',`오늘 DB단가 <b class="${isNum(dbCost)?'bad':''}" style="display:inline">${moneyOrDash(dbCost)}</b> · DB ${fmt(latest.db)}건`)}
+      ${item('비용 흐름',prev?`광고비 ${won(latest.cost)} · 전일 대비 ${costD!==null?(costD*100).toFixed(1)+'%':'비교불가'}`:`광고비 ${won(latest.cost)}`)}
+      ${item('기기별 참고',betterDevice?`${betterDevice} DB단가가 더 낮습니다. PC ${moneyOrDash(pcDbCost)} / 모바일 ${moneyOrDash(moDbCost)}`:'기기별 DB단가 비교 데이터가 부족합니다.')}
+      ${item('예산 체크',moCostPer>0.65?`모바일 비용 비중이 ${(moCostPer*100).toFixed(1)}%로 높습니다.`:pcCostPer>0.65?`PC 비용 비중이 ${(pcCostPer*100).toFixed(1)}%로 높습니다.`:'PC/모바일 비용 비중이 과도하게 쏠리지 않았습니다.')}
+    </div>
+  </div>`;
+}
+
+function keywordGrade(r,avgDbCost){
+  if(r.cost>0&&!r.db) return '🔴';
+  if(isNum(r.dbCost)&&avgDbCost&&r.dbCost<=avgDbCost*0.75&&r.db>=1) return '🟢';
+  if(isNum(r.dbCost)&&avgDbCost&&r.dbCost>=avgDbCost*1.35) return '🔴';
+  return '🟡';
+}
+function renderKeywordAiAnalysis(ks,t){
+  if(!ks.length) return '';
+  const avgDbCost=effectiveDbCost(t.cost,t.db);
+  const best=ks.filter(r=>r.db>0&&isNum(r.dbCost)).sort((a,b)=>a.dbCost-b.dbCost)[0];
+  const worst=ks.filter(r=>r.cost>0).sort((a,b)=>(b.dbCost??999999999)-(a.dbCost??999999999))[0];
+  const noDb=ks.filter(r=>r.cost>0&&!r.db).sort((a,b)=>b.cost-a.cost);
+  const noDbCost=noDb.reduce((s,r)=>s+r.cost,0);
+  const highSpend=ks.slice().sort((a,b)=>b.cost-a.cost)[0];
+  let status='보통', statusCls='warn', main='키워드별 성과를 기준으로 효율 키워드와 점검 키워드를 구분했습니다.';
+  if(noDbCost>0 && t.cost && noDbCost/t.cost>=0.25){status='주의'; statusCls='bad'; main=`광고비의 ${(noDbCost/t.cost*100).toFixed(1)}%가 DB 없는 키워드에서 사용되었습니다. 무DB 고비용 키워드를 먼저 점검하세요.`;}
+  else if(best && avgDbCost && best.dbCost<=avgDbCost*0.75){status='좋음'; statusCls='good'; main=`${best.keyword} 키워드가 평균보다 낮은 DB단가로 성과를 만들고 있습니다. 우수 키워드 중심으로 운영하면 좋습니다.`;}
+  const rank=(title,r,extra,cls='')=>`<div class="rank-card ${cls}"><b>${title}</b><div class="name">${r?keywordGrade(r,avgDbCost)+' '+escapeHtml(r.keyword):'-'}</div><div class="meta">${r?extra(r):'데이터 없음'}</div></div>`;
+  return `<div class="ai-panel keyword">
+    <div class="ai-head"><div><h3>🤖 키워드 AI 분석</h3><div class="hint">효율 TOP/WORST와 무DB 키워드 중심</div></div><span class="ai-status ${statusCls}">${status}</span></div>
+    <div class="ai-main">${main}</div>
+    <div class="ai-list">
+      <div class="ai-item"><b>전체 키워드</b>${fmt(ks.length)}개 · 평균 DB단가 ${moneyOrDash(avgDbCost)}</div>
+      <div class="ai-item"><b>무DB 키워드</b>${fmt(noDb.length)}개 · 광고비 ${won(noDbCost)}</div>
+    </div>
+    <div class="keyword-rank-grid">
+      ${rank('✅ 효율 TOP',best,r=>`DB단가 ${moneyOrDash(r.dbCost)} · DB ${fmt(r.db)}건`,'good')}
+      ${rank('🚨 점검 우선',worst,r=>`광고비 ${won(r.cost)} · DB ${fmt(r.db)}건 · DB단가 ${moneyOrDash(r.dbCost)}`,'bad')}
+      ${rank('💰 광고비 TOP',highSpend,r=>`광고비 ${won(r.cost)} · DB ${fmt(r.db)}건 · 전환율 ${pct(r.conv)}`)}
+    </div>
+  </div>`;
+}
+
+
+function keywordRowHtml(r){return `<tr class="${rowClass(r)}"><td>${r.keyword}</td><td>${fmt(r.impressions)}</td><td>${fmt(r.clicks)}</td><td>${pct(r.ctr)}</td><td>${won(r.cpc)}</td><td>${won(r.cost)}</td><td class="good">${fmt(r.db)}</td><td class="${isNum(r.dbCost)?'bad':''}">${moneyOrDash(r.dbCost)}</td><td>${pct(r.conv)}</td><td>${won(r.pcCost)}</td><td class="good">${fmt(r.pcDb)}</td><td>${moneyOrDash(r.dbCostPc)}</td><td>${won(r.moCost)}</td><td class="good">${fmt(r.moDb)}</td><td>${moneyOrDash(r.dbCostMo)}</td></tr>`;}
+function renderKeywordPagination(total){
+  const totalPages=Math.max(1,Math.ceil(total/keywordPageSize));
+  keywordPage=Math.min(Math.max(1,keywordPage),totalPages);
+  const start=total?((keywordPage-1)*keywordPageSize+1):0;
+  const end=Math.min(total,keywordPage*keywordPageSize);
+  const pageBtns=[];
+  const from=Math.max(1,keywordPage-2), to=Math.min(totalPages,keywordPage+2);
+  if(from>1) pageBtns.push(`<button class="pager-btn" data-page="1">1</button>${from>2?'<span class="hint">…</span>':''}`);
+  for(let i=from;i<=to;i++) pageBtns.push(`<button class="pager-btn ${i===keywordPage?'active':''}" data-page="${i}">${i}</button>`);
+  if(to<totalPages) pageBtns.push(`${to<totalPages-1?'<span class="hint">…</span>':''}<button class="pager-btn" data-page="${totalPages}">${totalPages}</button>`);
+  return `<div class="pager-bar keywordPager">
+    <div class="pager-left"><div class="pager-info">키워드 ${fmt(total)}개 <span class="muted">· ${fmt(start)}-${fmt(end)} 표시</span></div><select class="pager-size"><option value="25" ${keywordPageSize===25?'selected':''}>25개씩</option><option value="50" ${keywordPageSize===50?'selected':''}>50개씩</option><option value="100" ${keywordPageSize===100?'selected':''}>100개씩</option><option value="200" ${keywordPageSize===200?'selected':''}>200개씩</option></select></div>
+    <div class="pager-right"><button class="pager-btn" data-page="${keywordPage-1}" ${keywordPage<=1?'disabled':''}>이전</button>${pageBtns.join('')}<button class="pager-btn" data-page="${keywordPage+1}" ${keywordPage>=totalPages?'disabled':''}>다음</button></div>
+  </div>`;
+}
+function attachKeywordPagination(){
+  document.querySelectorAll('.keywordPager').forEach(pager=>{
+    const size=pager.querySelector('.pager-size');
+    if(size) size.addEventListener('change',e=>{keywordPageSize=Number(e.target.value)||50; keywordPage=1; renderTable(filtered()); window.scrollTo({top:$('dataView').offsetTop-10,behavior:'smooth'});});
+    pager.querySelectorAll('button[data-page]').forEach(btn=>btn.addEventListener('click',()=>{if(btn.disabled) return; keywordPage=Number(btn.dataset.page)||1; renderTable(filtered()); window.scrollTo({top:$('dataView').offsetTop-10,behavior:'smooth'});}));
+  });
+}
+
+function renderTable(searchRows){
+  let html='';
+  if(currentTab==='hourlyEfficiency'){renderHourlyEfficiency(searchRows); return;}
+  $('tableArea').classList.remove('hour-mode');
+  ['hourlyEfficiency','hourlyDbCost','hourlyCpc','hourlyCtr','hourlyConv'].forEach(k=>{if(charts[k]){charts[k].destroy(); delete charts[k];}});
+
+  if(currentTab==='dailyKeyword'){
+    const daily=groupBy(searchRows,r=>r.date,r=>({date:r.date,impressions:0,clicks:0,cost:0,db:0,pcDb:0,moDb:0,pcCost:0,moCost:0}),(a,r)=>{a.impressions+=r.impressions; a.clicks+=r.clicks; a.cost+=r.cost; a.db+=r.db; a.pcDb+=r.pcDb; a.moDb+=r.moDb; a.pcCost+=r.pcCost; a.moCost+=r.moCost;}).map(a=>({...a,ctr:a.impressions?a.clicks/a.impressions:0,cpc:a.clicks?a.cost/a.clicks:0,conv:a.clicks?a.db/a.clicks:0,dbCost:effectiveDbCost(a.cost,a.db),dbCostPc:effectiveDbCost(a.pcCost,a.pcDb),dbCostMo:effectiveDbCost(a.moCost,a.moDb)})).sort((a,b)=>a.date.localeCompare(b.date));
+    const t=daily.reduce((a,r)=>{['impressions','clicks','cost','db','pcDb','moDb','pcCost','moCost'].forEach(k=>a[k]+=r[k]); return a;},{impressions:0,clicks:0,cost:0,db:0,pcDb:0,moDb:0,pcCost:0,moCost:0});
+    const totals=`<td>합계</td><td>${fmt(t.impressions)}</td><td>${fmt(t.clicks)}</td><td>${pct(t.impressions?t.clicks/t.impressions:0)}</td><td>${t.clicks?won(t.cost/t.clicks):'-'}</td><td>${won(t.cost)}</td><td>${fmt(t.db)}</td><td>${pct(t.clicks?t.db/t.clicks:0)}</td><td>${moneyOrDash(effectiveDbCost(t.cost,t.db))}</td><td>${won(t.pcCost)}</td><td>${fmt(t.pcDb)}</td><td>${moneyOrDash(effectiveDbCost(t.pcCost,t.pcDb))}</td><td>${won(t.moCost)}</td><td>${fmt(t.moDb)}</td><td>${moneyOrDash(effectiveDbCost(t.moCost,t.moDb))}</td>`;
+    html=renderSearchAiAnalysis(daily,t)+renderDailySearchSummary(daily,t)+table(['날짜','노출','클릭','CTR','CPC','광고비','DB수','전환율','DB단가','PC비용','PC DB수','DB단가(PC)','모바일비용','모바일 DB수','DB단가(모바일)'],daily.map(r=>`<tr class="${rowClass(r)}"><td>${r.date}</td><td>${fmt(r.impressions)}</td><td>${fmt(r.clicks)}</td><td>${pct(r.ctr)}</td><td>${won(r.cpc)}</td><td>${won(r.cost)}</td><td class="good">${fmt(r.db)}</td><td>${pct(r.conv)}</td><td class="${isNum(r.dbCost)?'bad':''}">${moneyOrDash(r.dbCost)}</td><td>${won(r.pcCost)}</td><td class="good">${fmt(r.pcDb)}</td><td>${moneyOrDash(r.dbCostPc)}</td><td>${won(r.moCost)}</td><td class="good">${fmt(r.moDb)}</td><td>${moneyOrDash(r.dbCostMo)}</td></tr>`),totals);
+  } else if(currentTab==='keywordSummary'){
+    const ks=summarizeKeyword(searchRows);
+    const t=ks.reduce((a,r)=>{['impressions','clicks','cost','db','pcDb','moDb','pcCost','moCost'].forEach(k=>a[k]+=r[k]); return a;},{impressions:0,clicks:0,cost:0,db:0,pcDb:0,moDb:0,pcCost:0,moCost:0});
+    const totals=`<td>합계</td><td>${fmt(t.impressions)}</td><td>${fmt(t.clicks)}</td><td>${pct(t.impressions?t.clicks/t.impressions:0)}</td><td>${t.clicks?won(t.cost/t.clicks):'-'}</td><td>${won(t.cost)}</td><td>${fmt(t.db)}</td><td>${moneyOrDash(effectiveDbCost(t.cost,t.db))}</td><td>${pct(t.clicks?t.db/t.clicks:0)}</td><td>${won(t.pcCost)}</td><td>${fmt(t.pcDb)}</td><td>${moneyOrDash(effectiveDbCost(t.pcCost,t.pcDb))}</td><td>${won(t.moCost)}</td><td>${fmt(t.moDb)}</td><td>${moneyOrDash(effectiveDbCost(t.moCost,t.moDb))}</td>`;
+    const totalPages=Math.max(1,Math.ceil(ks.length/keywordPageSize)); keywordPage=Math.min(Math.max(1,keywordPage),totalPages); const pageRows=ks.slice((keywordPage-1)*keywordPageSize,keywordPage*keywordPageSize);
+    html=renderKeywordAiAnalysis(ks,t)+renderKeywordPagination(ks.length)+table(['키워드','노출','클릭','CTR','CPC','광고비','DB수','DB단가','전환율','PC비용','PC DB수','DB단가(PC)','모바일비용','모바일 DB수','DB단가(모바일)'],pageRows.map(keywordRowHtml),totals)+renderKeywordPagination(ks.length);
+  } else if(currentTab==='bannerDaily'){
+    const br=filteredBanner();
+    const daily=summarizeBannerDaily(br);
+    const creative=summarizeBannerCreative(br);
+    const t=daily.reduce((a,r)=>{['impressions','clicks','cost','db'].forEach(k=>a[k]+=r[k]); return a;},{impressions:0,clicks:0,cost:0,db:0});
+    const totals=`<td>합계</td><td>${fmt(t.impressions)}</td><td>${fmt(t.clicks)}</td><td>${pct(t.impressions?t.clicks/t.impressions:0)}</td><td>${t.clicks?won(t.cost/t.clicks):'-'}</td><td>${won(t.cost)}</td><td>${fmt(t.db)}</td><td>${pct(t.clicks?t.db/t.clicks:0)}</td><td>${moneyOrDash(effectiveDbCost(t.cost,t.db))}</td>`;
+    html=`<div class="banner-area summary">
+      <div class="banner-area-head"><div><h3>상단 요약</h3><div class="hint">배너광고 전체 KPI, AI 판단, 소재 TOP/WORST</div></div><span class="pill banner">요약</span></div>
+      ${renderBannerAiAnalysis(daily,creative,t)}
+    </div>
+    <div class="banner-area data">
+      <div class="banner-area-head"><div><h3>일별 배너 성과</h3><div class="hint">날짜별 배너 광고비, DB수, DB단가 흐름과 상세 데이터</div></div><span class="pill banner">일별</span></div>
+      ${renderBannerDailySummary(daily,t)}
+      ${table(['날짜','노출','클릭','CTR','CPC','광고비','DB수','전환율','DB단가'],daily.map(r=>`<tr class="${rowClass(r)}"><td>${r.date}</td><td>${fmt(r.impressions)}</td><td>${fmt(r.clicks)}</td><td>${pct(r.ctr)}</td><td>${won(r.cpc)}</td><td>${won(r.cost)}</td><td class="good">${fmt(r.db)}</td><td>${pct(r.conv)}</td><td class="${isNum(r.dbCost)?'bad':''}">${moneyOrDash(r.dbCost)}</td></tr>`),totals)}
+    </div>`;
+  } else if(currentTab==='bannerCreative'){
+    const br=filteredBanner();
+    const bs=summarizeBannerCreative(br);
+    const daily=summarizeBannerDaily(br);
+    const t=bs.reduce((a,r)=>{['impressions','clicks','cost','db'].forEach(k=>a[k]+=r[k]); return a;},{impressions:0,clicks:0,cost:0,db:0});
+    const totals=`<td>합계</td><td>-</td><td>${fmt(t.impressions)}</td><td>${fmt(t.clicks)}</td><td>${pct(t.impressions?t.clicks/t.impressions:0)}</td><td>${t.clicks?won(t.cost/t.clicks):'-'}</td><td>${won(t.cost)}</td><td>${fmt(t.db)}</td><td>${moneyOrDash(effectiveDbCost(t.cost,t.db))}</td><td>${pct(t.clicks?t.db/t.clicks:0)}</td>`;
+    html=`<div class="banner-area summary">
+      <div class="banner-area-head"><div><h3>상단 요약</h3><div class="hint">배너광고 전체 KPI, AI 판단, 소재 TOP/WORST</div></div><span class="pill banner">요약</span></div>
+      ${renderBannerAiAnalysis(daily,bs,t)}
+    </div>
+    <div class="banner-area data">
+      <div class="banner-area-head"><div><h3>소재별 성과</h3><div class="hint">소재명을 클릭하면 이미지와 일별 데이터를 확인합니다.</div></div><span class="pill banner">소재별</span></div>
+      ${table(['소재명 (클릭 → 일별)','인타입코드','노출','클릭','CTR','CPC','광고비','DB수','DB단가','전환율'],bs.map(r=>`<tr class="clickable-row ${rowClass(r)}" data-in-type="${encodeURIComponent(r.inTypeCode)}"><td>${r.creativeName}</td><td><span class="pill banner">${r.inTypeCode}</span></td><td>${fmt(r.impressions)}</td><td>${fmt(r.clicks)}</td><td>${pct(r.ctr)}</td><td>${won(r.cpc)}</td><td>${won(r.cost)}</td><td class="good">${fmt(r.db)}</td><td class="${isNum(r.dbCost)?'bad':''}">${moneyOrDash(r.dbCost)}</td><td>${pct(r.conv)}</td></tr>`),totals)}
+    </div>`;
+  }
+  $('tableArea').innerHTML=html;
+  if(currentTab==='dailyKeyword') renderDailyMiniChart(window._dailySummaryRows||[]); else if(charts.dailySearchMini){charts.dailySearchMini.destroy(); delete charts.dailySearchMini;}
+  if(currentTab==='bannerDaily') renderBannerDailyMiniChart(window._bannerDailyRows||[]); else if(charts.bannerDailyMini){charts.bannerDailyMini.destroy(); delete charts.bannerDailyMini;}
+  if(currentTab==='bannerDaily'||currentTab==='bannerCreative') renderBannerCreativeMiniChart(summarizeBannerCreative(filteredBanner())); else if(charts.bannerCreativeMini){charts.bannerCreativeMini.destroy(); delete charts.bannerCreativeMini;}
+  enableTableSort(); if(currentTab==='keywordSummary') attachKeywordPagination();
+}
+function sortValue(text){const raw=String(text||'').trim(); if(/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw; if(raw==='-'||raw==='') return -Infinity; const num=Number(raw.replace(/원|%|,/g,'').replace(/[^0-9.\-]/g,'')); return isNaN(num)?raw:num;}
+function enableTableSort(){const tbl=$('tableArea').querySelector('table'); if(!tbl) return; tbl.querySelectorAll('th').forEach(th=>th.addEventListener('click',()=>{const col=Number(th.dataset.col), asc=!th.classList.contains('sort-asc'); tbl.querySelectorAll('th').forEach(x=>x.classList.remove('sort-asc','sort-desc')); th.classList.add(asc?'sort-asc':'sort-desc'); [...tbl.tBodies[0].rows].sort((a,b)=>{const av=sortValue(a.cells[col]?.innerText), bv=sortValue(b.cells[col]?.innerText); if(typeof av==='number'&&typeof bv==='number') return asc?av-bv:bv-av; return asc?String(av).localeCompare(String(bv),'ko'):String(bv).localeCompare(String(av),'ko');}).forEach(r=>tbl.tBodies[0].appendChild(r));}));}
+
+function monthKey(date){return String(date||'').slice(0,7);}
+function monthName(m){const [y,mo]=String(m).split('-'); return `${Number(mo)}월`;}
+function calcDelta(cur,prev,reverse=false){
+  if(!prev&&cur) return {text:'신규',cls:'neutral'};
+  if(!prev&&!cur) return {text:'-',cls:'neutral'};
+  const d=(cur-prev)/prev;
+  const good=reverse?d<0:d>0;
+  const sign=d>0?'+':'';
+  return {text:`${sign}${(d*100).toFixed(1)}%`,cls:Math.abs(d)<0.001?'neutral':(good?'good':'bad')};
+}
+function buildMonthlyData(){
+  const search=filtered();
+  const banner=filteredBanner();
+  const map=new Map();
+  const ensure=m=>{if(!map.has(m)) map.set(m,{month:m,cost:0,impressions:0,clicks:0,db:0,searchCost:0,searchDb:0,bannerCost:0,bannerDb:0}); return map.get(m);};
+  search.forEach(r=>{const m=monthKey(r.date); if(!m) return; const a=ensure(m); a.cost+=r.cost; a.impressions+=r.impressions; a.clicks+=r.clicks; a.db+=r.db; a.searchCost+=r.cost; a.searchDb+=r.db;});
+  banner.forEach(r=>{const m=monthKey(r.date); if(!m) return; const a=ensure(m); a.cost+=r.cost; a.impressions+=r.impressions; a.clicks+=r.clicks; a.db+=r.db; a.bannerCost+=r.cost; a.bannerDb+=r.db;});
+  return [...map.values()].map(a=>({...a,ctr:a.impressions?a.clicks/a.impressions:0,cpc:a.clicks?a.cost/a.clicks:0,conv:a.clicks?a.db/a.clicks:0,dbCost:effectiveDbCost(a.cost,a.db),searchDbCost:effectiveDbCost(a.searchCost,a.searchDb),bannerDbCost:effectiveDbCost(a.bannerCost,a.bannerDb)})).sort((a,b)=>a.month.localeCompare(b.month));
+}
+function renderMonthlyComparison(){
+  const rows=buildMonthlyData();
+  const area=$('monthlyArea');
+  if(!area) return;
+  if(!rows.length){area.innerHTML='<div class="empty">월별 비교할 데이터가 없습니다.</div>'; return;}
+  const cur=rows[rows.length-1], prev=rows[rows.length-2];
+  const dCost=prev?calcDelta(cur.cost,prev.cost):{text:'-',cls:'neutral'};
+  const dDb=prev?calcDelta(cur.db,prev.db):{text:'-',cls:'neutral'};
+  const dDbCost=prev?calcDelta(cur.dbCost||0,prev.dbCost||0,true):{text:'-',cls:'neutral'};
+  const dConv=prev?calcDelta(cur.conv,prev.conv):{text:'-',cls:'neutral'};
+  const card=(label,value,delta,sub='')=>`<div class="monthly-card"><div class="label">${label}</div><div class="value">${value}</div><div class="delta ${delta.cls}">${delta.text}</div><div class="hint">${sub}</div></div>`;
+  let ai='월별 비교를 위해 2개월 이상 데이터를 함께 업로드하면 전월 대비 판단이 표시됩니다.';
+  if(prev){
+    const dbCostTxt=dDbCost.cls==='good'?'개선':'악화';
+    const dbTxt=dDb.cls==='good'?'증가':'감소';
+    ai=`${monthName(prev.month)} 대비 ${monthName(cur.month)}는 DB가 <b>${dDb.text}</b> ${dbTxt}했고, 광고비는 <b>${dCost.text}</b> 변화했습니다. DB단가는 <b class="${dDbCost.cls}">${dDbCost.text}</b> ${dbCostTxt}되어 ${dDbCost.cls==='good'?'효율이 좋아진 흐름입니다.':'효율 점검이 필요합니다.'}`;
+  }
+  const totals=rows.reduce((a,r)=>{['cost','impressions','clicks','db','searchCost','searchDb','bannerCost','bannerDb'].forEach(k=>a[k]+=r[k]); return a;},{cost:0,impressions:0,clicks:0,db:0,searchCost:0,searchDb:0,bannerCost:0,bannerDb:0});
+  const totalDbCost=effectiveDbCost(totals.cost,totals.db), totalCpc=totals.clicks?totals.cost/totals.clicks:0, totalConv=totals.clicks?totals.db/totals.clicks:0;
+  const tableRows=rows.map(r=>`<tr><td>${r.month}</td><td>${won(r.cost)}</td><td>${fmt(r.db)}</td><td class="${isNum(r.dbCost)?'bad':''}">${moneyOrDash(r.dbCost)}</td><td>${fmt(r.clicks)}</td><td>${won(r.cpc)}</td><td>${pct(r.conv)}</td><td>${won(r.searchCost)}</td><td>${fmt(r.searchDb)}</td><td>${moneyOrDash(r.searchDbCost)}</td><td>${won(r.bannerCost)}</td><td>${fmt(r.bannerDb)}</td><td>${moneyOrDash(r.bannerDbCost)}</td></tr>`);
+  const totalsRow=`<td>합계</td><td>${won(totals.cost)}</td><td>${fmt(totals.db)}</td><td>${moneyOrDash(totalDbCost)}</td><td>${fmt(totals.clicks)}</td><td>${won(totalCpc)}</td><td>${pct(totalConv)}</td><td>${won(totals.searchCost)}</td><td>${fmt(totals.searchDb)}</td><td>${moneyOrDash(effectiveDbCost(totals.searchCost,totals.searchDb))}</td><td>${won(totals.bannerCost)}</td><td>${fmt(totals.bannerDb)}</td><td>${moneyOrDash(effectiveDbCost(totals.bannerCost,totals.bannerDb))}</td>`;
+  area.innerHTML=`
+    <div class="monthly-grid">
+      ${card('광고비',won(cur.cost),dCost,prev?`${monthName(prev.month)} 대비`:monthName(cur.month))}
+      ${card('DB수',fmt(cur.db),dDb,prev?`${monthName(prev.month)} 대비`:monthName(cur.month))}
+      ${card('DB단가',moneyOrDash(cur.dbCost),dDbCost,'낮을수록 좋음')}
+      ${card('전환율',pct(cur.conv),dConv,'클릭 → DB')}
+      ${card('CPC',won(cur.cpc),prev?calcDelta(cur.cpc,prev.cpc,true):{text:'-',cls:'neutral'},'클릭당 비용')}
+    </div>
+    <div class="monthly-ai"><h3>🤖 월간 분석</h3><div>${ai}</div></div>
+    <div class="monthly-chart-box"><div class="section-title"><h2>월별 DB수 + DB단가 + 광고비</h2><span class="hint">막대: DB수 / 선: DB단가·광고비</span></div><canvas id="monthlyTrendChart"></canvas></div>
+    <div class="monthly-media-grid">
+      <div class="monthly-chart-box"><div class="section-title"><h2>검색 vs 배너 DB수</h2><span class="hint">월별 매체별 DB 기여도</span></div><canvas id="monthlyMediaDbChart"></canvas></div>
+      <div class="monthly-chart-box"><div class="section-title"><h2>검색 vs 배너 DB단가</h2><span class="hint">월별 매체별 효율 비교</span></div><canvas id="monthlyMediaCostChart"></canvas></div>
+    </div>
+    <div class="monthly-table-wrap">${table(['월','광고비','DB수','DB단가','클릭수','CPC','전환율','검색비용','검색DB','검색DB단가','배너비용','배너DB','배너DB단가'],tableRows,totalsRow)}</div>
+  `;
+  ['monthlyTrend','monthlyMediaDb','monthlyMediaCost'].forEach(k=>{if(charts[k]){charts[k].destroy(); delete charts[k];}});
+  const labels=rows.map(r=>r.month);
+  charts.monthlyTrend=new Chart($('monthlyTrendChart'),{type:'bar',data:{labels,datasets:[{type:'bar',label:'DB수',data:rows.map(r=>r.db),backgroundColor:'#16a34a',yAxisID:'y',order:2},{type:'line',label:'DB단가',data:rows.map(r=>r.dbCost||0),borderColor:'#dc2626',backgroundColor:'#dc2626',yAxisID:'y1',tension:.25,pointRadius:3,order:0},{type:'line',label:'광고비',data:rows.map(r=>r.cost||0),borderColor:'#2563eb',backgroundColor:'#2563eb',yAxisID:'y1',tension:.25,pointRadius:3,order:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>c.dataset.label==='DB수'?`DB수: ${fmt(c.raw)}건`:`${c.dataset.label}: ${won(c.raw)}`}}},scales:{y:{beginAtZero:true,ticks:{precision:0}},y1:{beginAtZero:true,position:'right',grid:{drawOnChartArea:false},ticks:{callback:v=>fmt(v)}}}}});
+  charts.monthlyMediaDb=new Chart($('monthlyMediaDbChart'),{type:'bar',data:{labels,datasets:[{label:'검색DB',data:rows.map(r=>r.searchDb),backgroundColor:'#2563eb'},{label:'배너DB',data:rows.map(r=>r.bannerDb),backgroundColor:'#ea580c'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}},scales:{y:{beginAtZero:true,ticks:{precision:0}}}}});
+  charts.monthlyMediaCost=new Chart($('monthlyMediaCostChart'),{type:'bar',data:{labels,datasets:[{label:'검색DB단가',data:rows.map(r=>r.searchDbCost||0),backgroundColor:'#2563eb'},{label:'배너DB단가',data:rows.map(r=>r.bannerDbCost||0),backgroundColor:'#ea580c'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${won(c.raw)}`}}},scales:{y:{beginAtZero:true,ticks:{callback:v=>fmt(v)}}}}});
+  enableMonthlyTableSort();
+}
+function enableMonthlyTableSort(){const area=$('monthlyArea'); if(!area) return; const tbl=area.querySelector('table'); if(!tbl) return; tbl.querySelectorAll('th').forEach(th=>th.addEventListener('click',()=>{const col=Number(th.dataset.col), asc=!th.classList.contains('sort-asc'); tbl.querySelectorAll('th').forEach(x=>x.classList.remove('sort-asc','sort-desc')); th.classList.add(asc?'sort-asc':'sort-desc'); [...tbl.tBodies[0].rows].sort((a,b)=>{const av=sortValue(a.cells[col]?.innerText), bv=sortValue(b.cells[col]?.innerText); if(typeof av==='number'&&typeof bv==='number') return asc?av-bv:bv-av; return asc?String(av).localeCompare(String(bv),'ko'):String(bv).localeCompare(String(av),'ko');}).forEach(r=>tbl.tBodies[0].appendChild(r));}));}
+function setHiddenState(el,hidden){if(!el) return; if(hidden) el.setAttribute('data-hidden','true'); else el.removeAttribute('data-hidden');}
+function switchMainTab(tab){
+  window._mainTab=tab;
+  document.querySelectorAll('.main-tab').forEach(btn=>btn.classList.toggle('active',btn.dataset.mainTab===tab));
+  $('summaryView').hidden=tab!=='summary';
+  $('dataView').hidden=(tab==='summary'||tab==='monthly');
+  $('monthlyView').hidden=tab!=='monthly';
+  const dailyBtn=document.querySelector('.tab[data-tab="dailyKeyword"]');
+  const hourBtn=document.querySelector('.tab[data-tab="hourlyEfficiency"]');
+  const keywordBtn=document.querySelector('.tab[data-tab="keywordSummary"]');
+  const bannerDailyBtn=document.querySelector('.tab[data-tab="bannerDaily"]');
+  const bannerBtn=document.querySelector('.tab[data-tab="bannerCreative"]');
+  const exportDaily=$('exportDailyBtn'), exportKeyword=$('exportKeywordBtn'), exportBanner=$('exportBannerBtn');
+  if(tab==='search'){
+    $('dataViewTitle').textContent='검색광고 데이터';
+    $('dataViewHint').textContent='일별·시간대별·키워드별 검색광고 성과를 확인합니다.';
+    setHiddenState(dailyBtn,false); setHiddenState(hourBtn,false); setHiddenState(keywordBtn,false); setHiddenState(bannerDailyBtn,true); setHiddenState(bannerBtn,true);
+    setHiddenState(exportDaily,false); setHiddenState(exportKeyword,false); setHiddenState(exportBanner,true);
+    if(currentTab==='bannerCreative'||currentTab==='bannerDaily') currentTab='dailyKeyword';
+  }else if(tab==='banner'){
+    $('dataViewTitle').textContent='배너광고 데이터';
+    $('dataViewHint').textContent='소재별 성과를 보고, 소재명을 클릭해 이미지와 일별 데이터를 확인합니다.';
+    setHiddenState(dailyBtn,true); setHiddenState(hourBtn,true); setHiddenState(keywordBtn,true); setHiddenState(bannerDailyBtn,false); setHiddenState(bannerBtn,false);
+    setHiddenState(exportDaily,true); setHiddenState(exportKeyword,true); setHiddenState(exportBanner,false);
+    currentTab='bannerDaily';
+  }else if(tab==='monthly'){
+    setHiddenState(exportDaily,true); setHiddenState(exportKeyword,true); setHiddenState(exportBanner,true);
+  }
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.tab===currentTab));
+  if(dbRows.length||adRows.length||bannerRows.length){ if(tab==='monthly') renderMonthlyComparison(); else renderTable(filtered()); }
+}
+function refresh(){const rows=filtered(); renderKPIs(rows); renderInsights(rows); renderCharts(); if(window._mainTab==='monthly') renderMonthlyComparison(); else renderTable(rows); const loaded=[]; if(adRows.length) loaded.push(`검색광고 ${fmt(adRows.length)}행`); if(bannerRows.length) loaded.push(`배너 ${fmt(bannerRows.length)}행`); if(dbRows.length) loaded.push(`DB ${fmt(dbRows.length)}행`); $('status').textContent=loaded.length?loaded.join(' / ')+' 로드됨':'파일을 선택해주세요.';}
+
+const GITHUB_DATA_FILES=[
+  {name:'db.xlsx', url:'https://raw.githubusercontent.com/ameny52-sketch/ad-dashboard-data/main/db.xlsx'},
+  {name:'키워드.csv', url:'https://raw.githubusercontent.com/ameny52-sketch/ad-dashboard-data/main/%ED%82%A4%EC%9B%8C%EB%93%9C.csv'},
+  {name:'result.csv', url:'https://raw.githubusercontent.com/ameny52-sketch/ad-dashboard-data/main/result.csv'}
+];
+async function fetchGithubFile(item){
+  const url=item.url+(item.url.includes('?')?'&':'?')+'v='+Date.now();
+  const res=await fetch(url,{cache:'no-store'});
+  if(!res.ok) throw new Error(`${item.name} 다운로드 실패 · HTTP ${res.status}`);
+  const blob=await res.blob();
+  const type=item.name.toLowerCase().endsWith('.csv')?'text/csv':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  return new File([blob],item.name,{type});
+}
+async function loadGithubData(){
+  const btn=$('githubLoadBtn');
+  try{
+    if(btn){btn.disabled=true; btn.textContent='⏳ GitHub 데이터 불러오는 중...';}
+    $('status').textContent='GitHub에서 최신 데이터 다운로드 중...';
+    const files=await Promise.all(GITHUB_DATA_FILES.map(fetchGithubFile));
+    dbRows=[]; adRows=[]; bannerRows=[];
+    IMAGE_VERSION=Date.now();
+    preloadedBannerImageUrls.clear();
+    window._githubLoadingNow=true;
+    await handleFiles(files);
+    window._githubLoadingNow=false;
+    const now=new Date();
+    $('status').textContent=`GitHub 최신 데이터 로드 완료 · 이미지 ${preloadedBannerImageUrls.size}개 캐시 · ${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  }catch(err){
+    console.error(err);
+    alert('GitHub 데이터 불러오기 실패\n\n'+(err?.message||err));
+    $('status').textContent='GitHub 데이터 불러오기 실패';
+  }finally{
+    window._githubLoadingNow=false;
+    if(btn){btn.disabled=false; btn.textContent='🔄 최신 데이터 가져오기';}
+  }
+}
+
+function peekCSVHeaders(file){return new Promise(resolve=>{const r=new FileReader(); r.onload=e=>{const text=String(e.target.result||'').slice(0,1000); const line=text.split(/\r?\n/).find(l=>l.trim()); resolve(line?line.split(',').map(h=>h.replace(/^"|"$/g,'').trim()):[]);}; r.readAsText(file,'UTF-8');});}
+async function handleFiles(files){$('status').textContent='파일 분석 중...'; if(!window._githubLoadingNow){IMAGE_VERSION=Date.now(); preloadedBannerImageUrls.clear();} const jobs=[]; for(const file of files){if(/\.(xlsx|xls)$/i.test(file.name)){jobs.push(parseDBExcel(file).then(rows=>{dbRows=rows; setBadge('badge-db','✅ DB관리 엑셀 — '+fmt(rows.length)+'행');}));} else if(/\.csv$/i.test(file.name)){const headers=await peekCSVHeaders(file); if(headers.some(h=>h.includes('광고 소재 이름')||h.includes('광고소재'))) jobs.push(parseBannerCSV(file).then(rows=>{bannerRows=rows; setBadge('badge-banner','✅ 배너 소재 CSV — '+fmt(rows.length)+'행');})); else if(headers.some(h=>h.includes('키워드'))||headers.some(h=>h.includes('일별'))) jobs.push(parseAdCSV(file).then(rows=>{adRows=rows; setBadge('badge-ad','✅ 검색광고 CSV — '+fmt(rows.length)+'행');})); else $('status').textContent=`${file.name} — 인식불가 형식`;}} await Promise.all(jobs); if(dbRows.length||adRows.length||bannerRows.length){setDefaultDates(); refresh(); await preloadBannerImages();} else $('status').textContent='인식 가능한 파일을 업로드해주세요.';}
+function setBadge(id,text){const el=$(id); el.textContent=text; el.classList.toggle('ok',text.startsWith('✅'));}
+function downloadXlsx(data,sheetName,fileName){if(!data.length){alert('데이터가 없습니다.'); return;} const ws=XLSX.utils.json_to_sheet(data), wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,sheetName); XLSX.writeFile(wb,fileName);}
+function exportDaily(){const rows=filtered(); const daily=groupBy(rows,r=>r.date,r=>({date:r.date,impressions:0,clicks:0,cost:0,db:0,pcDb:0,moDb:0,pcCost:0,moCost:0}),(a,r)=>{a.impressions+=r.impressions;a.clicks+=r.clicks;a.cost+=r.cost;a.db+=r.db;a.pcDb+=r.pcDb;a.moDb+=r.moDb;a.pcCost+=r.pcCost;a.moCost+=r.moCost;}).map(a=>({'날짜':a.date,'노출수':a.impressions,'클릭수':a.clicks,'CTR(%)':a.impressions?+(a.clicks/a.impressions*100).toFixed(2):0,'평균CPC':a.clicks?Math.round(a.cost/a.clicks):0,'광고비':a.cost,'DB수':a.db,'전환율(%)':a.clicks?+(a.db/a.clicks*100).toFixed(2):0,'DB단가':Math.round(effectiveDbCost(a.cost,a.db)||0),'PC광고비':a.pcCost,'PC DB수':a.pcDb,'DB단가(PC)':Math.round(effectiveDbCost(a.pcCost,a.pcDb)||0),'모바일광고비':a.moCost,'모바일 DB수':a.moDb,'DB단가(모바일)':Math.round(effectiveDbCost(a.moCost,a.moDb)||0)})).sort((a,b)=>a['날짜'].localeCompare(b['날짜'])); downloadXlsx(daily,'일별검색성과',`일별_검색광고_${new Date().toISOString().slice(0,10)}.xlsx`);}
+function exportKeyword(){const data=summarizeKeyword(filtered()).map(r=>({'키워드':r.keyword,'노출수':r.impressions,'클릭수':r.clicks,'CTR(%)':r.impressions?+(r.clicks/r.impressions*100).toFixed(2):0,'평균CPC':r.clicks?Math.round(r.cost/r.clicks):0,'광고비':r.cost,'DB수':r.db,'전환율(%)':r.clicks?+(r.db/r.clicks*100).toFixed(2):0,'DB단가':Math.round(effectiveDbCost(r.cost,r.db)||0),'PC광고비':r.pcCost,'PC DB수':r.pcDb,'DB단가(PC)':Math.round(effectiveDbCost(r.pcCost,r.pcDb)||0),'모바일광고비':r.moCost,'모바일 DB수':r.moDb,'DB단가(모바일)':Math.round(effectiveDbCost(r.moCost,r.moDb)||0)})); downloadXlsx(data,'키워드별성과',`키워드별_성과_${new Date().toISOString().slice(0,10)}.xlsx`);}
+function exportBanner(){const data=summarizeBannerCreative(filteredBanner()).map(r=>({'소재명':r.creativeName,'인타입코드':r.inTypeCode,'노출수':r.impressions,'클릭수':r.clicks,'CTR(%)':r.impressions?+(r.clicks/r.impressions*100).toFixed(2):0,'평균CPC':r.clicks?Math.round(r.cost/r.clicks):0,'광고비':r.cost,'DB수':r.db,'DB단가':Math.round(effectiveDbCost(r.cost,r.db)||0),'전환율(%)':r.clicks?+(r.db/r.clicks*100).toFixed(2):0})); downloadXlsx(data,'배너소재별성과',`배너별_성과_${new Date().toISOString().slice(0,10)}.xlsx`);}
+function openBannerDetail(code){
+  const br=filteredBanner().filter(r=>r.inTypeCode===code).sort((a,b)=>a.date.localeCompare(b.date));
+  if(!br.length) return;
+  const t=br.reduce((a,r)=>{['impressions','clicks','cost','db'].forEach(k=>a[k]+=r[k]); return a;},{impressions:0,clicks:0,cost:0,db:0});
+  const creativeName=br[0].creativeName;
+  const dbCost=effectiveDbCost(t.cost,t.db);
+  const conv=t.clicks?t.db/t.clicks:0;
+  const ctr=t.impressions?t.clicks/t.impressions:0;
+  const cpc=t.clicks?t.cost/t.clicks:null;
+  const headers=['날짜','노출','클릭','CTR','CPC','광고비','DB수','DB단가','전환율'];
+  const totals=`<td>합계</td><td>${fmt(t.impressions)}</td><td>${fmt(t.clicks)}</td><td>${pct(ctr)}</td><td>${cpc?won(cpc):'-'}</td><td>${won(t.cost)}</td><td>${fmt(t.db)}</td><td>${moneyOrDash(dbCost)}</td><td>${pct(conv)}</td>`;
+  $('modalTitle').textContent=`${creativeName} · 소재 상세`;
+  $('modalBody').innerHTML=`
+    <div class="creative-preview">
+      ${creativeImageMarkup(code, creativeName)}
+      <div class="creative-summary">
+        <div class="creative-title"><b>${escapeHtml(creativeName)}</b><span>인타입코드: ${escapeHtml(code)} · 이미지 파일명 예: ${escapeHtml(code)}_preview.png / ${escapeHtml(code)}.png / ${escapeHtml(creativeName)}.png</span></div>
+        <div class="mini-kpi"><div class="label">광고비</div><div class="num">${won(t.cost)}</div></div>
+        <div class="mini-kpi"><div class="label">DB수</div><div class="num good">${fmt(t.db)}</div></div>
+        <div class="mini-kpi"><div class="label">DB단가</div><div class="num bad">${moneyOrDash(dbCost)}</div></div>
+        <div class="mini-kpi"><div class="label">전환율</div><div class="num">${pct(conv)}</div></div>
+        <div class="mini-kpi"><div class="label">클릭수</div><div class="num">${fmt(t.clicks)}</div></div>
+        <div class="mini-kpi"><div class="label">CTR</div><div class="num">${pct(ctr)}</div></div>
+      </div>
+    </div>
+    <div class="modal-table-wrap">
+      <div class="section-title" style="margin:16px 0 10px"><h2>일별 데이터</h2><span class="hint">소재 클릭 시 표시되는 상세 성과</span></div>
+      <div class="table-box">
+        <table><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr><tr class="totals-row">${totals}</tr></thead><tbody>${br.map(r=>`<tr><td>${r.date}</td><td>${fmt(r.impressions)}</td><td>${fmt(r.clicks)}</td><td>${pct(r.ctr)}</td><td>${won(r.cpc)}</td><td>${won(r.cost)}</td><td class="good">${fmt(r.db)}</td><td class="${isNum(r.dbCost)?'bad':''}">${moneyOrDash(r.dbCost)}</td><td>${pct(r.conv)}</td></tr>`).join('')}</tbody></table>
+      </div>
+    </div>`;
+  $('bannerModal').classList.add('open');
+}
+function closeBannerModal(){$('bannerModal').classList.remove('open');}
+
+(function init(){const d=new Date(); $('todayLabel').textContent=`${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`; $('uploadBtn').addEventListener('click',()=>$('multiFile').click()); $('githubLoadBtn').addEventListener('click',loadGithubData); $('multiFile').addEventListener('change',e=>handleFiles([...e.target.files])); ['startDate','endDate','keywordSearch','sortBy'].forEach(id=>$(id).addEventListener('input',()=>{if(dbRows.length||adRows.length||bannerRows.length) refresh();})); $('resetBtn').addEventListener('click',()=>{$('keywordSearch').value=''; setDefaultDates(); if(dbRows.length||adRows.length||bannerRows.length) refresh();}); document.querySelectorAll('.main-tab').forEach(btn=>btn.addEventListener('click',()=>switchMainTab(btn.dataset.mainTab))); document.querySelectorAll('.seg').forEach(btn=>btn.addEventListener('click',()=>updateKpiCards(btn.dataset.mode))); document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{if(btn.dataset.hidden==='true') return; document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active')); btn.classList.add('active'); currentTab=btn.dataset.tab; if(currentTab==='keywordSummary') keywordPage=1; if(dbRows.length||adRows.length||bannerRows.length) renderTable(filtered());})); $('exportDailyBtn').addEventListener('click',exportDaily); $('exportKeywordBtn').addEventListener('click',exportKeyword); $('exportBannerBtn').addEventListener('click',exportBanner); $('tableArea').addEventListener('click',e=>{const tr=e.target.closest('tr[data-in-type]'); if(tr) openBannerDetail(decodeURIComponent(tr.dataset.inType));}); $('modalClose').addEventListener('click',closeBannerModal); $('bannerModal').addEventListener('click',e=>{if(e.target===$('bannerModal')) closeBannerModal();}); document.addEventListener('keydown',e=>{if(e.key==='Escape') closeBannerModal();}); renderKPIs([]);})();
+</script>
+</body>
+</html>
