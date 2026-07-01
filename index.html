@@ -453,6 +453,7 @@ function parseAdCSV(file){return new Promise((resolve,reject)=>Papa.parse(file,{
   const keywordCol=headers.find(h=>h==='키워드'||h.includes('키워드'))||'키워드';
   const out=[]; for(let i=hi+1;i<rows.length;i++){const row=rows[i]; if(!row||row.length<4) continue; const obj={}; headers.forEach((h,j)=>obj[h]=row[j]); const date=dateKey(obj[dateCol]); const hour=hourKey(hourCol?obj[hourCol]:''); const keyword=String(obj[keywordCol]??'').trim(); const kwKey=cleanKw(keyword); if(!date||!kwKey) continue; out.push({date,hour,campaign:obj['캠페인']||'',device:normalizeDevice(obj[deviceCol]),keyword,kwKey,impressions:n(obj['노출수']),clicks:n(obj['클릭수']),ctr:n(obj['클릭률(%)'])/100,avgCpc:n(obj['평균 CPC']),cost:n(obj['총비용'])});} resolve(out);},error:reject}));}
 function parseBannerCSV(file){return new Promise((resolve,reject)=>Papa.parse(file,{encoding:'UTF-8',skipEmptyLines:true,complete:res=>{const rows=res.data||[]; if(!rows.length) return resolve([]); const headers=rows[0].map(h=>String(h).trim()); const out=[]; for(let i=1;i<rows.length;i++){const row=rows[i]; if(!row||row.length<4) continue; const obj={}; headers.forEach((h,j)=>obj[h]=row[j]); const date=dateKey(obj['기간']); if(!date) continue; const creativeName=String(obj['광고 소재 이름']||'').trim(); const inTypeCode=extractInType(creativeName); out.push({date,creativeName,inTypeCode,impressions:n(obj['노출수']),clicks:n(obj['클릭수']),cost:n(obj['총비용']),ctr:n(obj['클릭률(%)'])/100,cpc:n(obj['평균 CPC'])});} resolve(out);},error:reject}));}
+function parseDBCSV(file){return new Promise((resolve,reject)=>Papa.parse(file,{encoding:'UTF-8',skipEmptyLines:true,complete:res=>{const rows=res.data||[]; if(!rows.length) return resolve([]); const headers=rows[0].map(h=>String(h).trim()); const candidates=['기기','기기구분','디바이스','유입기기','유입구분','PC/모바일','PC/모바일 매체','매체구분','device','Device']; let deviceCol=candidates.find(c=>headers.includes(c)); if(!deviceCol){deviceCol=headers.find(col=>{const idx=headers.indexOf(col); return rows.slice(1,80).map(r=>normalizeDevice(r[idx])).filter(v=>v==='PC'||v==='모바일').length>=2;});} const out=[]; for(let i=1;i<rows.length;i++){const row=rows[i]; if(!row||row.length<4) continue; const obj={}; headers.forEach((h,j)=>obj[h]=row[j]); const kw=String(obj['키워드']??'').trim(); const deviceRaw=deviceCol?obj[deviceCol]:(obj['기기']??obj['기기구분']??obj['유입구분']??''); out.push({date:dateKey(obj['유입일시']),hour:hourKey(obj['유입일시']),media:String(obj['유입매체']??'').trim()||'미분류',path:String(obj['상담경로']??'').trim()||'미분류',detail:String(obj['세부경로']??obj['세부상담경로']??'').trim()||'미분류',judge:String(obj['DB판정']??'').trim(),keyword:kw,kwKey:cleanKw(kw),inType:String(obj['InType']??obj['inType']??obj['in_type']??'').trim().toLowerCase(),device:normalizeDevice(deviceRaw)});} resolve(out);},error:reject}));}
 function parseDBExcel(file){return new Promise((resolve,reject)=>{const reader=new FileReader(); reader.onload=e=>{try{const wb=XLSX.read(e.target.result,{type:'array',cellDates:true}); const sheet=wb.Sheets['DB관리']||wb.Sheets[wb.SheetNames[0]]; const rows=XLSX.utils.sheet_to_json(sheet,{defval:''}); if(!rows.length) return resolve([]); const cols=Object.keys(rows[0]); const candidates=['기기','기기구분','디바이스','유입기기','유입구분','PC/모바일','PC/모바일 매체','매체구분','device','Device']; let deviceCol=candidates.find(c=>cols.includes(c)); if(!deviceCol){deviceCol=cols.find(col=>rows.slice(0,80).map(r=>normalizeDevice(r[col])).filter(v=>v==='PC'||v==='모바일').length>=2);} const out=rows.map(r=>{const kw=String(r['키워드']??'').trim(); const deviceRaw=deviceCol?r[deviceCol]:(r['기기']??r['기기구분']??r['유입구분']??''); return {date:dateKey(r['유입일시']),hour:hourKey(r['유입일시']),media:String(r['유입매체']??'').trim()||'미분류',path:String(r['상담경로']??'').trim()||'미분류',detail:String(r['세부경로']??r['세부상담경로']??'').trim()||'미분류',judge:String(r['DB판정']??'').trim(),keyword:kw,kwKey:cleanKw(kw),inType:String(r['InType']??r['inType']??r['in_type']??'').trim().toLowerCase(),device:normalizeDevice(deviceRaw)};}); resolve(out);}catch(err){reject(err)}}; reader.onerror=reject; reader.readAsArrayBuffer(file);});}
 function getDateRange(){return {start:$('startDate').value,end:$('endDate').value};}
 
@@ -1005,9 +1006,9 @@ function switchMainTab(tab){
 function refresh(){const rows=filtered(); renderKPIs(rows); renderInsights(rows); renderCharts(); if(window._mainTab==='monthly') renderMonthlyComparison(); else renderTable(rows); const loaded=[]; if(adRows.length) loaded.push(`검색광고 ${fmt(adRows.length)}행`); if(bannerRows.length) loaded.push(`배너 ${fmt(bannerRows.length)}행`); if(dbRows.length) loaded.push(`DB ${fmt(dbRows.length)}행`); $('status').textContent=loaded.length?loaded.join(' / ')+' 로드됨':'파일을 선택해주세요.';}
 
 const GITHUB_DATA_FILES=[
-  {name:'db.xlsx', url:'https://raw.githubusercontent.com/ameny52-sketch/ad-dashboard-data/main/db.xlsx'},
-  {name:'키워드.csv', url:'https://raw.githubusercontent.com/ameny52-sketch/ad-dashboard-data/main/%ED%82%A4%EC%9B%8C%EB%93%9C.csv'},
-  {name:'result.csv', url:'https://raw.githubusercontent.com/ameny52-sketch/ad-dashboard-data/main/result.csv'}
+  {name:'db.csv', url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vQIQwW2wakq3glJHYXtNLTXRbTrIHAOueOhhoX_EbYuOMcvsitvBlciosOcBy6CSLH4-ScIg44d_sKJ/pub?gid=206697733&single=true&output=csv'},
+  {name:'키워드.csv', url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vQIQwW2wakq3glJHYXtNLTXRbTrIHAOueOhhoX_EbYuOMcvsitvBlciosOcBy6CSLH4-ScIg44d_sKJ/pub?gid=1206651705&single=true&output=csv'},
+  {name:'result.csv', url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vQIQwW2wakq3glJHYXtNLTXRbTrIHAOueOhhoX_EbYuOMcvsitvBlciosOcBy6CSLH4-ScIg44d_sKJ/pub?gid=1002251922&single=true&output=csv'}
 ];
 async function fetchGithubFile(item){
   const url=item.url+(item.url.includes('?')?'&':'?')+'v='+Date.now();
@@ -1020,8 +1021,8 @@ async function fetchGithubFile(item){
 async function loadGithubData(){
   const btn=$('githubLoadBtn');
   try{
-    if(btn){btn.disabled=true; btn.textContent='⏳ GitHub 데이터 불러오는 중...';}
-    $('status').textContent='GitHub에서 최신 데이터 다운로드 중...';
+    if(btn){btn.disabled=true; btn.textContent='⏳ 구글시트 불러오는 중...';}
+    $('status').textContent='구글시트에서 최신 데이터 다운로드 중...';
     const files=await Promise.all(GITHUB_DATA_FILES.map(fetchGithubFile));
     dbRows=[]; adRows=[]; bannerRows=[];
     IMAGE_VERSION=Date.now();
@@ -1030,19 +1031,19 @@ async function loadGithubData(){
     await handleFiles(files);
     window._githubLoadingNow=false;
     const now=new Date();
-    $('status').textContent=`GitHub 최신 데이터 로드 완료 · 이미지 ${preloadedBannerImageUrls.size}개 캐시 · ${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    $('status').textContent=`구글시트 데이터 로드 완료 · 이미지 ${preloadedBannerImageUrls.size}개 캐시 · ${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
   }catch(err){
     console.error(err);
-    alert('GitHub 데이터 불러오기 실패\n\n'+(err?.message||err));
-    $('status').textContent='GitHub 데이터 불러오기 실패';
+    alert('구글시트 데이터 불러오기 실패\n\n'+(err?.message||err));
+    $('status').textContent='구글시트 데이터 불러오기 실패';
   }finally{
     window._githubLoadingNow=false;
-    if(btn){btn.disabled=false; btn.textContent='🔄 최신 데이터 가져오기';}
+    if(btn){btn.disabled=false; btn.textContent='🔄 최신 데이터';}
   }
 }
 
 function peekCSVHeaders(file){return new Promise(resolve=>{const r=new FileReader(); r.onload=e=>{const text=String(e.target.result||'').slice(0,1000); const line=text.split(/\r?\n/).find(l=>l.trim()); resolve(line?line.split(',').map(h=>h.replace(/^"|"$/g,'').trim()):[]);}; r.readAsText(file,'UTF-8');});}
-async function handleFiles(files){$('status').textContent='파일 분석 중...'; if(!window._githubLoadingNow){IMAGE_VERSION=Date.now(); preloadedBannerImageUrls.clear();} const jobs=[]; for(const file of files){if(/\.(xlsx|xls)$/i.test(file.name)){jobs.push(parseDBExcel(file).then(rows=>{dbRows=rows; setBadge('badge-db','✅ DB관리 엑셀 — '+fmt(rows.length)+'행');}));} else if(/\.csv$/i.test(file.name)){const headers=await peekCSVHeaders(file); if(headers.some(h=>h.includes('광고 소재 이름')||h.includes('광고소재'))) jobs.push(parseBannerCSV(file).then(rows=>{bannerRows=rows; setBadge('badge-banner','✅ 배너 소재 CSV — '+fmt(rows.length)+'행');})); else if(headers.some(h=>h.includes('키워드'))||headers.some(h=>h.includes('일별'))) jobs.push(parseAdCSV(file).then(rows=>{adRows=rows; setBadge('badge-ad','✅ 검색광고 CSV — '+fmt(rows.length)+'행');})); else $('status').textContent=`${file.name} — 인식불가 형식`;}} await Promise.all(jobs); if(dbRows.length||adRows.length||bannerRows.length){setDefaultDates(); refresh(); await preloadBannerImages();} else $('status').textContent='인식 가능한 파일을 업로드해주세요.';}
+async function handleFiles(files){$('status').textContent='파일 분석 중...'; if(!window._githubLoadingNow){IMAGE_VERSION=Date.now(); preloadedBannerImageUrls.clear();} const jobs=[]; for(const file of files){if(/\.(xlsx|xls)$/i.test(file.name)){jobs.push(parseDBExcel(file).then(rows=>{dbRows=rows; setBadge('badge-db','✅ DB관리 엑셀 — '+fmt(rows.length)+'행');}));} else if(/\.csv$/i.test(file.name)){const headers=await peekCSVHeaders(file); if(headers.some(h=>h.includes('광고 소재 이름')||h.includes('광고소재'))) jobs.push(parseBannerCSV(file).then(rows=>{bannerRows=rows; setBadge('badge-banner','✅ 배너 소재 CSV — '+fmt(rows.length)+'행');})); else if(headers.some(h=>h.includes('키워드'))||headers.some(h=>h.includes('일별'))) jobs.push(parseAdCSV(file).then(rows=>{adRows=rows; setBadge('badge-ad','✅ 검색광고 CSV — '+fmt(rows.length)+'행');})); else if(headers.some(h=>h.includes('유입일시')||h.includes('DB판정')||h.includes('유입매체'))) jobs.push(parseDBCSV(file).then(rows=>{dbRows=rows; setBadge('badge-db','✅ DB관리 — '+fmt(rows.length)+'행');})); else $('status').textContent=`${file.name} — 인식불가 형식`;}} await Promise.all(jobs); if(dbRows.length||adRows.length||bannerRows.length){setDefaultDates(); refresh(); await preloadBannerImages();} else $('status').textContent='인식 가능한 파일을 업로드해주세요.';}
 function setBadge(id,text){const el=$(id); el.textContent=text; el.classList.toggle('ok',text.startsWith('✅'));}
 function downloadXlsx(data,sheetName,fileName){if(!data.length){alert('데이터가 없습니다.'); return;} const ws=XLSX.utils.json_to_sheet(data), wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,sheetName); XLSX.writeFile(wb,fileName);}
 function exportDaily(){const rows=filtered(); const daily=groupBy(rows,r=>r.date,r=>({date:r.date,impressions:0,clicks:0,cost:0,db:0,pcDb:0,moDb:0,pcCost:0,moCost:0}),(a,r)=>{a.impressions+=r.impressions;a.clicks+=r.clicks;a.cost+=r.cost;a.db+=r.db;a.pcDb+=r.pcDb;a.moDb+=r.moDb;a.pcCost+=r.pcCost;a.moCost+=r.moCost;}).map(a=>({'날짜':a.date,'노출수':a.impressions,'클릭수':a.clicks,'CTR(%)':a.impressions?+(a.clicks/a.impressions*100).toFixed(2):0,'평균CPC':a.clicks?Math.round(a.cost/a.clicks):0,'광고비':a.cost,'DB수':a.db,'전환율(%)':a.clicks?+(a.db/a.clicks*100).toFixed(2):0,'DB단가':Math.round(effectiveDbCost(a.cost,a.db)||0),'PC광고비':a.pcCost,'PC DB수':a.pcDb,'DB단가(PC)':Math.round(effectiveDbCost(a.pcCost,a.pcDb)||0),'모바일광고비':a.moCost,'모바일 DB수':a.moDb,'DB단가(모바일)':Math.round(effectiveDbCost(a.moCost,a.moDb)||0)})).sort((a,b)=>a['날짜'].localeCompare(b['날짜'])); downloadXlsx(daily,'일별검색성과',`일별_검색광고_${new Date().toISOString().slice(0,10)}.xlsx`);}
