@@ -254,9 +254,7 @@
       <h1>NewStart 광고 효율 대시보드</h1>
     </div>
     <div class="hero-actions">
-      <input id="multiFile" type="file" accept=".xlsx,.xls,.csv" multiple hidden />
-      <button class="upload-btn hero-upload primary-load" type="button" id="githubLoadBtn">🔄 최신 데이터</button>
-      <button class="upload-btn hero-upload compact-upload" type="button" id="uploadBtn">📂 파일 불러오기</button>
+      <button class="upload-btn hero-upload primary-load" type="button" id="githubLoadBtn">🔄 데이터 새로고침</button>
       <div class="date-badge" id="todayLabel">오늘</div>
       <div style="display:none">
         <div class="file-badge" id="badge-db">DB관리 엑셀 — 미로드</div>
@@ -283,26 +281,32 @@
   </nav>
 
   <div class="main-view" id="summaryView">
+  <div class="panel" style="padding:12px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <div class="seg-wrap" id="summaryPeriodWrap">
+      <button class="seg active" data-period="current">당월</button>
+      <button class="seg" data-period="prev">전월</button>
+      <button class="seg" data-period="all">전체</button>
+    </div>
+    <div id="summaryPeriodLabel" style="font-size:12px;color:var(--muted);font-weight:900"></div>
+  </div>
+
   <section class="panel">
     <div class="section-title"><h2>자동 진단</h2><span class="hint">고비용·무DB 항목을 우선 확인하세요.</span></div>
     <div class="insights" id="insightArea"><div class="empty" style="grid-column:1/-1">파일을 업로드하면 진단이 표시됩니다.</div></div>
   </section>
 
   <section class="panel">
-    <div class="kpi-head"><h2>광고 성과 KPI</h2><div id="kpiMode" class="seg-wrap"><button class="seg active" data-mode="total">전체</button><button class="seg" data-mode="search">검색</button><button class="seg" data-mode="banner">배너</button></div></div>
+    <div class="kpi-head">
+      <h2>광고 성과 KPI</h2>
+      <div id="kpiMode" class="seg-wrap"><button class="seg active" data-mode="total">전체</button><button class="seg" data-mode="search">검색</button><button class="seg" data-mode="banner">배너</button></div>
+    </div>
     <div class="kpi-row" id="kpiTotal"></div>
   </section>
 
-  <section class="grid chart-grid">
-    <div class="panel">
-      <div class="section-title"><h2>일별 DB수</h2><span class="hint">정상DB 기준 · 검색/배너/기타 누적</span></div>
-      <canvas id="dailyDbChart"></canvas>
-      <div class="legend-row"><div class="legend-item"><div class="legend-dot" style="background:#2563eb"></div>검색광고 DB</div><div class="legend-item"><div class="legend-dot" style="background:#ea580c"></div>배너광고 DB</div><div class="legend-item"><div class="legend-dot" style="background:#9ca3af"></div>기타 DB</div></div>
-    </div>
-    <div class="panel">
-      <div class="section-title"><h2>매체별 DB단가</h2><span class="hint">검색 vs 배너 비교</span></div>
-      <canvas id="mediaCostChart"></canvas>
-    </div>
+  <section class="panel">
+    <div class="section-title"><h2>일별 DB수</h2><span class="hint">정상DB 기준 · 검색/배너/기타 누적</span></div>
+    <canvas id="dailyDbChart" style="max-height:420px"></canvas>
+    <div class="legend-row"><div class="legend-item"><div class="legend-dot" style="background:#2563eb"></div>검색광고 DB</div><div class="legend-item"><div class="legend-dot" style="background:#ea580c"></div>배너광고 DB</div><div class="legend-item"><div class="legend-dot" style="background:#9ca3af"></div>기타 DB</div></div>
   </section>
 
   </div>
@@ -334,7 +338,27 @@
 </div>
 
 <script>
-let dbRows=[], adRows=[], bannerRows=[], currentTab='dailyKeyword', charts={};
+let dbRows=[], adRows=[], bannerRows=[], currentTab='dailyKeyword', charts={}, summaryPeriod='current';
+function getSummaryRange(){
+  if(summaryPeriod==='all') return {start:'',end:''};
+  const months=[...new Set([...adRows,...bannerRows,...dbRows].map(r=>r.date?.slice(0,7)).filter(Boolean))].sort();
+  if(!months.length) return {start:'',end:''};
+  const latest=months[months.length-1];
+  const prev=months.length>=2?months[months.length-2]:latest;
+  const m=summaryPeriod==='current'?latest:prev;
+  const [y,mo]=m.split('-');
+  const lastDay=new Date(+y,+mo,0).getDate();
+  return {start:`${m}-01`,end:`${m}-${String(lastDay).padStart(2,'0')}`};
+}
+function filteredForSummary(){
+  const {start,end}=getSummaryRange();
+  let rows=buildSearchData();
+  return rows.filter(r=>(!start||r.date>=start)&&(!end||r.date<=end));
+}
+function filteredBannerForSummary(){
+  const {start,end}=getSummaryRange();
+  return buildBannerData().filter(r=>(!start||r.date>=start)&&(!end||r.date<=end));
+}
 let keywordPage=1, keywordPageSize=50;
 const $=id=>document.getElementById(id);
 const n=v=>Number(String(v??'').replace(/[^0-9.-]/g,''))||0;
@@ -483,19 +507,19 @@ function buildSearchData(){
   });
 }
 function buildBannerData(){const normal=dbRows.filter(r=>r.judge==='정상DB'&&r.date&&!r.kwKey&&r.inType); const dbMap=new Map(); normal.forEach(r=>{const k=r.date+'||'+r.inType; dbMap.set(k,(dbMap.get(k)||0)+1);}); const agg=groupBy(bannerRows,r=>r.date+'||'+r.inTypeCode,r=>({date:r.date,creativeName:r.creativeName,inTypeCode:r.inTypeCode,impressions:0,clicks:0,cost:0}),(a,r)=>{a.impressions+=r.impressions; a.clicks+=r.clicks; a.cost+=r.cost;}); return agg.map(a=>{const db=dbMap.get(a.date+'||'+a.inTypeCode)||0; return {...a,ctr:a.impressions?a.clicks/a.impressions:0,cpc:a.clicks?a.cost/a.clicks:0,db,dbCost:effectiveDbCost(a.cost,db),conv:a.clicks?db/a.clicks:0};});}
-function buildDailyMediaDB(){const {start,end}=getDateRange(); const normal=dbRows.filter(r=>r.judge==='정상DB'&&r.date&&(!start||r.date>=start)&&(!end||r.date<=end)); const searchSet=new Set(adRows.map(r=>r.date+'||'+r.kwKey)); const bannerSet=new Set(bannerRows.map(r=>r.date+'||'+r.inTypeCode)); const map=new Map(); const ensure=d=>map.get(d)||map.set(d,{search:0,banner:0,other:0}).get(d); normal.forEach(r=>{const d=ensure(r.date); if(r.kwKey&&searchSet.has(r.date+'||'+r.kwKey)) d.search++; else if(!r.kwKey&&r.inType&&bannerSet.has(r.date+'||'+r.inType)) d.banner++; else d.other++;}); return [...map.entries()].map(([date,v])=>({date,...v})).sort((a,b)=>a.date.localeCompare(b.date));}
+function buildDailyMediaDB(){const {start,end}=getSummaryRange(); const normal=dbRows.filter(r=>r.judge==='정상DB'&&r.date&&(!start||r.date>=start)&&(!end||r.date<=end)); const searchSet=new Set(adRows.map(r=>r.date+'||'+r.kwKey)); const bannerSet=new Set(bannerRows.map(r=>r.date+'||'+r.inTypeCode)); const map=new Map(); const ensure=d=>map.get(d)||map.set(d,{search:0,banner:0,other:0}).get(d); normal.forEach(r=>{const d=ensure(r.date); if(r.kwKey&&searchSet.has(r.date+'||'+r.kwKey)) d.search++; else if(!r.kwKey&&r.inType&&bannerSet.has(r.date+'||'+r.inType)) d.banner++; else d.other++;}); return [...map.entries()].map(([date,v])=>({date,...v})).sort((a,b)=>a.date.localeCompare(b.date));}
 function filtered(){let rows=buildSearchData(); const {start,end}=getDateRange(), q=cleanKw($('keywordSearch').value); rows=rows.filter(r=>(!start||r.date>=start)&&(!end||r.date<=end)&&(!q||r.kwKey.includes(q))); const sort=$('sortBy').value; rows.sort((a,b)=>sort==='db_cost_desc'?((b.dbCost??-1)-(a.dbCost??-1)):sort==='db_cost_asc'?((a.dbCost??999999999)-(b.dbCost??999999999)):sort==='db_desc'?b.db-a.db:sort==='click_desc'?b.clicks-a.clicks:sort==='date_desc'?b.date.localeCompare(a.date):b.cost-a.cost); return rows;}
 function filteredBanner(){let rows=buildBannerData(); const {start,end}=getDateRange(); return rows.filter(r=>(!start||r.date>=start)&&(!end||r.date<=end)).sort((a,b)=>b.cost-a.cost);}
 function summarizeKeyword(rows){return groupBy(rows,r=>r.kwKey,r=>({keyword:r.keyword,kwKey:r.kwKey,impressions:0,clicks:0,cost:0,db:0,pcDb:0,moDb:0,pcCost:0,moCost:0}),(a,r)=>{a.impressions+=r.impressions; a.clicks+=r.clicks; a.cost+=r.cost; a.db+=r.db; a.pcDb+=r.pcDb; a.moDb+=r.moDb; a.pcCost+=r.pcCost; a.moCost+=r.moCost;}).map(a=>({...a,ctr:a.impressions?a.clicks/a.impressions:0,cpc:a.clicks?a.cost/a.clicks:0,dbCost:effectiveDbCost(a.cost,a.db),dbCostPc:effectiveDbCost(a.pcCost,a.pcDb),dbCostMo:effectiveDbCost(a.moCost,a.moDb),conv:a.clicks?a.db/a.clicks:0})).sort((a,b)=>b.cost-a.cost);}
 function summarizeBannerCreative(rows){return groupBy(rows,r=>r.inTypeCode,r=>({creativeName:r.creativeName,inTypeCode:r.inTypeCode,impressions:0,clicks:0,cost:0,db:0}),(a,r)=>{a.impressions+=r.impressions; a.clicks+=r.clicks; a.cost+=r.cost; a.db+=r.db;}).map(a=>({...a,ctr:a.impressions?a.clicks/a.impressions:0,cpc:a.clicks?a.cost/a.clicks:0,dbCost:effectiveDbCost(a.cost,a.db),conv:a.clicks?a.db/a.clicks:0})).sort((a,b)=>b.cost-a.cost);}
 function setDefaultDates(){const dates=[...adRows,...bannerRows,...dbRows].map(r=>r.date).filter(Boolean).sort(); if(dates.length){$('startDate').value=dates[0]; $('endDate').value=dates[dates.length-1];}}
 function kpiCard(name,value,sub,cls=''){return `<div class="kpi ${cls}"><div class="name">${name}</div><div class="value">${value}</div><div class="sub">${sub}</div></div>`;}
-function renderKPIs(searchRows){const banner=filteredBanner(); const sum=rows=>({cost:rows.reduce((s,r)=>s+r.cost,0),imp:rows.reduce((s,r)=>s+r.impressions,0),clk:rows.reduce((s,r)=>s+r.clicks,0),db:rows.reduce((s,r)=>s+r.db,0)}); const s=sum(searchRows), b=sum(banner); window._kpiData={total:{cost:s.cost+b.cost,imp:s.imp+b.imp,clk:s.clk+b.clk,db:s.db+b.db},search:s,banner:b}; updateKpiCards(window._kpiMode||'total');}
+function renderKPIs(searchRows){const banner=filteredBannerForSummary(); const sum=rows=>({cost:rows.reduce((s,r)=>s+r.cost,0),imp:rows.reduce((s,r)=>s+r.impressions,0),clk:rows.reduce((s,r)=>s+r.clicks,0),db:rows.reduce((s,r)=>s+r.db,0)}); const s=sum(searchRows), b=sum(banner); window._kpiData={total:{cost:s.cost+b.cost,imp:s.imp+b.imp,clk:s.clk+b.clk,db:s.db+b.db},search:s,banner:b}; updateKpiCards(window._kpiMode||'total'); const {start,end}=getSummaryRange(); const lbl=$('summaryPeriodLabel'); if(lbl) lbl.textContent=start?`📅 ${start} ~ ${end}`:'';}
 function updateKpiCards(mode){window._kpiMode=mode; document.querySelectorAll('.seg').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode)); const d=window._kpiData?.[mode]||{cost:0,imp:0,clk:0,db:0}; const ctr=d.imp?d.clk/d.imp:0, dbCost=effectiveDbCost(d.cost,d.db), conv=d.clk?d.db/d.clk:0; $('kpiTotal').innerHTML=[kpiCard('💰 광고비',won(d.cost),''),kpiCard('📥 DB수',fmt(d.db),''),kpiCard('💵 DB단가',dbCost?won(dbCost):'-','핵심 KPI','dbcost'),kpiCard('🎯 DB전환율',pct(conv),'클릭→DB'),kpiCard('👆 클릭수',fmt(d.clk),''),kpiCard('📈 CTR',pct(ctr),'')].join('');}
 function renderInsights(searchRows){const ks=summarizeKeyword(searchRows); const noDb=ks.filter(r=>r.cost>0&&!r.db).sort((a,b)=>b.cost-a.cost)[0]; const highCost=ks.filter(r=>isNum(r.dbCost)).sort((a,b)=>b.dbCost-a.dbCost)[0]; const best=ks.filter(r=>r.db>=1&&isNum(r.dbCost)).sort((a,b)=>a.dbCost-b.dbCost)[0]; const card=(title,html)=>`<div class="insight"><b>${title}</b><div>${html}</div></div>`; $('insightArea').innerHTML=[card('🚨 무DB 고비용 키워드',noDb?`<span class="pill danger">${noDb.keyword}</span><br>광고비 ${won(noDb.cost)}, 클릭 ${fmt(noDb.clicks)}회 · 우선 점검 권장`:'해당 항목이 없습니다.'),card('⚠️ DB단가 최고 키워드',highCost?`<span class="pill">${highCost.keyword}</span><br>DB단가 <span class="bad">${won(highCost.dbCost)}</span>, DB ${fmt(highCost.db)}건`:'DB가 발생한 키워드가 없습니다.'),card('✅ 효율 우수 키워드',best?`<span class="pill good">${best.keyword}</span><br>DB단가 <span class="good">${won(best.dbCost)}</span>, DB ${fmt(best.db)}건`:'비교 가능한 키워드가 없습니다.')].join('');}
 
 const stackTotalPlugin={id:'stackTotal',afterDatasetsDraw(chart){const {ctx,data}=chart; const last=chart.getDatasetMeta(data.datasets.length-1); data.labels.forEach((_,i)=>{const total=data.datasets.reduce((s,ds)=>s+(ds.data[i]||0),0); if(!total||!last.data[i]) return; ctx.save(); ctx.fillStyle='#111827'; ctx.font='bold 11px system-ui,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='bottom'; ctx.fillText(total,last.data[i].x,last.data[i].y-3); ctx.restore();});}};
-function renderCharts(){['dailyDb','mediaCost'].forEach(k=>{if(charts[k]){charts[k].destroy(); delete charts[k];}}); const daily=buildDailyMediaDB(); charts.dailyDb=new Chart($('dailyDbChart'),{type:'bar',data:{labels:daily.map(r=>r.date),datasets:[{label:'검색광고 DB',data:daily.map(r=>r.search),backgroundColor:'#2563eb',stack:'db'},{label:'배너광고 DB',data:daily.map(r=>r.banner),backgroundColor:'#ea580c',stack:'db'},{label:'기타 DB',data:daily.map(r=>r.other),backgroundColor:'#9ca3af',stack:'db'}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true,ticks:{precision:0}}}},plugins:[stackTotalPlugin]}); const s=window._kpiData?.search||{cost:0,db:0}, b=window._kpiData?.banner||{cost:0,db:0}; charts.mediaCost=new Chart($('mediaCostChart'),{type:'bar',data:{labels:['검색','배너'],datasets:[{label:'DB단가',data:[effectiveDbCost(s.cost,s.db)||0,effectiveDbCost(b.cost,b.db)||0],backgroundColor:['#2563eb','#ea580c']}]},options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>won(c.raw)}}},scales:{y:{beginAtZero:true,ticks:{callback:v=>fmt(v)}}}}});}
+function renderCharts(){if(charts.dailyDb){charts.dailyDb.destroy(); delete charts.dailyDb;} const daily=buildDailyMediaDB(); charts.dailyDb=new Chart($('dailyDbChart'),{type:'bar',data:{labels:daily.map(r=>r.date),datasets:[{label:'검색광고 DB',data:daily.map(r=>r.search),backgroundColor:'#2563eb',stack:'db'},{label:'배너광고 DB',data:daily.map(r=>r.banner),backgroundColor:'#ea580c',stack:'db'},{label:'기타 DB',data:daily.map(r=>r.other),backgroundColor:'#9ca3af',stack:'db'}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true,ticks:{precision:0}}}},plugins:[stackTotalPlugin]});}
 function table(headers,rows,totals=''){if(!rows.length) return '<div class="empty">조건에 맞는 데이터가 없습니다.</div>'; return '<table><thead><tr>'+headers.map((h,i)=>`<th data-col="${i}">${h}</th>`).join('')+'</tr>'+(totals?'<tr class="totals-row">'+totals+'</tr>':'')+'</thead><tbody>'+rows.join('')+'</tbody></table>';}
 function rowClass(r){if(r.cost>0&&!r.db) return 'row-danger'; if(isNum(r.dbCost)&&r.dbCost>=300000) return 'row-warn'; return '';}
 function buildHourlyData(){
@@ -1003,7 +1027,7 @@ function switchMainTab(tab){
   document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.tab===currentTab));
   if(dbRows.length||adRows.length||bannerRows.length){ if(tab==='monthly') renderMonthlyComparison(); else renderTable(filtered()); }
 }
-function refresh(){const rows=filtered(); renderKPIs(rows); renderInsights(rows); renderCharts(); if(window._mainTab==='monthly') renderMonthlyComparison(); else renderTable(rows); const loaded=[]; if(adRows.length) loaded.push(`검색광고 ${fmt(adRows.length)}행`); if(bannerRows.length) loaded.push(`배너 ${fmt(bannerRows.length)}행`); if(dbRows.length) loaded.push(`DB ${fmt(dbRows.length)}행`); $('status').textContent=loaded.length?loaded.join(' / ')+' 로드됨':'파일을 선택해주세요.';}
+function refresh(){const rows=filtered(); const summaryRows=filteredForSummary(); renderKPIs(summaryRows); renderInsights(summaryRows); renderCharts(); if(window._mainTab==='monthly') renderMonthlyComparison(); else renderTable(rows); const loaded=[]; if(adRows.length) loaded.push(`검색광고 ${fmt(adRows.length)}행`); if(bannerRows.length) loaded.push(`배너 ${fmt(bannerRows.length)}행`); if(dbRows.length) loaded.push(`DB ${fmt(dbRows.length)}행`); $('status').textContent=loaded.length?loaded.join(' / ')+' 로드됨':'파일을 선택해주세요.';}
 
 const GITHUB_DATA_FILES=[
   {name:'db.csv', url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vQIQwW2wakq3glJHYXtNLTXRbTrIHAOueOhhoX_EbYuOMcvsitvBlciosOcBy6CSLH4-ScIg44d_sKJ/pub?gid=1438679155&single=true&output=csv'},
@@ -1084,7 +1108,7 @@ function openBannerDetail(code){
 }
 function closeBannerModal(){$('bannerModal').classList.remove('open');}
 
-(function init(){const d=new Date(); $('todayLabel').textContent=`${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`; $('uploadBtn').addEventListener('click',()=>$('multiFile').click()); $('githubLoadBtn').addEventListener('click',loadGithubData); $('multiFile').addEventListener('change',e=>handleFiles([...e.target.files])); ['startDate','endDate','keywordSearch','sortBy'].forEach(id=>$(id).addEventListener('input',()=>{if(dbRows.length||adRows.length||bannerRows.length) refresh();})); $('resetBtn').addEventListener('click',()=>{$('keywordSearch').value=''; setDefaultDates(); if(dbRows.length||adRows.length||bannerRows.length) refresh();}); document.querySelectorAll('.main-tab').forEach(btn=>btn.addEventListener('click',()=>switchMainTab(btn.dataset.mainTab))); document.querySelectorAll('.seg').forEach(btn=>btn.addEventListener('click',()=>updateKpiCards(btn.dataset.mode))); document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{if(btn.dataset.hidden==='true') return; document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active')); btn.classList.add('active'); currentTab=btn.dataset.tab; if(currentTab==='keywordSummary') keywordPage=1; if(dbRows.length||adRows.length||bannerRows.length) renderTable(filtered());})); $('exportDailyBtn').addEventListener('click',exportDaily); $('exportKeywordBtn').addEventListener('click',exportKeyword); $('exportBannerBtn').addEventListener('click',exportBanner); $('tableArea').addEventListener('click',e=>{const tr=e.target.closest('tr[data-in-type]'); if(tr) openBannerDetail(decodeURIComponent(tr.dataset.inType));}); $('modalClose').addEventListener('click',closeBannerModal); $('bannerModal').addEventListener('click',e=>{if(e.target===$('bannerModal')) closeBannerModal();}); document.addEventListener('keydown',e=>{if(e.key==='Escape') closeBannerModal();}); renderKPIs([]); loadGithubData();})();
+(function init(){const d=new Date(); $('todayLabel').textContent=`${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`; $('githubLoadBtn').addEventListener('click',loadGithubData); document.querySelectorAll('#summaryPeriodWrap .seg').forEach(btn=>btn.addEventListener('click',()=>{summaryPeriod=btn.dataset.period; document.querySelectorAll('#summaryPeriodWrap .seg').forEach(b=>b.classList.toggle('active',b===btn)); if(dbRows.length||adRows.length||bannerRows.length){const summaryRows=filteredForSummary(); renderKPIs(summaryRows); renderInsights(summaryRows); renderCharts();}})); ['startDate','endDate','keywordSearch','sortBy'].forEach(id=>$(id).addEventListener('input',()=>{if(dbRows.length||adRows.length||bannerRows.length) refresh();})); $('resetBtn').addEventListener('click',()=>{$('keywordSearch').value=''; setDefaultDates(); if(dbRows.length||adRows.length||bannerRows.length) refresh();}); document.querySelectorAll('.main-tab').forEach(btn=>btn.addEventListener('click',()=>switchMainTab(btn.dataset.mainTab))); document.querySelectorAll('.seg').forEach(btn=>btn.addEventListener('click',()=>updateKpiCards(btn.dataset.mode))); document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{if(btn.dataset.hidden==='true') return; document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active')); btn.classList.add('active'); currentTab=btn.dataset.tab; if(currentTab==='keywordSummary') keywordPage=1; if(dbRows.length||adRows.length||bannerRows.length) renderTable(filtered());})); $('exportDailyBtn').addEventListener('click',exportDaily); $('exportKeywordBtn').addEventListener('click',exportKeyword); $('exportBannerBtn').addEventListener('click',exportBanner); $('tableArea').addEventListener('click',e=>{const tr=e.target.closest('tr[data-in-type]'); if(tr) openBannerDetail(decodeURIComponent(tr.dataset.inType));}); $('modalClose').addEventListener('click',closeBannerModal); $('bannerModal').addEventListener('click',e=>{if(e.target===$('bannerModal')) closeBannerModal();}); document.addEventListener('keydown',e=>{if(e.key==='Escape') closeBannerModal();}); renderKPIs([]); loadGithubData();})();
 </script>
 </body>
 </html>
