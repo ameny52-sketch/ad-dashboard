@@ -1006,7 +1006,7 @@ function switchMainTab(tab){
 function refresh(){const rows=filtered(); renderKPIs(rows); renderInsights(rows); renderCharts(); if(window._mainTab==='monthly') renderMonthlyComparison(); else renderTable(rows); const loaded=[]; if(adRows.length) loaded.push(`검색광고 ${fmt(adRows.length)}행`); if(bannerRows.length) loaded.push(`배너 ${fmt(bannerRows.length)}행`); if(dbRows.length) loaded.push(`DB ${fmt(dbRows.length)}행`); $('status').textContent=loaded.length?loaded.join(' / ')+' 로드됨':'파일을 선택해주세요.';}
 
 const GITHUB_DATA_FILES=[
-  {name:'db.csv', url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vQIQwW2wakq3glJHYXtNLTXRbTrIHAOueOhhoX_EbYuOMcvsitvBlciosOcBy6CSLH4-ScIg44d_sKJ/pub?gid=206697733&single=true&output=csv'},
+  {name:'db.csv', url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vQIQwW2wakq3glJHYXtNLTXRbTrIHAOueOhhoX_EbYuOMcvsitvBlciosOcBy6CSLH4-ScIg44d_sKJ/pub?gid=1438679155&single=true&output=csv'},
   {name:'키워드.csv', url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vQIQwW2wakq3glJHYXtNLTXRbTrIHAOueOhhoX_EbYuOMcvsitvBlciosOcBy6CSLH4-ScIg44d_sKJ/pub?gid=1206651705&single=true&output=csv'},
   {name:'result.csv', url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vQIQwW2wakq3glJHYXtNLTXRbTrIHAOueOhhoX_EbYuOMcvsitvBlciosOcBy6CSLH4-ScIg44d_sKJ/pub?gid=1002251922&single=true&output=csv'}
 ];
