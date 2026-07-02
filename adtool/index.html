@@ -273,6 +273,28 @@ button.run,.dl{box-shadow:none}
   .container,.container.display-mode{padding-left:14px;padding-right:14px}
 }
 
+
+/* ===== Daily DB v2: compact card + no internal scroll ===== */
+#panel-daily{margin-top:0;}
+#daily-table-card{overflow:visible !important;margin-top:0;}
+#daily-table-card *{box-sizing:border-box;}
+#daily-table{width:100% !important;table-layout:fixed;border-collapse:collapse;font-size:10.5px;}
+#daily-table thead{position:static !important;}
+#daily-table th,#daily-table td{padding:5px 4px !important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.35;}
+#daily-table .dth{font-size:10px !important;text-align:right;}
+#daily-table .dtd{font-size:10.5px !important;text-align:right;}
+#daily-table th:first-child,#daily-table td:first-child{position:static !important;min-width:64px !important;width:64px !important;}
+.daily-card-head{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);gap:10px;flex-wrap:wrap;background:rgba(255,255,255,.96);}
+.daily-head-left{min-width:0;flex:1;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.daily-head-right{display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:auto;}
+.daily-toggle{display:inline-flex;border:1px solid var(--border-strong);border-radius:12px;overflow:hidden;background:#fff;}
+.daily-toggle button{border:0;background:#fff;color:var(--muted);padding:6px 11px;font-size:12px;font-weight:800;font-family:inherit;cursor:pointer;}
+.daily-toggle button.active{background:#101828;color:#fff;}
+#daily-month-summary{margin:0 !important;gap:6px;}
+.daily-summary-pill{display:inline-flex;align-items:center;gap:10px;background:#f8fafc;border:1px solid var(--border);border-radius:999px;padding:6px 10px;font-size:11px;white-space:nowrap;}
+.daily-summary-pill strong{color:var(--text);font-weight:800;}
+@media(max-width:1100px){#daily-table{font-size:9.5px;}#daily-table th,#daily-table td{padding:4px 3px !important;}}
+
 </style>
 </head>
 <body>
@@ -798,11 +820,15 @@ button.run,.dl{box-shadow:none}
 
 <!-- ===== Daily DB 현황 패널 ===== -->
 <div class="tab-panel" id="panel-daily">
-  <div class="table-card" id="daily-table-card" style="overflow:visible">
-    <!-- 카드 헤더: 월요약(왼쪽) + 월선택·CSV(오른쪽) -->
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px">
-      <div id="daily-month-summary"></div>
-      <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+  <div class="table-card" id="daily-table-card">
+    <!-- 카드 헤더: 월요약(왼쪽) + 당월/누적·월선택·CSV(오른쪽) -->
+    <div class="daily-card-head">
+      <div class="daily-head-left" id="daily-month-summary"></div>
+      <div class="daily-head-right">
+        <div class="daily-toggle" aria-label="Daily 계산 기준">
+          <button type="button" id="daily-mode-month" class="active" onclick="setDailyCalcMode('month')">당월</button>
+          <button type="button" id="daily-mode-cum" onclick="setDailyCalcMode('cum')">누적</button>
+        </div>
         <select id="daily-month-sel" onchange="renderDaily()" style="border:1px solid var(--border-strong);border-radius:var(--rs);padding:5px 10px;font-size:12px;font-family:inherit;color:var(--text);background:var(--surface);outline:none">
           <option value="">전체 월</option>
         </select>
@@ -810,7 +836,7 @@ button.run,.dl{box-shadow:none}
       </div>
     </div>
     <!-- 테이블: 내부 스크롤 없음 -->
-    <table id="daily-table" style="width:100%;border-collapse:collapse;font-size:11.5px">
+    <table id="daily-table">
       <thead id="daily-thead"></thead>
       <tbody id="daily-tbody"></tbody>
     </table>
@@ -1342,8 +1368,8 @@ function _apiAnalyze(month,s){
     const dt=_normDK(r['상담등록일']||'');
     if(!sIT[it])sIT[it]={db:0,contracts:0,performance:0,contracts_cum:0,performance_cum:0};
     sIT[it].db++;sIT[it].contracts+=cnt;sIT[it].performance+=perf;sIT[it].contracts_cum+=cC;sIT[it].performance_cum+=pC;
-    if(!sITD[it])sITD[it]={};if(!sITD[it][dt])sITD[it][dt]={db:0,contracts:0,performance:0};
-    sITD[it][dt].db++;sITD[it][dt].contracts+=cnt;sITD[it][dt].performance+=perf;
+    if(!sITD[it])sITD[it]={};if(!sITD[it][dt])sITD[it][dt]={db:0,contracts:0,performance:0,contracts_cum:0,performance_cum:0};
+    sITD[it][dt].db++;sITD[it][dt].contracts+=cnt;sITD[it][dt].performance+=perf;sITD[it][dt].contracts_cum+=cC;sITD[it][dt].performance_cum+=pC;
   });
   const res=[];
   for(const[g,ad]of Object.entries(adG)){
@@ -3363,6 +3389,14 @@ function downloadKwCsv(){
 }
 
 
+let dailyCalcMode = 'month'; // month: 계약수/평가업적, cum: 계약수(누적)/평가업적(누적)
+function setDailyCalcMode(mode){
+  dailyCalcMode = mode === 'cum' ? 'cum' : 'month';
+  document.getElementById('daily-mode-month')?.classList.toggle('active', dailyCalcMode === 'month');
+  document.getElementById('daily-mode-cum')?.classList.toggle('active', dailyCalcMode === 'cum');
+  renderDaily();
+}
+
 function initDailyTab(){
   const needCrm    = Object.keys(CRM_DATA).length === 0;
   const needResult = resultData.length === 0;
@@ -3486,8 +3520,8 @@ function renderDaily(){
       if(selMonth && pd.monthLabel !== selMonth) return;
       if(!dayMap[pd.key]) dayMap[pd.key] = {pd, pc_cost:0, pc_db:0, pc_con:0, pc_perf:0};
       dayMap[pd.key].pc_db   += (sv.db||0);
-      dayMap[pd.key].pc_con  += (sv.contracts||0);
-      dayMap[pd.key].pc_perf += (sv.performance||0);
+      dayMap[pd.key].pc_con  += (dailyCalcMode === 'cum' ? (sv.contracts_cum||0) : (sv.contracts||0));
+      dayMap[pd.key].pc_perf += (dailyCalcMode === 'cum' ? (sv.performance_cum||0) : (sv.performance||0));
     });
   });
   [...Object.keys(CRM_DATA), ...Object.keys(KW_DAILY_COST)].forEach(key=>{
@@ -3537,18 +3571,20 @@ function renderDaily(){
     const kwC = key?(KW_DAILY_COST[key]||{}):(item.kwCost||{});
     const naverCost=kwC.naver||0, googleCost=kwC.google||0, daumCost=kwC.daum||0;
     const crmDay = isMonthTotal?(item.crmTotals||{}):(key?(CRM_DATA[key]||{}):{});
+    const getCon = c => dailyCalcMode === 'cum' ? (c.contracts_cum ?? c.contracts ?? 0) : (c.contracts || 0);
+    const getPerf = c => dailyCalcMode === 'cum' ? (c.perf_cum ?? c.performance_cum ?? c.perf ?? 0) : (c.perf || c.performance || 0);
     const naverDb  = isMonthTotal?(item.kwDb?.naver||0) :(crmDay['네이버']||{}).db||0;
-    const naverCon = isMonthTotal?(item.kwCon?.naver||0) :(crmDay['네이버']||{}).contracts||0;
-    const naverPerf= isMonthTotal?(item.kwPerf?.naver||0):(crmDay['네이버']||{}).perf||0;
+    const naverCon = isMonthTotal?(item.kwCon?.naver||0) :getCon(crmDay['네이버']||{});
+    const naverPerf= isMonthTotal?(item.kwPerf?.naver||0):getPerf(crmDay['네이버']||{});
     const googleDb = isMonthTotal?(item.kwDb?.google||0) :(crmDay['구글']||{}).db||0;
-    const googleCon= isMonthTotal?(item.kwCon?.google||0):(crmDay['구글']||{}).contracts||0;
-    const googlePerf=isMonthTotal?(item.kwPerf?.google||0):(crmDay['구글']||{}).perf||0;
+    const googleCon= isMonthTotal?(item.kwCon?.google||0):getCon(crmDay['구글']||{});
+    const googlePerf=isMonthTotal?(item.kwPerf?.google||0):getPerf(crmDay['구글']||{});
     const daumDb   = isMonthTotal?(item.kwDb?.daum||0)  :(crmDay['다음']||{}).db||0;
-    const daumCon  = isMonthTotal?(item.kwCon?.daum||0) :(crmDay['다음']||{}).contracts||0;
-    const daumPerf = isMonthTotal?(item.kwPerf?.daum||0):(crmDay['다음']||{}).perf||0;
+    const daumCon  = isMonthTotal?(item.kwCon?.daum||0) :getCon(crmDay['다음']||{});
+    const daumPerf = isMonthTotal?(item.kwPerf?.daum||0):getPerf(crmDay['다음']||{});
     const totalDb=isMonthTotal?(item.totalDb||0):(pc_db+Object.values(crmDay).reduce((s,c)=>s+(c.db||0),0));
-    const totalCon=isMonthTotal?(item.totalCon||0):(pc_con+Object.values(crmDay).reduce((s,c)=>s+(c.contracts||0),0));
-    const totalPerf=isMonthTotal?(item.totalPerf||0):(pc_perf+Object.values(crmDay).reduce((s,c)=>s+(c.perf||0),0));
+    const totalCon=isMonthTotal?(item.totalCon||0):(pc_con+Object.values(crmDay).reduce((s,c)=>s+getCon(c),0));
+    const totalPerf=isMonthTotal?(item.totalPerf||0):(pc_perf+Object.values(crmDay).reduce((s,c)=>s+getPerf(c),0));
     const totalCost=isMonthTotal?(item.totalCost||0):(pc_cost+naverCost+googleCost+daumCost);
     const bg = isMonthTotal?'background:#eff4ff;font-weight:700':'';
     const bgSticky = isMonthTotal?'#eff4ff':'var(--surface)';
@@ -3557,7 +3593,7 @@ function renderDaily(){
     let crmCells='';
     crmMedias.forEach(m=>{
       const c=crmDay[m]||{};
-      crmCells+=makeMediaCells(c.db||0,c.contracts||0,c.perf||0,0);
+      crmCells+=makeMediaCells(c.db||0,getCon(c),getPerf(c),0);
     });
     return '<tr style="'+bg+'"><td style="padding:7px 10px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);font-size:12px;'+dateColor+';text-align:center;position:sticky;left:0;z-index:1;background:'+bgSticky+'">'+item.label+'</td>'+makeTotalCells(totalDb,totalCon,totalPerf,totalCost)+makeMediaCells(pc_db,pc_con,pc_perf,pc_cost)+makeMediaCells(naverDb,naverCon,naverPerf,naverCost)+makeMediaCells(googleDb,googleCon,googlePerf,googleCost)+makeMediaCells(daumDb,daumCon,daumPerf,daumCost)+crmCells+'</tr>';
   }
@@ -3621,6 +3657,8 @@ function makeMonthTotal(label, rows){
   const crmMedias = CRM_MEDIA_LIST.filter(m=>m!=='파워컨텐츠'&&m!=='네이버'&&m!=='구글'&&m!=='다음');
   const crmTotals = {};
   crmMedias.forEach(m=>{ crmTotals[m]={db:0,contracts:0,perf:0}; });
+  const getCon = c => dailyCalcMode === 'cum' ? (c.contracts_cum ?? c.contracts ?? 0) : (c.contracts || 0);
+  const getPerf = c => dailyCalcMode === 'cum' ? (c.perf_cum ?? c.performance_cum ?? c.perf ?? 0) : (c.perf || c.performance || 0);
 
   rows.forEach(d=>{
     pc_db   +=(d.pc_db||0);
@@ -3636,19 +3674,19 @@ function makeMonthTotal(label, rows){
     const crmDay = key ? (CRM_DATA[key]||{}) : {};
     // 네이버/구글/다음 DB 집계
     kwDb.naver   += (crmDay['네이버']||{}).db||0;
-    kwCon.naver  += (crmDay['네이버']||{}).contracts||0;
-    kwPerf.naver += (crmDay['네이버']||{}).perf||0;
+    kwCon.naver  += getCon(crmDay['네이버']||{});
+    kwPerf.naver += getPerf(crmDay['네이버']||{});
     kwDb.google  += (crmDay['구글']||{}).db||0;
-    kwCon.google += (crmDay['구글']||{}).contracts||0;
-    kwPerf.google+= (crmDay['구글']||{}).perf||0;
+    kwCon.google += getCon(crmDay['구글']||{});
+    kwPerf.google+= getPerf(crmDay['구글']||{});
     kwDb.daum    += (crmDay['다음']||{}).db||0;
-    kwCon.daum   += (crmDay['다음']||{}).contracts||0;
-    kwPerf.daum  += (crmDay['다음']||{}).perf||0;
+    kwCon.daum   += getCon(crmDay['다음']||{});
+    kwPerf.daum  += getPerf(crmDay['다음']||{});
     crmMedias.forEach(m=>{
       const c=crmDay[m]||{};
       crmTotals[m].db       += (c.db||0);
-      crmTotals[m].contracts+= (c.contracts||0);
-      crmTotals[m].perf     += (c.perf||0);
+      crmTotals[m].contracts+= getCon(c);
+      crmTotals[m].perf     += getPerf(c);
     });
   });
   const allDb  = pc_db + kwDb.naver + kwDb.google + kwDb.daum + crmMedias.reduce((s,m)=>s+(crmTotals[m]?.db||0),0);
@@ -3660,16 +3698,23 @@ function makeMonthTotal(label, rows){
 
 function buildMonthlySummary(allDays){
   const totals = allDays.filter(r=>r.type==='month-total');
-  document.getElementById('daily-month-summary').innerHTML = totals.map(t=>`
-    <div style="display:inline-flex;gap:16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:.75rem 1.25rem;margin-right:8px;margin-bottom:8px;flex-wrap:wrap">
-      <span style="font-size:12px;font-weight:700;color:var(--accent)">${t.label}</span>
-      <span style="font-size:12px;color:var(--muted)">DB <strong style="color:var(--text)">${fmtN(t.db)}</strong></span>
-      <span style="font-size:12px;color:var(--muted)">계약 <strong style="color:var(--text)">${fmtN(t.contracts)}</strong></span>
-      <span style="font-size:12px;color:var(--muted)">계약율 <strong style="color:var(--text)">${t.cvr!=null?t.cvr.toFixed(1)+'%':'-'}</strong></span>
-      <span style="font-size:12px;color:var(--muted)">광고비 <strong style="color:var(--text)">${fmtN(t.cost)}</strong></span>
-      <span style="font-size:12px;color:var(--muted)">DB단가 <strong style="color:var(--text)">${t.cpd!=null?fmtN(t.cpd):'-'}</strong></span>
-      <span style="font-size:12px;color:var(--muted)">환산비광고비 <strong style="color:${t.roas>1000?'#dc2626':t.roas<=300?'#166534':'var(--text)'}">${t.roas!=null?t.roas.toLocaleString()+'%':'-'}</strong></span>
-    </div>`).join('');
+  const modeLabel = dailyCalcMode === 'cum' ? '누적' : '당월';
+  document.getElementById('daily-month-summary').innerHTML = totals.map(t=>{
+    const db=t.totalDb||0, con=t.totalCon||0, perf=t.totalPerf||0, cost=t.totalCost||0;
+    const cvr = db>0 ? con/db*100 : null;
+    const cpd = db>0 && cost>0 ? Math.round(cost/db) : null;
+    const roas = perf>0 && cost>0 ? Math.round(cost/perf*100) : null;
+    return `
+    <div class="daily-summary-pill">
+      <span style="font-weight:900;color:var(--accent)">${t.label}</span>
+      <span>${modeLabel}</span>
+      <span>DB <strong>${fmtN(db)}</strong></span>
+      <span>계약 <strong>${fmtN(con)}</strong></span>
+      <span>계약률 <strong>${cvr!=null?cvr.toFixed(1)+'%':'-'}</strong></span>
+      <span>광고비 <strong>${fmtN(cost)}</strong></span>
+      <span>ROAS <strong style="color:${roas>1000?'#dc2626':roas<=300?'#166534':'var(--text)'}">${roas!=null?roas.toLocaleString()+'%':'-'}</strong></span>
+    </div>`;
+  }).join('');
 }
 
 function fmtN(v){ return v!=null?Math.round(v).toLocaleString():'-'; }
