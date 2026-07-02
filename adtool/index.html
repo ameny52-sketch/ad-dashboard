@@ -1260,7 +1260,7 @@ async function loadAllSheets(){
 function _getMonths(s){
   const ds=new Set();
   (s.pc||[]).forEach(r=>{const d=_normDS(r['일별']||'');if(d.length>=7)ds.add(d.substring(0,7));});
-  return[...ds].sort().reverse().map(ym=>{const[y,mo]=ym.split('-');return`${y}년 ${parseInt(mo)}월`;});
+  return[...ds].filter(ym=>ym>='2026-01').sort().reverse().map(ym=>{const[y,mo]=ym.split('-');return`${y}년 ${parseInt(mo)}월`;});
 }
 function _fillMonSels(months){
   ['month-select','month-select-all','month-select-kw'].forEach(id=>{
