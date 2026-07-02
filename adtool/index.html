@@ -266,7 +266,7 @@ tbody tr:hover td{background:#eef6ff}
 button.run,.dl{box-shadow:none}
 .status{margin-left:auto}
 #display-media-tabs{background:rgba(255,255,255,.92);border:1px solid var(--border);border-radius:20px;padding:7px;margin-bottom:16px;box-shadow:var(--shadow-sm)}
-#daily-month-summary:not(:empty){margin-bottom:12px}
+#daily-month-summary{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 @media(max-width:900px){
   .app-hero{margin-top:14px;padding:0 14px}.app-hero-inner{display:block;padding:20px}.app-brand h1{font-size:24px}.hero-sub{font-size:12px}.hero-chip{display:inline-block;margin-top:14px}
   .app-main-nav{margin-left:14px;margin-right:14px;padding:7px;overflow:auto;flex-wrap:nowrap}.app-main-nav .media-group-tab{white-space:nowrap}
@@ -798,28 +798,26 @@ button.run,.dl{box-shadow:none}
 
 <!-- ===== Daily DB 현황 패널 ===== -->
 <div class="tab-panel" id="panel-daily">
-  <div style="display:flex;align-items:center;justify-content:flex-end;margin-bottom:8px;gap:10px">
-    <select id="daily-month-sel" onchange="renderDaily()" style="border:1px solid var(--border-strong);border-radius:var(--rs);padding:5px 10px;font-size:12px;font-family:inherit;color:var(--text);background:var(--surface);outline:none">
-      <option value="">전체 월</option>
-    </select>
-    <button onclick="downloadDailyCsv()" style="border:1px solid var(--border-strong);border-radius:var(--rs);padding:5px 12px;font-size:12px;font-family:inherit;color:var(--text);background:var(--surface);cursor:pointer;white-space:nowrap">↓ CSV</button>
-  </div>
-
-  <!-- 월 합계 요약 -->
-  <div id="daily-month-summary" style="margin-bottom:0"></div>
-
-  <!-- 테이블 -->
-  <div class="table-card" id="daily-table-card">
-    <div class="table-wrap" style="overflow-x:auto;position:relative">
-      <table id="daily-table" style="width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap">
-        <thead id="daily-thead" style="position:sticky;top:0;z-index:3"></thead>
-        <tbody id="daily-tbody"></tbody>
-      </table>
+  <div class="table-card" id="daily-table-card" style="overflow:visible">
+    <!-- 카드 헤더: 월요약(왼쪽) + 월선택·CSV(오른쪽) -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px">
+      <div id="daily-month-summary"></div>
+      <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+        <select id="daily-month-sel" onchange="renderDaily()" style="border:1px solid var(--border-strong);border-radius:var(--rs);padding:5px 10px;font-size:12px;font-family:inherit;color:var(--text);background:var(--surface);outline:none">
+          <option value="">전체 월</option>
+        </select>
+        <button onclick="downloadDailyCsv()" style="border:1px solid var(--border-strong);border-radius:var(--rs);padding:5px 12px;font-size:12px;font-family:inherit;color:var(--text);background:var(--surface);cursor:pointer;white-space:nowrap">↓ CSV</button>
+      </div>
     </div>
+    <!-- 테이블: 내부 스크롤 없음 -->
+    <table id="daily-table" style="width:100%;border-collapse:collapse;font-size:11.5px">
+      <thead id="daily-thead"></thead>
+      <tbody id="daily-tbody"></tbody>
+    </table>
   </div>
 
   <div id="daily-no-data" style="display:none;padding:3rem;text-align:center;color:var(--faint);font-size:14px">
-    ▶ 상단 <strong>불러오기</strong> 버튼을 눌러 데이터를 먼저 로드해 주세요.
+    ▶ 데이터를 불러오는 중이거나 해당 월 데이터가 없습니다.
   </div>
 </div>
 
