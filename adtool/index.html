@@ -1134,8 +1134,36 @@ function _setLoadOverlay(show,msg,pct){
   }else el.style.display='none';
 }
 
+const _CACHE_KEY='adtool_sheets_v1';
+const _CACHE_TTL=24*60*60*1000; // 24시간
+
+function _saveCache(data){
+  try{
+    const raw={ts:Date.now(),data};
+    // 각 시트를 CSV 텍스트 그대로 저장 (객체보다 용량 작음)
+    localStorage.setItem(_CACHE_KEY, JSON.stringify(raw));
+  }catch(e){ /* 용량 초과 시 무시 */ }
+}
+function _loadCache(){
+  try{
+    const s=localStorage.getItem(_CACHE_KEY);
+    if(!s)return null;
+    const {ts,data}=JSON.parse(s);
+    if(Date.now()-ts>_CACHE_TTL){localStorage.removeItem(_CACHE_KEY);return null;}
+    return data;
+  }catch(e){return null;}
+}
+
 async function loadAllSheets(){
   if(_sheetsParsed)return _sheetsParsed;
+
+  // 캐시 확인
+  const cached=_loadCache();
+  if(cached){
+    _sheetsParsed=cached;
+    return _sheetsParsed;
+  }
+
   _setLoadOverlay(true,'구글 시트 데이터 로드 중...',0);
   let done=0;
   const onDone=name=>{done++;_setLoadOverlay(true,`${name} 완료 (${done}/5)`,done/6);};
@@ -1149,6 +1177,7 @@ async function loadAllSheets(){
   _setLoadOverlay(true,'파싱 중...',5/6);
   await new Promise(r=>setTimeout(r,10));
   _sheetsParsed={raw:_pCSV(rt),pc:_pCSV(pt),naver:_pCSV(nt),google:_pCSV(gt),daum:_pCSV(dt)};
+  _saveCache(_sheetsParsed);
   _setLoadOverlay(false);
   return _sheetsParsed;
 }
