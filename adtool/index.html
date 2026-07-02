@@ -243,7 +243,7 @@ body{
 .hero-sub{display:none}
 .hero-chip{display:none}
 .app-main-nav{
-  position:sticky;top:10px;z-index:200;max-width:1480px;margin:0 auto 18px;padding:7px 22px;display:flex;gap:7px;flex-wrap:wrap;
+  position:sticky;top:10px;z-index:200;max-width:calc(1480px - 44px);margin:0 auto 12px;padding:7px 14px;display:flex;gap:7px;flex-wrap:wrap;
   background:rgba(255,255,255,.88);border:1px solid rgba(226,232,240,.95);border-radius:20px;box-shadow:0 12px 30px rgba(15,23,42,.07);backdrop-filter:blur(10px);
   box-sizing:border-box;
 }
@@ -253,7 +253,7 @@ body{
 .container{max-width:1480px;padding:0 22px 46px}
 .container.display-mode{max-width:1480px;padding-left:22px;padding-right:22px;padding-top:0}
 .card,.table-card,.alert-section,.cpc-chart-card,.cpc-metric,.metric,.sales-cmp-card{border-color:var(--border);border-radius:18px;box-shadow:var(--shadow-sm);background:rgba(255,255,255,.96)}
-.main-tabs{background:rgba(255,255,255,.92);border:1px solid var(--border);border-radius:20px;padding:7px;margin-bottom:16px;box-shadow:var(--shadow-sm);align-items:center;gap:4px;flex-wrap:wrap}
+.main-tabs{background:rgba(255,255,255,.92);border:1px solid var(--border);border-radius:20px;padding:7px;margin-bottom:8px;box-shadow:var(--shadow-sm);align-items:center;gap:4px;flex-wrap:wrap}
 .main-tab{border:0;border-radius:14px;padding:10px 16px;margin:0;color:#42526b;background:transparent;font-weight:850;border-bottom:0;transition:.15s ease}
 .main-tab:hover{background:#f1f5f9;color:#111827}
 .main-tab.active,.main-tab.alert.active{background:#101828;color:#fff;border-bottom:0;box-shadow:0 8px 16px rgba(15,23,42,.13)}
@@ -797,7 +797,7 @@ button.run,.dl{box-shadow:none}
 
 <!-- ===== Daily DB 현황 패널 ===== -->
 <div class="tab-panel" id="panel-daily">
-  <div style="display:flex;align-items:center;margin-bottom:1rem;gap:8px">
+  <div style="display:flex;align-items:center;justify-content:flex-end;margin-bottom:8px;gap:10px">
     <select id="daily-month-sel" onchange="renderDaily()" style="border:1px solid var(--border-strong);border-radius:var(--rs);padding:5px 10px;font-size:12px;font-family:inherit;color:var(--text);background:var(--surface);outline:none">
       <option value="">전체 월</option>
     </select>
