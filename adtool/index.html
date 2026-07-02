@@ -227,10 +227,10 @@ body{
   text-rendering:optimizeLegibility;
 }
 .app-hero{
-  position:relative;top:auto;z-index:auto;height:auto;margin:24px auto 12px;padding:0 22px;border:0;background:transparent;display:block;max-width:1480px;
+  position:relative;top:auto;z-index:auto;height:auto;margin:20px auto 12px;padding:0 22px;border:0;background:transparent;display:block;max-width:1480px;
 }
 .app-hero-inner{
-  min-height:92px;border-radius:26px;padding:22px 26px;display:flex;align-items:center;justify-content:space-between;gap:20px;overflow:hidden;position:relative;color:#fff;
+  min-height:68px;border-radius:22px;padding:16px 26px;display:flex;align-items:center;gap:20px;overflow:hidden;position:relative;color:#fff;
   background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 54%,#2563eb 100%);
   box-shadow:0 22px 54px rgba(30,64,175,.20);border:1px solid rgba(255,255,255,.14);
 }
@@ -239,12 +239,13 @@ body{
 .app-brand{display:flex;align-items:center;gap:13px;position:relative;z-index:1}
 .app-brand .logo{width:42px;height:42px;border-radius:14px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.24);box-shadow:0 10px 22px rgba(15,23,42,.14)}
 .app-brand .logo svg{width:21px;height:21px}
-.app-brand h1{font-size:29px;font-weight:900;letter-spacing:-.045em;line-height:1.18;color:#fff;margin:0}
-.hero-sub{font-size:13px;color:rgba(255,255,255,.76);margin-top:5px}
-.hero-chip{position:relative;z-index:1;background:#fff;color:#1e3a8a;border-radius:999px;padding:9px 13px;font-size:12px;font-weight:800;box-shadow:var(--shadow-sm);white-space:nowrap}
+.app-brand h1{font-size:36px;font-weight:700;letter-spacing:-.03em;line-height:1;color:#fff;margin:0}
+.hero-sub{display:none}
+.hero-chip{display:none}
 .app-main-nav{
   position:sticky;top:10px;z-index:200;max-width:1480px;margin:0 auto 18px;padding:7px 22px;display:flex;gap:7px;flex-wrap:wrap;
   background:rgba(255,255,255,.88);border:1px solid rgba(226,232,240,.95);border-radius:20px;box-shadow:0 12px 30px rgba(15,23,42,.07);backdrop-filter:blur(10px);
+  box-sizing:border-box;
 }
 .app-main-nav .media-group-tab{border:0;border-radius:14px;background:transparent;color:#42526b;padding:11px 18px;font-size:14px;font-weight:900;transition:.15s ease;line-height:1.35}
 .app-main-nav .media-group-tab:hover:not(.disabled){background:#f1f5f9;color:#111827}
@@ -279,11 +280,9 @@ button.run,.dl{box-shadow:none}
     <div class="app-brand">
       <div class="logo"><svg viewBox="0 0 16 16" fill="none"><rect x="2" y="8" width="3" height="6" rx="1" fill="white"/><rect x="6.5" y="5" width="3" height="9" rx="1" fill="white"/><rect x="11" y="2" width="3" height="12" rx="1" fill="white"/></svg></div>
       <div>
-        <h1>광고 성과 분석 툴</h1>
-        <div class="hero-sub">매체별 성과를 한 화면에서 빠르게 확인하는 통합 모니터링 대시보드</div>
+        <h1>Marketing Performance Monitor</h1>
       </div>
     </div>
-    <div class="hero-chip">Marketing Performance Monitor</div>
   </div>
 </header>
 
@@ -300,8 +299,7 @@ button.run,.dl{box-shadow:none}
   <div class="main-tabs" id="subtabs-all">
     <button class="main-tab active" onclick="switchTab('daily',this)">📅 Daily DB 현황</button>
     <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
-      <select id="month-select-all" style="border:1px solid var(--border-strong);border-radius:var(--rs);padding:5px 10px;font-size:13px;font-family:inherit;color:var(--text);background:var(--surface);outline:none;cursor:pointer" onchange="onMonthChange()">
-      </select>
+      <select id="month-select-all" style="display:none" onchange="onMonthChange()"></select>
       <span class="status" id="status-all" style="font-size:12px;display:none"></span>
     </div>
   </div>
@@ -799,16 +797,11 @@ button.run,.dl{box-shadow:none}
 
 <!-- ===== Daily DB 현황 패널 ===== -->
 <div class="tab-panel" id="panel-daily">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:10px">
-    <div>
-      <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:2px">Daily DB 현황</div>
-      <div style="font-size:12px;color:var(--faint)">일별 DB·계약·광고비 현황 · 매출파일·광고비 파일 로드 시 자동 집계</div>
-    </div>
-    <div style="display:flex;gap:8px;align-items:center">
-      <select id="daily-month-sel" onchange="renderDaily()" style="border:1px solid var(--border-strong);border-radius:var(--rs);padding:5px 10px;font-size:12px;font-family:inherit;color:var(--text);background:var(--surface);outline:none">
-        <option value="">전체 월</option>
-      </select>
-    </div>
+  <div style="display:flex;align-items:center;margin-bottom:1rem;gap:8px">
+    <select id="daily-month-sel" onchange="renderDaily()" style="border:1px solid var(--border-strong);border-radius:var(--rs);padding:5px 10px;font-size:12px;font-family:inherit;color:var(--text);background:var(--surface);outline:none">
+      <option value="">전체 월</option>
+    </select>
+    <button onclick="downloadDailyCsv()" style="border:1px solid var(--border-strong);border-radius:var(--rs);padding:5px 12px;font-size:12px;font-family:inherit;color:var(--text);background:var(--surface);cursor:pointer;white-space:nowrap">↓ CSV</button>
   </div>
 
   <!-- 월 합계 요약 -->
