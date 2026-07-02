@@ -270,7 +270,8 @@ button.run,.dl{box-shadow:none}
 #daily-table-card{overflow:visible !important}
 #daily-table-card>div[style*="overflow-x"]{overflow-x:auto;overflow-y:visible}
 #daily-table th:first-child,#daily-table td:first-child{position:sticky;left:0;z-index:2;background:#f8fafc}
-#daily-table thead th:first-child{z-index:3;background:#f8fafc}
+#daily-table thead th{position:sticky;top:0;z-index:3;background:#f8fafc}
+#daily-table thead th:first-child{z-index:4}
 @media(max-width:900px){
   .app-hero{margin-top:14px;padding:0 14px}.app-hero-inner{display:block;padding:20px}.app-brand h1{font-size:24px}.hero-sub{font-size:12px}.hero-chip{display:inline-block;margin-top:14px}
   .app-main-nav{margin-left:14px;margin-right:14px;padding:7px;overflow:auto;flex-wrap:nowrap}.app-main-nav .media-group-tab{white-space:nowrap}
