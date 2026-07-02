@@ -209,20 +209,91 @@ tbody td.intype-cell{font-family:'SF Mono','Fira Code',monospace;font-size:11px;
 /* ===== Daily DB 현황 ===== */
 .dth{padding:6px 10px;border-bottom:1px solid var(--border);font-size:11px;font-weight:600;color:var(--muted);text-align:right;white-space:nowrap}
 .dtd{padding:7px 10px;border-bottom:1px solid var(--border);text-align:right;font-size:12px;color:var(--text)}
+
+
+/* ===== vUI: header/menu unified premium layout ===== */
+:root{
+  --bg:#f3f6fb;--surface:#fff;--border:#e6ebf2;--border-strong:#d5dde8;
+  --text:#0b1220;--muted:#667085;--faint:#8a94a6;--accent:#2563eb;--primary:#2563eb;--card:#fff;
+  --shadow:0 18px 44px rgba(15,23,42,.07);--shadow-sm:0 8px 18px rgba(15,23,42,.055);
+  --r:18px;--rs:12px;
+}
+body{
+  background:
+    radial-gradient(circle at 12% -6%,rgba(37,99,235,.14),transparent 30%),
+    radial-gradient(circle at 88% 0%,rgba(234,88,12,.11),transparent 26%),
+    linear-gradient(180deg,#fbfdff 0%,#f3f6fb 48%,#eef3f9 100%);
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+.app-hero{
+  position:relative;top:auto;z-index:auto;height:auto;margin:24px auto 12px;padding:0 22px;border:0;background:transparent;display:block;max-width:1480px;
+}
+.app-hero-inner{
+  min-height:92px;border-radius:26px;padding:22px 26px;display:flex;align-items:center;justify-content:space-between;gap:20px;overflow:hidden;position:relative;color:#fff;
+  background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 54%,#2563eb 100%);
+  box-shadow:0 22px 54px rgba(30,64,175,.20);border:1px solid rgba(255,255,255,.14);
+}
+.app-hero-inner:before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(255,255,255,.08),transparent 42%);pointer-events:none}
+.app-hero-inner:after{content:"";position:absolute;right:-70px;top:-120px;width:310px;height:310px;border-radius:50%;background:rgba(255,255,255,.10)}
+.app-brand{display:flex;align-items:center;gap:13px;position:relative;z-index:1}
+.app-brand .logo{width:42px;height:42px;border-radius:14px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.24);box-shadow:0 10px 22px rgba(15,23,42,.14)}
+.app-brand .logo svg{width:21px;height:21px}
+.app-brand h1{font-size:29px;font-weight:900;letter-spacing:-.045em;line-height:1.18;color:#fff;margin:0}
+.hero-sub{font-size:13px;color:rgba(255,255,255,.76);margin-top:5px}
+.hero-chip{position:relative;z-index:1;background:#fff;color:#1e3a8a;border-radius:999px;padding:9px 13px;font-size:12px;font-weight:800;box-shadow:var(--shadow-sm);white-space:nowrap}
+.app-main-nav{
+  position:sticky;top:10px;z-index:200;max-width:1480px;margin:0 auto 18px;padding:7px 22px;display:flex;gap:7px;flex-wrap:wrap;
+  background:rgba(255,255,255,.88);border:1px solid rgba(226,232,240,.95);border-radius:20px;box-shadow:0 12px 30px rgba(15,23,42,.07);backdrop-filter:blur(10px);
+}
+.app-main-nav .media-group-tab{border:0;border-radius:14px;background:transparent;color:#42526b;padding:11px 18px;font-size:14px;font-weight:900;transition:.15s ease;line-height:1.35}
+.app-main-nav .media-group-tab:hover:not(.disabled){background:#f1f5f9;color:#111827}
+.app-main-nav .media-group-tab.active{background:#101828;color:#fff;box-shadow:0 10px 20px rgba(15,23,42,.16)}
+.container{max-width:1480px;padding:0 22px 46px}
+.container.display-mode{max-width:1480px;padding-left:22px;padding-right:22px;padding-top:0}
+.card,.table-card,.alert-section,.cpc-chart-card,.cpc-metric,.metric,.sales-cmp-card{border-color:var(--border);border-radius:18px;box-shadow:var(--shadow-sm);background:rgba(255,255,255,.96)}
+.main-tabs{background:rgba(255,255,255,.92);border:1px solid var(--border);border-radius:20px;padding:7px;margin-bottom:16px;box-shadow:var(--shadow-sm);align-items:center;gap:4px;flex-wrap:wrap}
+.main-tab{border:0;border-radius:14px;padding:10px 16px;margin:0;color:#42526b;background:transparent;font-weight:850;border-bottom:0;transition:.15s ease}
+.main-tab:hover{background:#f1f5f9;color:#111827}
+.main-tab.active,.main-tab.alert.active{background:#101828;color:#fff;border-bottom:0;box-shadow:0 8px 16px rgba(15,23,42,.13)}
+.metric,.cpc-metric{padding:1rem 1.125rem;background:linear-gradient(180deg,#fff,#f8fafc)}
+.metric-value,.cpc-metric .val,.alert-kpi-val{font-variant-numeric:tabular-nums}
+.table-header{background:#fff;padding:1rem 1.25rem}
+thead th{background:#f8fafc;color:#475569;font-weight:800}
+tbody tr:hover td{background:#eef6ff}
+.filter-row input,.filter-row select,.tab-btn,.cpc-dtab{border-color:var(--border-strong);border-radius:12px}
+button.run,.dl{box-shadow:none}
+.status{margin-left:auto}
+#display-media-tabs{background:rgba(255,255,255,.92);border:1px solid var(--border);border-radius:20px;padding:7px;margin-bottom:16px;box-shadow:var(--shadow-sm)}
+@media(max-width:900px){
+  .app-hero{margin-top:14px;padding:0 14px}.app-hero-inner{display:block;padding:20px}.app-brand h1{font-size:24px}.hero-sub{font-size:12px}.hero-chip{display:inline-block;margin-top:14px}
+  .app-main-nav{margin-left:14px;margin-right:14px;padding:7px;overflow:auto;flex-wrap:nowrap}.app-main-nav .media-group-tab{white-space:nowrap}
+  .container,.container.display-mode{padding-left:14px;padding-right:14px}
+}
+
 </style>
 </head>
 <body>
-<header>
-  <div class="logo"><svg viewBox="0 0 16 16" fill="none"><rect x="2" y="8" width="3" height="6" rx="1" fill="white"/><rect x="6.5" y="5" width="3" height="9" rx="1" fill="white"/><rect x="11" y="2" width="3" height="12" rx="1" fill="white"/></svg></div>
-  <h1>광고 성과 분석 툴</h1>
-  <div class="media-group-tabs">
-    <button class="media-group-tab active" onclick="switchMediaGroup('all',this)">전체</button>
-    <button class="media-group-tab" onclick="switchMediaGroup('pc_content',this)">파워컨텐츠</button>
-    <button class="media-group-tab" onclick="switchMediaGroup('keyword',this)">키워드</button>
-    <button class="media-group-tab" onclick="switchMediaGroup('display',this)">디스플레이</button>
-    <button class="media-group-tab" onclick="switchMediaGroup('rank',this)">🔍 순위 조회</button>
+<header class="app-hero">
+  <div class="app-hero-inner">
+    <div class="app-brand">
+      <div class="logo"><svg viewBox="0 0 16 16" fill="none"><rect x="2" y="8" width="3" height="6" rx="1" fill="white"/><rect x="6.5" y="5" width="3" height="9" rx="1" fill="white"/><rect x="11" y="2" width="3" height="12" rx="1" fill="white"/></svg></div>
+      <div>
+        <h1>광고 성과 분석 툴</h1>
+        <div class="hero-sub">매체별 성과를 한 화면에서 빠르게 확인하는 통합 모니터링 대시보드</div>
+      </div>
+    </div>
+    <div class="hero-chip">Marketing Performance Monitor</div>
   </div>
 </header>
+
+<nav class="media-group-tabs app-main-nav" aria-label="광고 매체 메뉴">
+  <button class="media-group-tab active" onclick="switchMediaGroup('all',this)">전체</button>
+  <button class="media-group-tab" onclick="switchMediaGroup('pc_content',this)">파워컨텐츠</button>
+  <button class="media-group-tab" onclick="switchMediaGroup('keyword',this)">키워드</button>
+  <button class="media-group-tab" onclick="switchMediaGroup('display',this)">디스플레이</button>
+  <button class="media-group-tab" onclick="switchMediaGroup('rank',this)">순위 조회</button>
+</nav>
 
 <div class="container">
   <!-- 전체 탭용 서브메뉴 -->
@@ -231,8 +302,6 @@ tbody td.intype-cell{font-family:'SF Mono','Fira Code',monospace;font-size:11px;
     <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
       <select id="month-select-all" style="border:1px solid var(--border-strong);border-radius:var(--rs);padding:5px 10px;font-size:13px;font-family:inherit;color:var(--text);background:var(--surface);outline:none;cursor:pointer" onchange="onMonthChange()">
       </select>
-      <button class="run" onclick="runAnalysis()" style="padding:6px 14px;font-size:13px">🔄 새로고침</button>
-      <button onclick="exportExcel()" style="padding:6px 14px;font-size:13px;background:#166534;color:#fff;border:none;border-radius:var(--rs);cursor:pointer;font-family:inherit;font-weight:600">📥 성과 엑셀 다운로드</button>
       <span class="status" id="status-all" style="font-size:12px;display:none"></span>
     </div>
   </div>
@@ -250,7 +319,6 @@ tbody td.intype-cell{font-family:'SF Mono','Fira Code',monospace;font-size:11px;
         <select id="month-select" style="border:1px solid var(--border-strong);border-radius:var(--rs);padding:5px 10px;font-size:13px;font-family:inherit;color:var(--text);background:var(--surface);outline:none;cursor:pointer" onchange="onMonthChange()">
         </select>
       </div>
-      <button class="run" id="run-btn" onclick="runAnalysis()" style="padding:6px 14px;font-size:13px">🔄 새로고침</button>
       <span class="status" id="status" style="font-size:12px;display:none"></span>
     </div>
   </div>
@@ -262,7 +330,6 @@ tbody td.intype-cell{font-family:'SF Mono','Fira Code',monospace;font-size:11px;
     <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
       <select id="month-select-kw" style="border:1px solid var(--border-strong);border-radius:var(--rs);padding:5px 10px;font-size:13px;font-family:inherit;color:var(--text);background:var(--surface);outline:none;cursor:pointer" onchange="onMonthChange()">
       </select>
-      <button class="run" onclick="runAnalysis()" style="padding:6px 14px;font-size:13px">🔄 새로고침</button>
       <span class="status" id="status-kw" style="font-size:12px;display:none"></span>
     </div>
   </div>
@@ -384,7 +451,7 @@ tbody td.intype-cell{font-family:'SF Mono','Fira Code',monospace;font-size:11px;
     </div>
 
     <div id="kw-insight-no-data" style="display:block;padding:3rem;text-align:center;color:var(--faint);font-size:14px">
-      ▶ 상단 <strong>새로고침</strong> 버튼을 눌러 데이터를 로드해 주세요.
+      데이터를 불러오면 이 영역에 결과가 표시됩니다.
     </div>
   </div>
 
@@ -395,7 +462,6 @@ tbody td.intype-cell{font-family:'SF Mono','Fira Code',monospace;font-size:11px;
         <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:2px">광고 키워드별 성과</div>
         <div style="font-size:12px;color:var(--faint)">상담시스템 기준 · 광고매체=키워드 · 네이버/구글/다음 광고비 자동 매칭</div>
       </div>
-      <button class="dl" onclick="downloadKwCsv()">↓ CSV</button>
     </div>
 
     <!-- 요약 지표 -->
@@ -436,7 +502,7 @@ tbody td.intype-cell{font-family:'SF Mono','Fira Code',monospace;font-size:11px;
     </div>
 
     <div id="kw-no-data" style="display:none;padding:3rem;text-align:center;color:var(--faint);font-size:14px">
-      ▶ 상단 <strong>새로고침</strong> 버튼을 눌러 데이터를 로드해 주세요.
+      데이터를 불러오면 이 영역에 결과가 표시됩니다.
     </div>
   </div>
 
@@ -555,7 +621,7 @@ tbody td.intype-cell{font-family:'SF Mono','Fira Code',monospace;font-size:11px;
     </div>
 
     <div id="insight-no-data" style="display:none;padding:3rem;text-align:center;color:var(--faint);font-size:14px">
-      ▶ 상단 <strong>새로고침</strong> 버튼을 눌러 데이터를 먼저 로드해 주세요.
+      데이터를 불러오면 이 영역에 결과가 표시됩니다.
     </div>
   </div>
 
@@ -565,8 +631,6 @@ tbody td.intype-cell{font-family:'SF Mono','Fira Code',monospace;font-size:11px;
       <button class="tab-btn active" id="adinfo-tab-intype" onclick="switchAdInfo('intype',this)">그룹별 인타입</button>
       <button class="tab-btn" id="adinfo-tab-kw" onclick="switchAdInfo('kw',this)">그룹별 키워드</button>
       <div style="margin-left:auto;display:flex;gap:8px">
-        <button class="dl" onclick="downloadAdInfoCSV()">↓ CSV</button>
-        <button class="dl" onclick="downloadAdInfoXLSX()">↓ 엑셀</button>
       </div>
     </div>
     <div class="table-card">
@@ -679,9 +743,6 @@ tbody td.intype-cell{font-family:'SF Mono','Fira Code',monospace;font-size:11px;
         <h2>광고그룹별 성과 <span style="font-size:11px;font-weight:400;color:var(--faint)">(행 클릭 → 일별 상세)</span></h2>
         <div class="table-actions">
           <span style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px;margin-right:4px">⭐ 메인키워드 중요그룹</span>
-          <button class="dl" onclick="downloadCSV()">↓ CSV</button>
-          <button class="dl" onclick="downloadXLSX()">↓ 엑셀</button>
-          <button class="dl" onclick="downloadAdInfo()" style="background:#eff4ff;border-color:#b5d4f4;color:#185FA5">↓ 광고정보 엑셀</button>
         </div>
       </div>
       <!-- PC/모바일 탭 -->
@@ -747,7 +808,6 @@ tbody td.intype-cell{font-family:'SF Mono','Fira Code',monospace;font-size:11px;
       <select id="daily-month-sel" onchange="renderDaily()" style="border:1px solid var(--border-strong);border-radius:var(--rs);padding:5px 10px;font-size:12px;font-family:inherit;color:var(--text);background:var(--surface);outline:none">
         <option value="">전체 월</option>
       </select>
-      <button class="dl" onclick="downloadDailyCsv()">↓ CSV</button>
     </div>
   </div>
 
@@ -901,8 +961,7 @@ tbody td.intype-cell{font-family:'SF Mono','Fira Code',monospace;font-size:11px;
   <!-- 매체 서브탭 + 다운로드 -->
   <div id="display-media-tabs" style="display:flex;align-items:center;gap:4px;margin-bottom:.4rem">
     <button class="main-tab active" onclick="switchDisplayMedia('kakao',this)">카카오페이</button>
-    <button onclick="downloadDisplayReport()" style="margin-left:auto;padding:4px 12px;background:var(--primary);color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer">다운로드</button>
-  </div>
+    </div>
   <!-- 카카오페이 패널 -->
   <div id="display-panel-kakao">
     <div id="display-kakao-loading" style="padding:2rem;text-align:center;color:var(--muted);font-size:13px">데이터 로딩 중...</div>
@@ -993,7 +1052,6 @@ tbody td.intype-cell{font-family:'SF Mono','Fira Code',monospace;font-size:11px;
     <div class="table-header">
       <h2>그룹별 순위별 예상 CPC</h2>
       <div class="table-actions">
-        <button class="dl" onclick="downloadCpcCsv()">↓ CSV</button>
       </div>
     </div>
     <div class="table-wrap">
@@ -3081,7 +3139,7 @@ let kwRendered = false; // 탭 재렌더 방지용
 
 function initKwTab(){
   if(!kwData.length){
-    setStatus('새로고침 버튼을 눌러 데이터를 로드하세요','');
+    setStatus('데이터를 불러오면 결과가 표시됩니다','');
     document.getElementById('kw-no-data').style.display = 'block';
     document.getElementById('kw-metrics').innerHTML = '';
     document.getElementById('kw-tbody').innerHTML = '';
