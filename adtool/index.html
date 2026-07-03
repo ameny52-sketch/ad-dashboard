@@ -1202,7 +1202,7 @@ function _setLoadOverlay(show,msg,pct){
 const _IDB_NAME='adtool_cache_v4';
 const _IDB_STORE='sheets';
 const _TTL_STATIC=30*24*60*60*1000;  // 상반기 광고비: 30일
-const _TTL_DYNAMIC=24*60*60*1000;    // RAW + 하반기: 24시간
+const _TTL_DYNAMIC='daily';           // RAW + 하반기: 날짜 바뀌면 자동 갱신
 
 function _openIDB(){
   return new Promise((res,rej)=>{
@@ -1232,14 +1232,19 @@ async function _idbSet(key,value){
     });
   }catch(e){}
 }
+function _today(){return new Date().toISOString().slice(0,10);}
 async function _getCached(key,ttl){
   const entry=await _idbGet(key);
   if(!entry)return null;
-  if(Date.now()-entry.ts>ttl){return null;}
+  if(ttl==='daily'){
+    if(entry.date!==_today())return null;
+  } else {
+    if(Date.now()-entry.ts>ttl)return null;
+  }
   return entry.data;
 }
 async function _setCached(key,data){
-  await _idbSet(key,{ts:Date.now(),data});
+  await _idbSet(key,{ts:Date.now(),date:_today(),data});
 }
 
 async function loadAllSheets(){
