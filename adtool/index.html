@@ -814,8 +814,8 @@ button.run,.dl{box-shadow:none}
         <button onclick="downloadDailyCsv()" style="border:1px solid var(--border-strong);border-radius:var(--rs);padding:5px 12px;font-size:12px;font-family:inherit;color:var(--text);background:var(--surface);cursor:pointer;white-space:nowrap">↓ CSV</button>
       </div>
     </div>
-    <!-- 테이블: 가로 스크롤만 허용 -->
-    <div style="overflow-x:auto">
+    <!-- 테이블: 양방향 스크롤, sticky thead 작동 -->
+    <div style="overflow:auto;max-height:calc(100vh - 220px)">
       <table id="daily-table" style="width:100%;border-collapse:collapse;font-size:11.5px">
         <thead id="daily-thead"></thead>
         <tbody id="daily-tbody"></tbody>
