@@ -622,6 +622,7 @@ function attachHourlyChartToggle(){
   setHourlyChartView(selected);
 }
 function renderHourlyEfficiency(searchRows){
+  ['hourlyEfficiency','hourlyDbCost','hourlyCpc','hourlyCtr','hourlyConv'].forEach(k=>{if(charts[k]){charts[k].destroy(); delete charts[k];}});
   const hourly=buildHourlyData();
   const used=hourly.filter(r=>r.cost>0||r.clicks>0||r.db>0);
   if(!used.length){$('tableArea').innerHTML='<div class="empty">시간대별 데이터가 없습니다. 검색광고 CSV에 시간대 컬럼이 있는지 확인해주세요.</div>'; return;}
@@ -671,8 +672,6 @@ function renderHourlyEfficiency(searchRows){
   </div>`;
   $('tableArea').classList.add('hour-mode');
   $('tableArea').innerHTML=aiSummary+insights+chartHtml+table(['시간대','노출','클릭','CTR','CPC','광고비','DB수','전환율','DB단가','PC비용','PC DB수','DB단가(PC)','모바일비용','모바일 DB수','DB단가(모바일)'],rows,totals);
-
-  ['hourlyEfficiency','hourlyDbCost','hourlyCpc','hourlyCtr','hourlyConv'].forEach(k=>{if(charts[k]){charts[k].destroy(); delete charts[k];}});
   const labels=used.map(r=>r.hour+'시');
   const moneyTick=v=>fmt(v);
   const compactWon=v=>{
