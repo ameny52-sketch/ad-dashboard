@@ -311,6 +311,15 @@
 
   </div>
 
+  <div id="searchPeriodBar" class="panel" style="display:none;padding:10px 16px;margin-bottom:10px;align-items:center;gap:12px;flex-wrap:wrap">
+    <div class="seg-wrap" id="searchPeriodWrap">
+      <button class="seg active" data-search-period="current">당월</button>
+      <button class="seg" data-search-period="prev">전월</button>
+      <button class="seg" data-search-period="all">전체</button>
+    </div>
+    <div id="searchPeriodLabel" style="font-size:12px;color:var(--muted);font-weight:900"></div>
+  </div>
+
   <section class="panel main-view" id="dataView" hidden>
     <div class="data-title"><h2 id="dataViewTitle">검색광고 데이터</h2><span class="hint" id="dataViewHint">일별·시간대별·키워드별 검색광고 성과를 확인합니다.</span></div>
     <div class="tabs">
@@ -338,7 +347,27 @@
 </div>
 
 <script>
-let dbRows=[], adRows=[], bannerRows=[], currentTab='dailyKeyword', charts={}, summaryPeriod='current';
+let dbRows=[], adRows=[], bannerRows=[], currentTab='dailyKeyword', charts={}, summaryPeriod='current', searchPeriod='current';
+function getSearchRange(){
+  if(searchPeriod==='all') return {start:'',end:''};
+  const months=[...new Set([...adRows,...dbRows].map(r=>r.date?.slice(0,7)).filter(Boolean))].sort();
+  if(!months.length) return {start:'',end:''};
+  const latest=months[months.length-1];
+  const prev=months.length>=2?months[months.length-2]:latest;
+  const m=searchPeriod==='current'?latest:prev;
+  const [y,mo]=m.split('-');
+  const lastDay=new Date(+y,+mo,0).getDate();
+  return {start:`${m}-01`,end:`${m}-${String(lastDay).padStart(2,'0')}`};
+}
+function filteredSearch(){
+  const {start,end}=getSearchRange();
+  let rows=buildSearchData();
+  const q=cleanKw($('keywordSearch').value);
+  rows=rows.filter(r=>(!start||r.date>=start)&&(!end||r.date<=end)&&(!q||r.kwKey.includes(q)));
+  const sort=$('sortBy').value;
+  rows.sort((a,b)=>sort==='db_cost_desc'?((b.dbCost??-1)-(a.dbCost??-1)):sort==='db_cost_asc'?((a.dbCost??999999999)-(b.dbCost??999999999)):sort==='db_desc'?b.db-a.db:sort==='click_desc'?b.clicks-a.clicks:sort==='date_desc'?b.date.localeCompare(a.date):b.cost-a.cost);
+  return rows;
+}
 function getSummaryRange(){
   if(summaryPeriod==='all') return {start:'',end:''};
   const months=[...new Set([...adRows,...bannerRows,...dbRows].map(r=>r.date?.slice(0,7)).filter(Boolean))].sort();
@@ -1021,6 +1050,7 @@ function switchMainTab(tab){
   document.querySelectorAll('.main-tab').forEach(btn=>btn.classList.toggle('active',btn.dataset.mainTab===tab));
   $('summaryView').hidden=tab!=='summary';
   $('dataView').hidden=(tab==='summary'||tab==='monthly');
+  $('searchPeriodBar').style.display=tab==='search'?'flex':'none';
   $('monthlyView').hidden=tab!=='monthly';
   const dailyBtn=document.querySelector('.tab[data-tab="dailyKeyword"]');
   const hourBtn=document.querySelector('.tab[data-tab="hourlyEfficiency"]');
@@ -1044,9 +1074,9 @@ function switchMainTab(tab){
     setHiddenState(exportDaily,true); setHiddenState(exportKeyword,true); setHiddenState(exportBanner,true);
   }
   document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.tab===currentTab));
-  if(dbRows.length||adRows.length||bannerRows.length){ if(tab==='monthly') renderMonthlyComparison(); else renderTable(filtered()); }
+  if(dbRows.length||adRows.length||bannerRows.length){ if(tab==='monthly') renderMonthlyComparison(); else renderTable(filteredSearch()); }
 }
-function refresh(){const rows=filtered(); renderKPIs(); renderInsights(filteredForSummary()); renderCharts(); if(window._mainTab==='monthly') renderMonthlyComparison(); else renderTable(rows); const loaded=[]; if(adRows.length) loaded.push(`검색광고 ${fmt(adRows.length)}행`); if(bannerRows.length) loaded.push(`배너 ${fmt(bannerRows.length)}행`); if(dbRows.length) loaded.push(`DB ${fmt(dbRows.length)}행`); $('status').textContent=loaded.length?loaded.join(' / ')+' 로드됨':'파일을 선택해주세요.';}
+function refresh(){renderKPIs(); renderInsights(filteredForSummary()); renderCharts(); if(window._mainTab==='monthly') renderMonthlyComparison(); else renderTable(filteredSearch()); const loaded=[]; if(adRows.length) loaded.push(`검색광고 ${fmt(adRows.length)}행`); if(bannerRows.length) loaded.push(`배너 ${fmt(bannerRows.length)}행`); if(dbRows.length) loaded.push(`DB ${fmt(dbRows.length)}행`); $('status').textContent=loaded.length?loaded.join(' / ')+' 로드됨':'파일을 선택해주세요.';}
 
 const GITHUB_DATA_FILES=[
   {name:'db.csv', url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vQIQwW2wakq3glJHYXtNLTXRbTrIHAOueOhhoX_EbYuOMcvsitvBlciosOcBy6CSLH4-ScIg44d_sKJ/pub?gid=1438679155&single=true&output=csv'},
@@ -1127,7 +1157,7 @@ function openBannerDetail(code){
 }
 function closeBannerModal(){$('bannerModal').classList.remove('open');}
 
-(function init(){const d=new Date(); $('todayLabel').textContent=`${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`; $('githubLoadBtn').addEventListener('click',loadGithubData); document.querySelectorAll('#summaryPeriodWrap .seg').forEach(btn=>btn.addEventListener('click',()=>{summaryPeriod=btn.dataset.period; document.querySelectorAll('#summaryPeriodWrap .seg').forEach(b=>b.classList.toggle('active',b===btn)); if(dbRows.length||adRows.length||bannerRows.length){renderKPIs(); renderInsights(filteredForSummary()); renderCharts();}})); ['startDate','endDate','keywordSearch','sortBy'].forEach(id=>$(id).addEventListener('input',()=>{if(dbRows.length||adRows.length||bannerRows.length) refresh();})); $('resetBtn').addEventListener('click',()=>{$('keywordSearch').value=''; setDefaultDates(); if(dbRows.length||adRows.length||bannerRows.length) refresh();}); document.querySelectorAll('.main-tab').forEach(btn=>btn.addEventListener('click',()=>switchMainTab(btn.dataset.mainTab))); document.querySelectorAll('#kpiMode .seg').forEach(btn=>btn.addEventListener('click',()=>updateKpiCards(btn.dataset.mode))); document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{if(btn.dataset.hidden==='true') return; document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active')); btn.classList.add('active'); currentTab=btn.dataset.tab; if(currentTab==='keywordSummary') keywordPage=1; if(dbRows.length||adRows.length||bannerRows.length) renderTable(filtered());})); $('exportDailyBtn').addEventListener('click',exportDaily); $('exportKeywordBtn').addEventListener('click',exportKeyword); $('exportBannerBtn').addEventListener('click',exportBanner); $('tableArea').addEventListener('click',e=>{const tr=e.target.closest('tr[data-in-type]'); if(tr) openBannerDetail(decodeURIComponent(tr.dataset.inType));}); $('modalClose').addEventListener('click',closeBannerModal); $('bannerModal').addEventListener('click',e=>{if(e.target===$('bannerModal')) closeBannerModal();}); document.addEventListener('keydown',e=>{if(e.key==='Escape') closeBannerModal();}); renderKPIs(); loadGithubData();})();
+(function init(){const d=new Date(); $('todayLabel').textContent=`${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`; $('githubLoadBtn').addEventListener('click',loadGithubData); document.querySelectorAll('#summaryPeriodWrap .seg').forEach(btn=>btn.addEventListener('click',()=>{summaryPeriod=btn.dataset.period; document.querySelectorAll('#summaryPeriodWrap .seg').forEach(b=>b.classList.toggle('active',b===btn)); if(dbRows.length||adRows.length||bannerRows.length){renderKPIs(); renderInsights(filteredForSummary()); renderCharts();}})); ['startDate','endDate','keywordSearch','sortBy'].forEach(id=>$(id).addEventListener('input',()=>{if(dbRows.length||adRows.length||bannerRows.length) refresh();})); $('resetBtn').addEventListener('click',()=>{$('keywordSearch').value=''; setDefaultDates(); if(dbRows.length||adRows.length||bannerRows.length) refresh();}); document.querySelectorAll('.main-tab').forEach(btn=>btn.addEventListener('click',()=>switchMainTab(btn.dataset.mainTab))); document.querySelectorAll('#kpiMode .seg').forEach(btn=>btn.addEventListener('click',()=>updateKpiCards(btn.dataset.mode))); document.querySelectorAll('#searchPeriodWrap .seg').forEach(btn=>btn.addEventListener('click',()=>{searchPeriod=btn.dataset.searchPeriod; document.querySelectorAll('#searchPeriodWrap .seg').forEach(b=>b.classList.toggle('active',b===btn)); const {start,end}=getSearchRange(); const lbl=$('searchPeriodLabel'); if(lbl) lbl.textContent=start?`📅 ${start} ~ ${end}`:''; if(dbRows.length||adRows.length||bannerRows.length) renderTable(filteredSearch());})); document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{if(btn.dataset.hidden==='true') return; document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active')); btn.classList.add('active'); currentTab=btn.dataset.tab; if(currentTab==='keywordSummary') keywordPage=1; if(dbRows.length||adRows.length||bannerRows.length) renderTable(filteredSearch());})); $('exportDailyBtn').addEventListener('click',exportDaily); $('exportKeywordBtn').addEventListener('click',exportKeyword); $('exportBannerBtn').addEventListener('click',exportBanner); $('tableArea').addEventListener('click',e=>{const tr=e.target.closest('tr[data-in-type]'); if(tr) openBannerDetail(decodeURIComponent(tr.dataset.inType));}); $('modalClose').addEventListener('click',closeBannerModal); $('bannerModal').addEventListener('click',e=>{if(e.target===$('bannerModal')) closeBannerModal();}); document.addEventListener('keydown',e=>{if(e.key==='Escape') closeBannerModal();}); renderKPIs(); loadGithubData();})();
 </script>
 </body>
 </html>
