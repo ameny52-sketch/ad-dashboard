@@ -571,7 +571,7 @@ function renderCharts(){if(charts.dailyDb){charts.dailyDb.destroy(); delete char
 function table(headers,rows,totals=''){if(!rows.length) return '<div class="empty">조건에 맞는 데이터가 없습니다.</div>'; return '<table><thead><tr>'+headers.map((h,i)=>`<th data-col="${i}">${h}</th>`).join('')+'</tr>'+(totals?'<tr class="totals-row">'+totals+'</tr>':'')+'</thead><tbody>'+rows.join('')+'</tbody></table>';}
 function rowClass(r){if(r.cost>0&&!r.db) return 'row-danger'; if(isNum(r.dbCost)&&r.dbCost>=300000) return 'row-warn'; return '';}
 function buildHourlyData(){
-  const {start,end}=getDateRange(), q=cleanKw($('keywordSearch').value);
+  const {start,end}=getSearchRange(), q=cleanKw($('keywordSearch').value);
   const base=Array.from({length:24},(_,h)=>({hour:String(h).padStart(2,'0'),impressions:0,clicks:0,cost:0,db:0,pcDb:0,moDb:0,pcCost:0,moCost:0}));
   const map=new Map(base.map(r=>[r.hour,r]));
   // 광고비/클릭은 검색광고 CSV의 시간대 컬럼 기준으로 합산합니다.
