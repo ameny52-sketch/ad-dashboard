@@ -21,7 +21,6 @@ header .sub{font-size:12px;color:var(--faint);margin-left:4px}
 .media-group-tab.disabled{opacity:.38;cursor:not-allowed}
 .badge-built-in{font-size:11px;background:#dcfce7;color:#166534;padding:2px 8px;border-radius:4px;font-weight:600;margin-left:8px}
 .container{max-width:1200px;margin:0 auto;padding:2rem 1.5rem}
-.container.display-mode{max-width:98vw;padding-top:.75rem;padding-left:1rem;padding-right:1rem}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.5rem;margin-bottom:1rem}
 .section-title{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:1rem}
 .upload-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
@@ -251,7 +250,6 @@ body{
 .app-main-nav .media-group-tab:hover:not(.disabled){background:#f1f5f9;color:#111827}
 .app-main-nav .media-group-tab.active{background:#101828;color:#fff;box-shadow:0 10px 20px rgba(15,23,42,.16)}
 .container{max-width:1680px;padding:0 22px 46px}
-.container.display-mode{max-width:1680px;padding-left:22px;padding-right:22px;padding-top:0}
 .card,.table-card,.alert-section,.cpc-chart-card,.cpc-metric,.metric,.sales-cmp-card{border-color:var(--border);border-radius:18px;box-shadow:var(--shadow-sm);background:rgba(255,255,255,.96)}
 .main-tabs{background:rgba(255,255,255,.92);border:1px solid var(--border);border-radius:20px;padding:7px;margin-bottom:8px;box-shadow:var(--shadow-sm);align-items:center;gap:4px;flex-wrap:wrap}
 .main-tab{border:0;border-radius:14px;padding:10px 16px;margin:0;color:#42526b;background:transparent;font-weight:850;border-bottom:0;transition:.15s ease}
@@ -265,7 +263,6 @@ tbody tr:hover td{background:#eef6ff}
 .filter-row input,.filter-row select,.tab-btn,.cpc-dtab{border-color:var(--border-strong);border-radius:12px}
 button.run,.dl{box-shadow:none}
 .status{margin-left:auto}
-#display-media-tabs{background:rgba(255,255,255,.92);border:1px solid var(--border);border-radius:20px;padding:7px;margin-bottom:16px;box-shadow:var(--shadow-sm)}
 #daily-month-summary{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 #daily-table-card{overflow:visible !important}
 #daily-table-card>div[style*="overflow-x"]{overflow-x:auto;overflow-y:visible}
@@ -275,11 +272,8 @@ button.run,.dl{box-shadow:none}
 @media(max-width:900px){
   .app-hero{margin-top:14px;padding:0 14px}.app-hero-inner{display:block;padding:20px}.app-brand h1{font-size:24px}.hero-sub{font-size:12px}.hero-chip{display:inline-block;margin-top:14px}
   .app-main-nav{margin-left:14px;margin-right:14px;padding:7px;overflow:auto;flex-wrap:nowrap}.app-main-nav .media-group-tab{white-space:nowrap}
-  .container,.container.display-mode{padding-left:14px;padding-right:14px}
+  .container{padding-left:14px;padding-right:14px}
 }
-
-.report-sheet-tile{background:linear-gradient(180deg,#f5f8ff,#eef4ff);border:1px solid rgba(24,95,165,.12);border-radius:12px;padding:12px 10px;text-align:center;transition:transform .15s ease,box-shadow .15s ease}
-.report-sheet-tile:hover{transform:translateY(-2px);box-shadow:0 10px 22px rgba(24,95,165,.12)}
 
 </style>
 </head>
@@ -299,8 +293,6 @@ button.run,.dl{box-shadow:none}
   <button class="media-group-tab active" onclick="switchMediaGroup('all',this)">전체</button>
   <button class="media-group-tab" onclick="switchMediaGroup('pc_content',this)">파워컨텐츠</button>
   <button class="media-group-tab" onclick="switchMediaGroup('keyword',this)">키워드</button>
-  <button class="media-group-tab" onclick="switchMediaGroup('display',this)">디스플레이</button>
-  <button class="media-group-tab" onclick="switchMediaGroup('rank',this)">순위 조회</button>
 </nav>
 
 <div class="container">
@@ -319,7 +311,6 @@ button.run,.dl{box-shadow:none}
     <button class="main-tab alert" onclick="switchTab('alert',this)">효율 순위</button>
     <button class="main-tab" onclick="switchTab('cpc',this)">CPC 분석</button>
     <button class="main-tab" onclick="switchTab('data',this)">데이터 현황</button>
-    <button class="main-tab" onclick="switchTab('report',this)">보고서</button>
     <button class="main-tab" onclick="switchTab('adinfo',this)">광고 설정</button>
     <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
       <div id="pc-month-sel-wrap" style="display:none;align-items:center;gap:8px">
@@ -829,158 +820,6 @@ button.run,.dl{box-shadow:none}
 
   <div id="daily-no-data" style="display:none;padding:3rem;text-align:center;color:var(--faint);font-size:14px">
     ▶ 데이터를 불러오는 중이거나 해당 월 데이터가 없습니다.
-  </div>
-</div>
-
-<!-- ===== 리포트 패널 ===== -->
-<div class="tab-panel" id="panel-report">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:10px">
-    <div>
-      <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:2px">📄 성과 리포트 다운로드</div>
-      <div style="font-size:12px;color:var(--faint)">파워컨텐츠 광고파일 + 상담시스템 기반 · 광고파일/1-통합/2-보종별/3-기기별/4-보종기기별 시트 자동 생성</div>
-    </div>
-  </div>
-
-  <!-- 월 선택 + 다운로드 카드 -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem">
-    <div class="card" style="padding:1.25rem;margin-bottom:0;position:relative;overflow:hidden">
-      <div style="position:absolute;right:-30px;top:-30px;width:110px;height:110px;border-radius:50%;background:var(--accent-bg)"></div>
-      <div style="position:relative;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem">당월 / 특정 월</div>
-      <div style="position:relative;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <select id="report-month-sel" style="border:1px solid var(--border-strong);border-radius:var(--rs);padding:6px 10px;font-size:12px;font-family:inherit;color:var(--text);background:var(--surface);outline:none">
-          <option value="">최신 파일 기준</option>
-        </select>
-        <button onclick="downloadReport(document.getElementById('report-month-sel').value)"
-          style="padding:7px 16px;background:#185FA5;color:#fff;border:none;border-radius:var(--rs);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 8px 18px rgba(24,95,165,.25)">
-          📥 엑셀 다운로드
-        </button>
-      </div>
-      <div style="position:relative;margin-top:.75rem;font-size:11px;color:var(--faint)">월 선택 시 해당 월 파워컨텐츠 파일만 집계</div>
-    </div>
-    <div class="card" style="padding:1.25rem;margin-bottom:0;position:relative;overflow:hidden">
-      <div style="position:absolute;right:-30px;top:-30px;width:110px;height:110px;border-radius:50%;background:#eafaf0"></div>
-      <div style="position:relative;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem">전체 기간 (모든 파일 합산)</div>
-      <div style="position:relative;display:flex;align-items:center;gap:8px">
-        <button onclick="downloadReport('', true)"
-          style="padding:7px 16px;background:#166534;color:#fff;border:none;border-radius:var(--rs);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 8px 18px rgba(22,101,52,.22)">
-          📥 전체 기간 엑셀 다운로드
-        </button>
-      </div>
-      <div style="position:relative;margin-top:.75rem;font-size:11px;color:var(--faint)">data 폴더 내 모든 월 파워컨텐츠 파일을 합산해서 생성</div>
-    </div>
-  </div>
-
-  <!-- 포함 시트 안내 -->
-  <!-- 템플릿 안내 -->
-  <div id="report-template-warn" style="background:#FFF7ED;border:1px solid #FDBA74;border-radius:var(--r);padding:12px 16px;margin-bottom:1rem;font-size:12px;color:#9A3412;display:none">
-    ⚠️ <strong>template.xlsx</strong> 파일이 필요합니다 — 기존 파워컨텐츠 성과 모니터링 파일을 <code>template.xlsx</code>로 이름 변경 후 adtool 폴더에 넣어주세요.
-  </div>
-
-  <div class="card" style="padding:1.25rem;margin-bottom:1rem">
-    <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:.75rem">생성되는 시트</div>
-    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px">
-      <div class="report-sheet-tile">
-        <div style="font-size:22px;margin-bottom:6px">📋</div>
-        <div style="font-size:11.5px;font-weight:700;color:#185FA5">광고파일</div>
-        <div style="font-size:10.5px;color:var(--faint);margin-top:3px">원본 데이터 전체</div>
-      </div>
-      <div class="report-sheet-tile">
-        <div style="font-size:22px;margin-bottom:6px">📊</div>
-        <div style="font-size:11.5px;font-weight:700;color:#185FA5">1-통합</div>
-        <div style="font-size:10.5px;color:var(--faint);margin-top:3px">월별 전체 집계</div>
-      </div>
-      <div class="report-sheet-tile">
-        <div style="font-size:22px;margin-bottom:6px">🏷️</div>
-        <div style="font-size:11.5px;font-weight:700;color:#185FA5">2-보종별</div>
-        <div style="font-size:10.5px;color:var(--faint);margin-top:3px">월별 × 보험종류</div>
-      </div>
-      <div class="report-sheet-tile">
-        <div style="font-size:22px;margin-bottom:6px">📱</div>
-        <div style="font-size:11.5px;font-weight:700;color:#185FA5">3-기기별</div>
-        <div style="font-size:10.5px;color:var(--faint);margin-top:3px">월별 × PC/모바일</div>
-      </div>
-      <div class="report-sheet-tile">
-        <div style="font-size:22px;margin-bottom:6px">🔀</div>
-        <div style="font-size:11.5px;font-weight:700;color:#185FA5">4-보종기기별</div>
-        <div style="font-size:10.5px;color:var(--faint);margin-top:3px">보종 × 기기 교차</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- 상태 메시지 -->
-  <div id="report-status" style="font-size:13px;color:var(--muted);padding:.5rem 0"></div>
-</div>
-
-<!-- ===== 순위 조회 패널 ===== -->
-<div class="tab-panel" id="panel-rank">
-  <div style="font-size:18px;font-weight:700;margin-bottom:4px">네이버 광고 순위 조회</div>
-  <div style="font-size:12px;color:var(--faint);margin-bottom:1.25rem">키워드를 쉼표로 구분해서 입력하면 파워링크(1~10위)·파워컨텐츠(1~3위) PC/모바일 결과를 가져옵니다.</div>
-
-  <!-- 입력 -->
-  <div style="display:flex;gap:8px;margin-bottom:1rem">
-    <input id="rank-keyword-input" type="text" placeholder="예: 실비보험, 암보험, 치아보험"
-      style="flex:1;border:1.5px solid var(--border-strong);border-radius:var(--rs);padding:9px 14px;font-size:13px;font-family:inherit;outline:none;color:var(--text)"
-      onkeydown="if(event.key==='Enter') runRankCrawl()">
-    <button onclick="runRankCrawl()" id="rank-btn"
-      style="background:var(--text);color:#fff;border:none;border-radius:var(--rs);padding:9px 22px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap">
-      조회
-    </button>
-  </div>
-
-  <!-- 상태 메시지 -->
-  <div id="rank-status" style="font-size:12px;color:var(--faint);margin-bottom:.75rem;min-height:18px"></div>
-
-  <!-- 키워드 탭 -->
-  <div id="rank-kw-tabs" style="display:none;gap:6px;flex-wrap:wrap;margin-bottom:1rem" class="tab-bar"></div>
-
-  <!-- PC / 모바일 토글 -->
-  <div id="rank-device-toggle" style="display:none;gap:6px;margin-bottom:1rem">
-    <button class="tab-btn active" id="rank-dev-pc" onclick="switchRankDevice('pc',this)">🖥 PC</button>
-    <button class="tab-btn" id="rank-dev-mobile" onclick="switchRankDevice('mobile',this)">📱 모바일</button>
-  </div>
-
-  <!-- 결과 -->
-  <div id="rank-result" style="display:none">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
-      <div class="table-card">
-        <div class="table-header">
-          <h2>파워링크</h2>
-          <span style="font-size:11px;color:var(--faint)">1~10위</span>
-        </div>
-        <div id="rank-powerlink-list"></div>
-      </div>
-      <div class="table-card">
-        <div class="table-header">
-          <h2>파워컨텐츠</h2>
-          <span style="font-size:11px;color:var(--faint)">1~3위</span>
-        </div>
-        <div id="rank-powercontent-list"></div>
-      </div>
-    </div>
-    <div id="rank-timestamp" style="font-size:11px;color:var(--faint);margin-top:.6rem;text-align:right"></div>
-  </div>
-</div>
-
-<!-- ===== 디스플레이 광고 패널 ===== -->
-<div class="tab-panel" id="panel-display">
-  <!-- 매체 서브탭 + 다운로드 -->
-  <div id="display-media-tabs" style="display:flex;align-items:center;gap:4px;margin-bottom:.4rem">
-    <button class="main-tab active" onclick="switchDisplayMedia('kakao',this)">카카오페이</button>
-    </div>
-  <!-- 카카오페이 패널 -->
-  <div id="display-panel-kakao">
-    <div id="display-kakao-loading" style="padding:2rem;text-align:center;color:var(--muted);font-size:13px">데이터 로딩 중...</div>
-    <div id="display-kakao-error" style="display:none;padding:1rem;background:#fff3cd;border-radius:8px;font-size:13px;color:#856404"></div>
-    <div id="display-kakao-table-wrap" style="display:none;overflow-x:auto"></div>
-  </div>
-</div>
-
-<!-- 소재 상세 팝업 -->
-<div id="creative-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.5);overflow-y:auto" onclick="if(event.target===this)closeCreativeModal()">
-  <div style="background:var(--card);border-radius:12px;max-width:900px;margin:40px auto;padding:1.5rem;position:relative">
-    <button onclick="closeCreativeModal()" style="position:absolute;right:1rem;top:1rem;background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);line-height:1">×</button>
-    <div id="creative-modal-title" style="font-size:15px;font-weight:700;margin-bottom:1rem;color:var(--text)"></div>
-    <div id="creative-modal-body"></div>
   </div>
 </div>
 
@@ -1624,123 +1463,6 @@ function runAnalysis(){
   }).catch(e=>setStatus('데이터 로드 실패: '+e.message,'err'));
 }
 
-function runAnalysis_DISABLED(){
-  setStatus('계산 중...','');
-  setTimeout(()=>{
-    try{
-      // 광고비: 광고그룹별 + 일별 원본 보관
-      const adByGroup={};
-      const adRaw={}; // group -> [{date,cost,clicks,impressions}]
-      adData.forEach(r=>{
-        const g=(r['광고그룹']||'').trim();
-        if(!g) return;
-        const cost=parseInt(r['총비용']||'0')||0;
-        const click=parseInt(r['클릭수']||'0')||0;
-        const imp=parseInt(r['노출수']||'0')||0;
-        const date=(r['일별']||'').trim();
-        const rank=parseFloat(r['평균노출순위']||'0')||0;
-        if(!adByGroup[g]) adByGroup[g]={cost:0,clicks:0,impressions:0,rankSum:0,rankImpSum:0};
-        adByGroup[g].cost+=cost;
-        adByGroup[g].clicks+=click;
-        adByGroup[g].impressions+=imp;
-        if(rank>0 && imp>0){ adByGroup[g].rankSum+=rank*imp; adByGroup[g].rankImpSum+=imp; }
-        if(!adRaw[g]) adRaw[g]=[];
-        adRaw[g].push({date,cost,clicks:click,impressions:imp,rank});
-      });
-
-      // 매출: 인타입별 전체 + 날짜별 집계
-      const salesByIntype={};       // 전체 합산
-      const salesByIntypeDate={};   // 날짜별 {date: {db,contracts,performance}}
-      salesData.forEach(r=>{
-        const it=(r['인타입']||'').trim();
-        if(!it) return;
-        const cnt=parseInt(r['계약수']||'0')||0;
-        const perf=parseInt(r['평가업적']||'0')||0;
-        const rawDate=(r['상담등록일']||'').trim();
-        const date=window._normSalesDate ? window._normSalesDate(rawDate) : rawDate;
-        // 전체
-        if(!salesByIntype[it]) salesByIntype[it]={db:0,contracts:0,performance:0};
-        salesByIntype[it].db+=1;
-        salesByIntype[it].contracts+=cnt;
-        salesByIntype[it].performance+=perf;
-        // 날짜별
-        if(!salesByIntypeDate[it]) salesByIntypeDate[it]={};
-        if(!salesByIntypeDate[it][date]) salesByIntypeDate[it][date]={db:0,contracts:0,performance:0};
-        salesByIntypeDate[it][date].db+=1;
-        salesByIntypeDate[it][date].contracts+=cnt;
-        salesByIntypeDate[it][date].performance+=perf;
-      });
-
-      // 인타입→광고그룹 역매핑
-      const intypeToGroup = {};
-      Object.entries(INTYPE_MAP).forEach(([g,it])=>{ if(!intypeToGroup[it]) intypeToGroup[it]=g; });
-
-      // 미매핑 or 광고비 없는 인타입: 매출에 있는데 adByGroup에 그룹이 없는 경우
-      const mappedIntypes = new Set(Object.values(INTYPE_MAP));
-      const unmappedSales = {};
-      Object.keys(salesByIntype).forEach(it => {
-        const g = intypeToGroup[it];
-        // 인타입 매핑 자체가 없거나, 매핑은 있지만 광고비 데이터에 그룹이 없는 경우
-        if(!g || !adByGroup[g]){
-          unmappedSales[it] = {
-            ...salesByIntype[it],
-            group: g || null,  // 매핑된 그룹명 (있으면)
-            dailySalesMap: salesByIntypeDate[it] || {}
-          };
-        }
-      });
-
-      resultData=Object.keys(adByGroup).map(g=>{
-        const it=INTYPE_MAP[g]||null;
-        const ad=adByGroup[g];
-        const s=(it&&salesByIntype[it])?salesByIntype[it]:{db:0,contracts:0,performance:0};
-        // ROAS = 광고비 / 평가업적 (보험 방식: 비용효율, 낮을수록 좋음)
-        // 하지만 일반적으로 ROAS = 매출/비용이 맞으므로 평가업적/광고비로 계산
-        const roas=s.performance>0?Math.round(ad.cost/s.performance*100):null;
-        const avgRank=ad.rankImpSum>0?Math.round(ad.rankSum/ad.rankImpSum*10)/10:null;
-        const cpd=s.db>0?Math.round(ad.cost/s.db):null;
-        const cvr=s.db>0?Math.round(s.contracts/s.db*1000)/10:null;
-        const dbcvr=ad.clicks>0?Math.round(s.db/ad.clicks*1000)/10:null;
-        const campInfo = getCampInfo(g);
-        const dailySalesMap = (it && salesByIntypeDate[it]) ? salesByIntypeDate[it] : {};
-        return{group:g,intype:it||'-',cost:ad.cost,clicks:ad.clicks,impressions:ad.impressions,
-               db:s.db,contracts:s.contracts,performance:s.performance,
-               roas,avgRank,rankSum:ad.rankSum||0,rankImpSum:ad.rankImpSum||0,
-               cpd,cvr,dbcvr,
-               camp:campInfo.camp,cat:campInfo.cat,media:campInfo.media,
-               dailySalesMap,
-               dailyRaw:adRaw[g]||[]};
-      });
-
-      // 미매핑 인타입 행 추가 (광고그룹/광고비 없이 매출만)
-      Object.keys(unmappedSales).forEach(it => {
-        const s = unmappedSales[it];
-        const roas = null; // 광고비 없으므로 계산 불가
-        const cpd  = null;
-        const dbcvr= null;
-        const cvr  = s.db>0 ? Math.round(s.contracts/s.db*1000)/10 : null;
-        resultData.push({
-          group: s.group || '-', intype:it,
-          cost:0, clicks:0, impressions:0,
-          db:s.db, contracts:s.contracts, performance:s.performance,
-          roas, cpd, cvr, dbcvr,
-          camp:'-', cat:'미매핑', media:'-',
-          dailySalesMap: s.dailySalesMap,
-          isUnmapped: true
-        });
-      });
-
-      filteredData=[...resultData];
-      renderMetrics(resultData);
-      renderTable();
-      document.getElementById('results').classList.add('show');
-      setStatus(`분석 완료 — 광고그룹 ${resultData.length}개`,'ok');
-    }catch(e){
-      setStatus('오류: '+e.message,'err');
-    }
-  },50);
-} // end runAnalysis_DISABLED
-
 // ===== 요약 지표 =====
 // ===== 영업 성과 비교 카드 (당월 vs 누적) =====
 function renderSalesCompare(elId, data){
@@ -2088,9 +1810,6 @@ function switchMediaGroup(group, btn){
   document.querySelectorAll('.media-group-tab').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   _currentMediaGroup = group;
-  // 디스플레이 탭 외에는 기본 너비 복원
-  const container = document.querySelector('.container');
-  container?.classList.toggle('display-mode', group==='display');
 
   const subtabsAll = document.getElementById('subtabs-all');
   const subtabsPc  = document.getElementById('subtabs-pc');
@@ -2102,7 +1821,7 @@ function switchMediaGroup(group, btn){
   subtabsKw.style.display  = 'none';
 
   // 모든 패널 숨김
-  ['panel-alert','panel-cpc','panel-data','panel-adinfo','panel-daily','panel-kw-main','panel-kw-insight','panel-insight','panel-report','panel-display','panel-rank'].forEach(id=>{
+  ['panel-alert','panel-cpc','panel-data','panel-adinfo','panel-daily','panel-kw-main','panel-kw-insight','panel-insight'].forEach(id=>{
     const el = document.getElementById(id); if(el) el.classList.remove('show');
   });
 
@@ -2162,11 +1881,6 @@ function switchMediaGroup(group, btn){
     } else {
       showKwPanel();
     }
-  } else if(group === 'display'){
-    document.getElementById('panel-display').classList.add('show');
-    initDisplayTab();
-  } else if(group === 'rank'){
-    document.getElementById('panel-rank').classList.add('show');
   }
 }
 
@@ -2221,7 +1935,7 @@ function setDataPeriod(p){
 }
 
 function showPcPanel(tab){
-  ['panel-alert','panel-cpc','panel-data','panel-adinfo','panel-insight','panel-report'].forEach(id=>{
+  ['panel-alert','panel-cpc','panel-data','panel-adinfo','panel-insight'].forEach(id=>{
     document.getElementById(id).classList.remove('show');
   });
   // 월선택: 성과 알림판, 전체 데이터만 표시
@@ -2234,7 +1948,6 @@ function showPcPanel(tab){
   if(tab==='cpc')     { document.getElementById('panel-cpc').classList.add('show');     initCpcTab(); }
   if(tab==='data')    { document.getElementById('panel-data').classList.add('show'); }
   if(tab==='adinfo')  { document.getElementById('panel-adinfo').classList.add('show');  loadAdInfo(); }
-  if(tab==='report')  { document.getElementById('panel-report').classList.add('show');  initReportTab(); }
 }
 
 function switchTab(tab, btn){
@@ -4095,634 +3808,6 @@ function downloadCpcCsv(){
   a.href = URL.createObjectURL(blob);
   a.download = '예상CPC_'+_cpcDevice+'.csv';
   a.click();
-}
-
-// ===== 리포트 탭 =====
-function initReportTab(){
-  // 월 목록을 report-month-sel에 채우기
-  const sel = document.getElementById('report-month-sel');
-  if(!sel) return;
-  // 기존 options 제거 (첫번째 "최신 파일 기준" 제외)
-  while(sel.options.length > 1) sel.remove(1);
-  // month-select-all에서 가져오기
-  const src = document.getElementById('month-select-all');
-  if(src){
-    [...src.options].forEach(o=>{
-      if(!o.value) return;
-      const opt = document.createElement('option');
-      opt.value = o.value; opt.textContent = o.textContent;
-      sel.appendChild(opt);
-    });
-  }
-}
-
-async function downloadReport(month, allPeriod=false){
-  alert('웹 버전에서는 엑셀 보고서 다운로드를 지원하지 않습니다.\n(서버 실행 환경에서만 사용 가능)');
-  return;
-  const statusEl = document.getElementById('report-status');
-  if(statusEl) statusEl.textContent = '⏳ 엑셀 생성 중... 잠시 기다려주세요.';
-  try {
-    let url = '/api/export';
-    const params = [];
-    if(allPeriod) params.push('period=all');
-    else if(month) params.push('month=' + encodeURIComponent(month));
-    if(params.length) url += '?' + params.join('&');
-
-    const res = await fetch(url);
-    if(!res.ok){
-      let msg = '서버 오류';
-      try { const j = await res.json(); msg = j.error || msg; } catch{}
-      if(statusEl) statusEl.textContent = '❌ 실패: ' + msg;
-      const warnEl = document.getElementById('report-template-warn');
-      if(warnEl && msg.includes('template')) warnEl.style.display = 'block';
-      return;
-    }
-    const blob = await res.blob();
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    const cd = res.headers.get('Content-Disposition') || '';
-    const m = cd.match(/filename\*=UTF-8''(.+)/i);
-    a.download = m ? decodeURIComponent(m[1]) : '파워컨텐츠_성과모니터링.xlsx';
-    a.click();
-    if(statusEl) statusEl.textContent = '✅ 다운로드 완료!';
-    setTimeout(()=>{ if(statusEl) statusEl.textContent=''; }, 4000);
-  } catch(e){
-    if(statusEl) statusEl.textContent = '❌ 오류: ' + e.message;
-  }
-}
-
-// ===== 엑셀 다운로드 =====
-async function exportExcel(){
-  const monthEl = document.getElementById('month-select-all');
-  const month = monthEl ? monthEl.value : '';
-  const url = month ? `/api/export?month=${encodeURIComponent(month)}` : '/api/export';
-  setStatus('엑셀 생성 중...','');
-  try {
-    const res = await fetch(url);
-    if(!res.ok){
-      const err = await res.json();
-      setStatus('엑셀 생성 실패: ' + (err.error||res.status), 'err');
-      return;
-    }
-    const blob = await res.blob();
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    // 파일명 추출
-    const cd = res.headers.get('Content-Disposition') || '';
-    const m = cd.match(/filename\*=UTF-8''(.+)/i);
-    a.download = m ? decodeURIComponent(m[1]) : '파워컨텐츠_성과모니터링.xlsx';
-    a.click();
-    setStatus('엑셀 다운로드 완료 ✅', 'ok');
-  } catch(e){
-    setStatus('엑셀 생성 오류: ' + e.message, 'err');
-  }
-}
-
-// ===== 초기 로딩: 전체 탭 / Daily DB 현황 패널 표시 =====
-document.addEventListener('DOMContentLoaded', function(){
-  // panel-daily에 show 클래스 부여 (HTML 기본값에는 없음)
-  document.getElementById('panel-daily').classList.add('show');
-
-  // 전체 서브탭바만 표시 (pc/kw는 숨김 유지)
-  const subtabsAll = document.getElementById('subtabs-all');
-  const subtabsPc  = document.getElementById('subtabs-pc');
-  const subtabsKw  = document.getElementById('subtabs-kw');
-  if(subtabsAll) subtabsAll.style.display = '';
-  if(subtabsPc)  subtabsPc.style.display  = 'none';
-  if(subtabsKw)  subtabsKw.style.display  = 'none';
-
-  // 미디어 그룹 탭 active 상태 확인 (전체 버튼이 active인지)
-  const allBtn = document.querySelector('.media-group-tab.active');
-  if(!allBtn || allBtn.textContent.trim() !== '전체'){
-    const firstBtn = document.querySelector('.media-group-tab');
-    if(firstBtn) firstBtn.classList.add('active');
-  }
-
-  // CRM 데이터 자동 로드 후 Daily 탭 초기화
-  const monthEl = document.getElementById('month-select-all');
-  const month = monthEl?.value || '';
-  if(Object.keys(CRM_DATA).length === 0){
-    loadCrmData(month).then(()=>{
-      initDailyTab();
-    });
-  } else {
-    initDailyTab();
-  }
-});
-
-
-// ===== 디스플레이 광고 탭 =====
-let _displayData   = null;
-let _displayLoaded = false;
-let _dispCollapsed = {};
-let _dispHierarchy = null;
-let _dispLatestMon = null;
-
-// ── 핵심 헬퍼 ──────────────────────────────────────────
-function _fN(v, dec=0){ if(v==null||v==='') return '-'; const n=Number(v); if(isNaN(n)) return '-'; if(v===0||n===0) return '0'; return n.toLocaleString('ko-KR',{maximumFractionDigits:dec}); }
-function _fP(v, dec=2){ if(v==null||v==='') return '-'; const n=Number(v); if(isNaN(n)) return '-'; return (n*100).toFixed(dec)+'%'; }
-function _fM(metric, v){
-  if(metric==='CTR'||metric==='DB전환율'||metric==='계약률') return _fP(v);
-  if(metric==='평가업적比광고비') return _fN(v,1);
-  return _fN(v);
-}
-function _getVal(area, metric, mon){
-  if(!area) return null;
-  const r=(area.rows||[]).find(r=>r.metric===metric);
-  return r ? (r.values[mon]??null) : null;
-}
-
-// ── 전월 대비 변화율 ───────────────────────────────────
-function _momPct(cur, prev){
-  if(cur==null||prev==null||prev===0) return null;
-  return (cur - prev) / Math.abs(prev) * 100;
-}
-function _momText(pct, metric){
-  if(pct==null) return '';
-  const costMetrics=new Set(['Cost','DB단가']);
-  const isDown=pct<0;
-  const color=costMetrics.has(metric)?(isDown?'#27ae60':'#e74c3c'):(isDown?'#e74c3c':'#27ae60');
-  const arrow=isDown?'▼':'▲';
-  const sign=isDown?'':'+';
-  return `<span style="color:${color}">${arrow} ${sign}${pct.toFixed(1)}%</span>`;
-}
-
-// ── 계층 구조 생성 ─────────────────────────────────────
-function buildDispHierarchy(areas){
-  const total   = areas.find(a=>a.name==='Total')||null;
-  const parents = [];
-  let cur = null;
-  let pidx = 0, cidx = 0;
-  // 월 형태 영역명(예: "25년 10월") 및 불필요 행 제외
-  const skipName = n => n==='Total'||n==='MONTH'||/^\d{2}년\s*\d{1,2}월$/.test(n)||n==='전면팝업';
-  for(const area of areas){
-    if(skipName(area.name)) continue;
-    const isChild = /^소재\s/.test(area.name);
-    if(!isChild){
-      cidx = 0;
-      cur = {...area, children:[], _key:`p_${pidx++}_${area.name}`};
-      parents.push(cur);
-    } else if(cur){
-      cur.children.push({...area, _key:`c_${cur._key}_${cidx++}_${area.name}`});
-    }
-  }
-  return {total, parents};
-}
-
-// ── 최신 활성 월 탐지 ─────────────────────────────────
-function findLatestActiveMon(total, months){
-  const costRow = total&&total.rows.find(r=>r.metric==='Cost');
-  if(!costRow) return months[months.length-1]||'';
-  for(let i=months.length-1;i>=0;i--){
-    if(costRow.values[months[i]]>0) return months[i];
-  }
-  return months[months.length-1]||'';
-}
-
-function initDisplayTab(){
-  if(!_displayLoaded){ _displayLoaded = true; loadDisplayKakao(); }
-}
-
-function switchDisplayMedia(media, btn){
-  document.querySelectorAll('#display-media-tabs .main-tab').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-}
-
-function loadDisplayKakao(){
-  const loading = document.getElementById('display-kakao-loading');
-  const errBox  = document.getElementById('display-kakao-error');
-  const wrap    = document.getElementById('display-kakao-table-wrap');
-  loading.style.display=''; errBox.style.display='none'; wrap.style.display='none';
-  // 웹 버전: 카카오페이 디스플레이 데이터는 로컬 서버 필요
-  loading.style.display='none';
-  errBox.textContent='웹 버전에서 카카오페이 데이터는 지원되지 않습니다. (로컬 server.py 필요)';
-  errBox.style.display='';
-  return;
-  fetch('/api/display/kakao')
-    .then(r=>r.json())
-    .then(data=>{
-      if(data.error){ errBox.textContent=data.error; errBox.style.display=''; loading.style.display='none'; return; }
-      _displayData = data;
-      loading.style.display='none'; wrap.style.display='';
-      renderDisplayTable();
-    })
-    .catch(e=>{ errBox.textContent='서버 연결 실패: '+e.message; errBox.style.display=''; loading.style.display='none'; });
-}
-
-// ── KPI 카드 클릭 → 영역별 상세 모달 ─────────────────────
-function openKpiModal(metric){
-  if(!_dispHierarchy||!_displayData||!_dispLatestMon) return;
-  const {total, parents}=_dispHierarchy;
-  const months=_displayData.months||[];
-  const latestMon=_dispLatestMon;
-  const prevMon=months[months.indexOf(latestMon)-1]||null;
-  const metricLabel={'Cost':'광고비','CTR':'CTR','DB':'DB수','DB단가':'DB단가','DB전환율':'DB전환율'}[metric]||metric;
-  const modal=document.getElementById('creative-modal');
-  const title=document.getElementById('creative-modal-title');
-  const body =document.getElementById('creative-modal-body');
-  title.textContent=`${metricLabel} - 영역별 상세`;
-  const areas=[{name:'Total',area:total},...parents.map(p=>({name:p.name,area:p}))];
-  const y='20'+latestMon.slice(0,2), mo=parseInt(latestMon.slice(2));
-  const prevY=prevMon?'20'+prevMon.slice(0,2):null, prevMo=prevMon?parseInt(prevMon.slice(2)):null;
-  let html='<div style="display:flex;flex-direction:column;gap:10px">';
-  areas.forEach((a,i)=>{
-    const val    =_getVal(a.area,metric,latestMon);
-    const prevVal=prevMon?_getVal(a.area,metric,prevMon):null;
-    const pct    =_momPct(val,prevVal);
-    const mom    =_momText(pct,metric);
-    const isTotal=i===0;
-    html+=`<div style="padding:12px 16px;background:${isTotal?'#EBF3FF':'#fff'};border-radius:8px;border:1px solid ${isTotal?'#B8D0E8':'#e5e5e5'}">
-      <div style="font-size:11px;color:var(--muted);font-weight:${isTotal?700:500};margin-bottom:3px">${a.name}</div>
-      <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap">
-        <span style="font-size:${isTotal?20:17}px;font-weight:700;color:#1F3864">${_fM(metric,val)}</span>
-        ${prevMon?`<span style="font-size:11px;color:var(--muted)">${prevY}년 ${prevMo}월: ${_fM(metric,prevVal)} &nbsp;${mom}</span>`:''}
-      </div>
-    </div>`;
-    if(i===0&&areas.length>1) html+='<div style="height:1px;background:#e0e0e0;margin:2px 0"></div>';
-  });
-  html+='</div>';
-  body.innerHTML=html;
-  modal.style.display='';
-}
-
-// ── 요약 카드 렌더링 ───────────────────────────────────────
-function renderDispSummary(total, parents, months, latestMon){
-  const prevMon=months[months.indexOf(latestMon)-1]||null;
-  const y='20'+latestMon.slice(0,2), mo=parseInt(latestMon.slice(2));
-  const label=`${y}년 ${mo}월`;
-
-  function makeCard(title, metric, val, prevVal, accent){
-    const main=_fM(metric,val);
-    const pct =_momPct(val,prevVal);
-    const mom =pct!=null?`전월 대비 ${_momText(pct,metric)}`:'<span style="color:var(--muted)">전월 데이터 없음</span>';
-    return`<div onclick="openKpiModal('${metric}')" style="background:#fff;border:1px solid #e0e0e0;border-radius:10px;padding:10px 14px;flex:1;min-width:120px;border-top:3px solid ${accent};cursor:pointer" onmouseover="this.style.boxShadow='0 2px 10px rgba(0,0,0,.12)'" onmouseout="this.style.boxShadow=''">
-      <div style="font-size:10.5px;color:var(--muted);margin-bottom:4px">${title}</div>
-      <div style="font-size:17px;font-weight:700;color:${accent};letter-spacing:-.02em;white-space:nowrap">${main}</div>
-      <div style="font-size:10.5px;margin-top:3px">${mom}</div>
-    </div>`;
-  }
-
-  const cost   =_getVal(total,'Cost',latestMon);
-  const ctr    =_getVal(total,'CTR',latestMon);
-  const db     =_getVal(total,'DB',latestMon);
-  const dbPrice=_getVal(total,'DB단가',latestMon);
-  const dbCvr  =_getVal(total,'DB전환율',latestMon);
-  const pCost   =prevMon?_getVal(total,'Cost',prevMon):null;
-  const pCtr    =prevMon?_getVal(total,'CTR',prevMon):null;
-  const pDb     =prevMon?_getVal(total,'DB',prevMon):null;
-  const pDbPrice=prevMon?_getVal(total,'DB단가',prevMon):null;
-  const pDbCvr  =prevMon?_getVal(total,'DB전환율',prevMon):null;
-
-  const cards=
-    makeCard(`${label} 광고비`, 'Cost',     cost,    pCost,    '#4472C4')
-   +makeCard(`${label} CTR`,   'CTR',      ctr,     pCtr,     '#27ae60')
-   +makeCard(`${label} DB수`,  'DB',       db,      pDb,      '#f39c12')
-   +makeCard('DB단가',          'DB단가',   dbPrice, pDbPrice, '#8e44ad')
-   +makeCard('DB전환율',        'DB전환율', dbCvr,   pDbCvr,   '#e74c3c');
-
-  return `<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:.75rem">${cards}</div>`;
-}
-
-// ── 메인 테이블 렌더링 ──────────────────────────────────
-function renderDisplayTable(){
-  if(!_displayData) return;
-  const months=_displayData.months||[];
-  const wrap=document.getElementById('display-kakao-table-wrap');
-  const hier=buildDispHierarchy(_displayData.areas||[]);
-  _dispHierarchy=hier;
-  const {total, parents}=hier;
-  const latestMon=findLatestActiveMon(total, months);
-  _dispLatestMon=latestMon;
-
-  const MBG={'Cost':'#EBF5FB','CTR':'#E9F7EF','DB':'#FEF9E7','DB단가':'#F5EEF8','DB전환율':'#FDEDEC'};
-  const W_AREA=60, W_METRIC=110, W_MON=90;
-  const totalW=W_AREA+W_METRIC+W_MON*months.length;
-  const HDR_H=31, ROW_H=22;
-  const C=`padding:2px 6px;border:1px solid #ddd;font-size:11px;height:${ROW_H}px;box-sizing:border-box;`;
-  const H=`padding:4px 6px;border:1px solid #888;font-size:11px;font-weight:700;height:${HDR_H}px;box-sizing:border-box;`;
-
-  // ── 헤더 ──
-  const thead=`<thead><tr>
-    <th style="${H}background:#1F3864;color:#fff;position:sticky;top:0;left:0;z-index:6;text-align:center;width:${W_AREA}px">영역</th>
-    <th style="${H}background:#1F3864;color:#fff;position:sticky;top:0;left:${W_AREA}px;z-index:6;text-align:left;width:${W_METRIC}px">항목</th>
-    ${months.map(m=>{const y='20'+m.slice(0,2),mo=parseInt(m.slice(2));
-      return`<th style="${H}background:#1F3864;color:#fff;position:sticky;top:0;z-index:3;text-align:right;width:${W_MON}px">${y}년 ${mo}월</th>`;}).join('')}
-  </tr></thead>`;
-
-  // ── Total (sticky) — rowspan 제거, 모든 셀 각 행마다 top 지정 ──
-  const totalRows=(total?.rows||[]).map((row,ri)=>{
-    const top=HDR_H+ri*ROW_H;
-    const bg=MBG[row.metric]||(ri%2===0?'#EBF3FF':'#D9EAF7');
-    return`<tr>
-      <td style="${C}position:sticky;top:${top}px;left:0;z-index:6;background:#B8D0E8;color:#1F3864;font-weight:700;text-align:center;border-right:2px solid #7BA7C8">${ri===0?'Total':''}</td>
-      <td style="${C}position:sticky;top:${top}px;left:${W_AREA}px;z-index:6;background:${bg};font-weight:600;color:#1F3864">${row.metric}</td>
-      ${months.map(m=>`<td style="${C}position:sticky;top:${top}px;z-index:4;background:${bg};text-align:right;font-weight:600">${_fM(row.metric,row.values[m])}</td>`).join('')}
-    </tr>`;
-  }).join('');
-
-  // ── 영역/소재 섹션 (영역 접기만, 소재 개별 접기 없음) ──
-  const areaSections=parents.map(parent=>{
-    const pk=parent._key;
-    const pCol=_dispCollapsed[pk]||false;
-    const chevP=pCol?'▶':'▼';
-    const hide=pCol?'display:none':'';
-
-    // 영역 헤더 (항상 표시, 클릭 시 모두 접힘)
-    let html=`<tr>
-      <td colspan="${2+months.length}" style="${C}background:#1F3864;color:#fff;font-weight:700;font-size:12px;cursor:pointer;padding:4px 10px;height:26px"
-        onclick="toggleDispArea('${pk}')">
-        <span style="margin-right:6px;font-size:10px">${chevP}</span>${parent.name}
-      </td>
-    </tr>`;
-
-    // 영역 합계 행 (항상 표시 - 접어도 유지)
-    const aRowCount=(parent.rows||[]).length;
-    const areaNameCell=`<td rowspan="${aRowCount||1}" style="${C}position:sticky;left:0;z-index:1;background:#2F5496;color:#fff;font-weight:700;text-align:center;vertical-align:middle;border-right:2px solid #1F3864;font-size:10px">${parent.name}</td>`;
-    let nameInjected=false;
-    (parent.rows||[]).forEach((row,ri)=>{
-      const bg=MBG[row.metric]||(ri%2===0?'#E8EEF6':'#D9E4F0');
-      html+=`<tr>
-        ${(!nameInjected&&ri===0)?(nameInjected=true,areaNameCell):''}
-        <td style="${C}position:sticky;left:${W_AREA}px;background:${bg};font-weight:600;color:#1F3864">${row.metric}</td>
-        ${months.map(m=>`<td style="${C}background:${bg};text-align:right;font-weight:600">${_fM(row.metric,row.values[m])}</td>`).join('')}
-      </tr>`;
-    });
-
-    // 하위 소재 (pCol이면 접힘, 소재별 개별 접기 없음)
-    parent.children.forEach(child=>{
-      const childHasInt=child.intype&&Object.keys(child.intype).length>0;
-      const childRowCount=(childHasInt?1:0)+(child.rows||[]).length;
-      const childNameCell=`<td rowspan="${childRowCount||1}" style="${C}position:sticky;left:0;z-index:1;background:#3A6AB5;color:#fff;font-weight:700;text-align:center;vertical-align:middle;border-right:2px solid #2a5090;font-size:10px">${child.name}</td>`;
-      // 첫 행: 소재명 + 인타입(있으면) 또는 첫 지표를 같은 행에
-      let cNameInjected=false;
-      if(childHasInt){
-        html+=`<tr style="${hide}">
-          ${!cNameInjected?(cNameInjected=true,childNameCell):''}
-          <td style="${C}position:sticky;left:${W_AREA}px;background:#3A6AB5;color:#fff;font-weight:600;font-size:10px">인타입</td>
-          ${months.map(m=>`<td style="${C}background:#3A6AB5;color:#fff;font-size:10px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${child.intype[m]||''}</td>`).join('')}
-        </tr>`;
-      }
-      (child.rows||[]).forEach((row,ri)=>{
-        const bg=MBG[row.metric]||(ri%2===0?'#fff':'#f4f7fc');
-        html+=`<tr style="${hide}">
-          ${(!cNameInjected&&ri===0)?(cNameInjected=true,childNameCell):''}
-          <td style="${C}position:sticky;left:${W_AREA}px;background:${bg};color:var(--muted)">${row.metric}</td>
-          ${months.map(m=>`<td style="${C}background:${bg};text-align:right">${_fM(row.metric,row.values[m])}</td>`).join('')}
-        </tr>`;
-      });
-    });
-    return html;
-  }).join('');
-
-  const tableHtml=`<table style="border-collapse:separate;border-spacing:0;table-layout:fixed;font-size:11px">
-    <colgroup>
-      <col style="width:${W_AREA}px"><col style="width:${W_METRIC}px">
-      ${months.map(()=>`<col style="width:${W_MON}px">`).join('')}
-    </colgroup>
-    ${thead}
-    <tbody>${totalRows}${areaSections}</tbody>
-  </table>`;
-
-  const summary=renderDispSummary(total, parents, months, latestMon);
-
-  wrap.innerHTML=`
-    ${summary}
-    <div id="disp-top-scroll" style="overflow-x:auto;overflow-y:hidden;margin-bottom:1px">
-      <div style="width:${totalW}px;height:1px"></div>
-    </div>
-    <div id="disp-table-scroll" style="overflow:auto;max-height:calc(100vh - 210px)">
-      ${tableHtml}
-    </div>
-    <div style="margin-top:5px;font-size:10.5px;color:var(--muted)">* 영역 헤더 클릭 → 접기/펼치기 &nbsp;|&nbsp; KPI 카드 클릭 → 영역별 상세</div>`;
-
-  const ts=document.getElementById('disp-top-scroll');
-  const ms=document.getElementById('disp-table-scroll');
-  ts.addEventListener('scroll',()=>ms.scrollLeft=ts.scrollLeft);
-  ms.addEventListener('scroll',()=>ts.scrollLeft=ms.scrollLeft);
-}
-
-function toggleDispArea(key){
-  _dispCollapsed[key]=!_dispCollapsed[key];
-  renderDisplayTable();
-}
-
-function downloadDisplayReport(){
-  alert('웹 버전에서는 카카오페이 디스플레이 내보내기를 지원하지 않습니다.');
-}
-
-function openCreativeModal(areaName){
-  const modal = document.getElementById('creative-modal');
-  const title = document.getElementById('creative-modal-title');
-  const body  = document.getElementById('creative-modal-body');
-  title.textContent = `[${areaName}] 소재별 상세`;
-  body.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted)">소재 데이터 로딩 중...</div>';
-  modal.style.display = '';
-
-  body.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted)">웹 버전에서는 카카오페이 데이터를 지원하지 않습니다.</div>';
-  return;
-  const url = '/api/display/kakao/daily';
-  fetch(url)
-    .then(r=>r.json())
-    .then(data=>{
-      if(data.error){ body.innerHTML=`<div style="color:red">${data.error}</div>`; return; }
-      renderCreativeModal(body, data.creatives||[], areaName);
-    })
-    .catch(e=>{ body.innerHTML=`<div style="color:red">오류: ${e.message}</div>`; });
-}
-
-function renderCreativeModal(container, creatives, areaName){
-  if(!creatives.length){
-    container.innerHTML = '<div style="color:var(--muted);text-align:center;padding:2rem">소재 데이터가 없습니다.<br>data/ 폴더에 카카오페이_광고비.xlsx 파일을 넣어주세요.</div>';
-    return;
-  }
-  let html = '';
-  creatives.forEach(c=>{
-    const totalCost = c.total_cost ? c.total_cost.toLocaleString('ko-KR')+'원' : '-';
-    const totalImps = c.total_imps ? c.total_imps.toLocaleString('ko-KR') : '-';
-    const totalClicks = c.total_clicks ? c.total_clicks.toLocaleString('ko-KR') : '-';
-    const imgHtml = c.image
-      ? `<img src="${c.image}" style="max-width:160px;max-height:160px;object-fit:contain;border-radius:6px;border:1px solid #eee" onerror="this.style.display='none'">`
-      : `<div style="width:120px;height:120px;background:#f0f0f0;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#999">이미지 없음</div>`;
-
-    // daily table
-    const dailyRows = (c.daily||[]).map(d=>{
-      const ctr = d.ctr ? (d.ctr*100).toFixed(2)+'%' : '-';
-      return `<tr><td style="padding:3px 8px;border:1px solid #eee">${d.date}</td>
-        <td style="padding:3px 8px;border:1px solid #eee;text-align:right">${d.imps.toLocaleString()}</td>
-        <td style="padding:3px 8px;border:1px solid #eee;text-align:right">${d.reach.toLocaleString()}</td>
-        <td style="padding:3px 8px;border:1px solid #eee;text-align:right">${d.clicks.toLocaleString()}</td>
-        <td style="padding:3px 8px;border:1px solid #eee;text-align:right">${ctr}</td>
-        <td style="padding:3px 8px;border:1px solid #eee;text-align:right">${d.cost.toLocaleString()}</td></tr>`;
-    }).join('');
-
-    html += `<div style="border:1px solid #e0e0e0;border-radius:8px;padding:1rem;margin-bottom:1rem">
-      <div style="display:flex;gap:1rem;align-items:flex-start;flex-wrap:wrap">
-        <div style="flex-shrink:0">${imgHtml}</div>
-        <div style="flex:1;min-width:220px">
-          <div style="font-size:13px;font-weight:700;margin-bottom:6px;color:var(--text)">${c.name}</div>
-          <div style="font-size:11px;color:var(--muted);margin-bottom:8px">${c.product||''}</div>
-          <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:12px;margin-bottom:10px">
-            <span>노출수: <strong>${totalImps}</strong></span>
-            <span>클릭수: <strong>${totalClicks}</strong></span>
-            <span>광고비: <strong>${totalCost}</strong></span>
-          </div>
-          <div style="overflow-x:auto;max-height:220px;overflow-y:auto">
-            <table style="border-collapse:collapse;font-size:11px;width:100%">
-              <thead style="position:sticky;top:0;background:#1F3864;color:#fff">
-                <tr>
-                  <th style="padding:4px 8px;border:1px solid #ccc;text-align:left">일자</th>
-                  <th style="padding:4px 8px;border:1px solid #ccc;text-align:right">노출수</th>
-                  <th style="padding:4px 8px;border:1px solid #ccc;text-align:right">도달수</th>
-                  <th style="padding:4px 8px;border:1px solid #ccc;text-align:right">클릭수</th>
-                  <th style="padding:4px 8px;border:1px solid #ccc;text-align:right">CTR</th>
-                  <th style="padding:4px 8px;border:1px solid #ccc;text-align:right">광고비</th>
-                </tr>
-              </thead>
-              <tbody>${dailyRows}</tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>`;
-  });
-  container.innerHTML = html || '<div style="color:var(--muted);text-align:center;padding:2rem">소재 데이터 없음</div>';
-}
-
-function closeCreativeModal(){
-  document.getElementById('creative-modal').style.display = 'none';
-}
-
-// ===== 순위 조회 =====
-let _rankResults = [];   // [{keyword, pc, mobile, error}, ...]
-let _rankKwIdx   = 0;    // 현재 선택된 키워드 인덱스
-let _rankDevice  = 'pc'; // 'pc' | 'mobile'
-
-async function runRankCrawl(){
-  const raw = document.getElementById('rank-keyword-input').value.trim();
-  if(!raw){ alert('키워드를 입력해주세요.'); return; }
-
-  const keywords = raw.split(',').map(k=>k.trim()).filter(Boolean);
-  const btn      = document.getElementById('rank-btn');
-  const statusEl = document.getElementById('rank-status');
-  const tabsEl   = document.getElementById('rank-kw-tabs');
-  const toggleEl = document.getElementById('rank-device-toggle');
-  const resultEl = document.getElementById('rank-result');
-
-  // 초기화
-  _rankResults = [];
-  _rankKwIdx   = 0;
-  _rankDevice  = 'pc';
-  document.getElementById('rank-dev-pc').classList.add('active');
-  document.getElementById('rank-dev-mobile').classList.remove('active');
-
-  btn.disabled = true;
-  btn.textContent = '조회 중...';
-  resultEl.style.display = 'none';
-  tabsEl.style.display = 'none';
-  toggleEl.style.display = 'none';
-
-  // 키워드별 순차 조회
-  for(let i = 0; i < keywords.length; i++){
-    const kw = keywords[i];
-    statusEl.style.color = 'var(--faint)';
-    statusEl.textContent = `[${i+1}/${keywords.length}] "${kw}" 조회 중... (PC·모바일 각 10~20초 소요)`;
-
-    try {
-      alert('웹 버전에서는 순위 조회 기능을 지원하지 않습니다.'); return;
-      const res  = await fetch(`/api/crawl?keyword=${encodeURIComponent(kw)}`);
-      const data = await res.json();
-      if(data.error){
-        _rankResults.push({keyword: kw, pc:{powerlink:[],power_content:[]}, mobile:{powerlink:[],power_content:[]}, error: data.error});
-      } else {
-        _rankResults.push({keyword: kw, pc: data.results[0].pc, mobile: data.results[0].mobile, error: null});
-      }
-    } catch(e){
-      _rankResults.push({keyword: kw, pc:{powerlink:[],power_content:[]}, mobile:{powerlink:[],power_content:[]}, error: '서버 연결 실패'});
-    }
-
-    // 첫 결과 즉시 표시
-    if(i === 0){
-      renderRankTabs();
-      renderRankResult();
-      tabsEl.style.display   = 'flex';
-      toggleEl.style.display = 'flex';
-      resultEl.style.display = 'block';
-    } else {
-      renderRankTabs();
-    }
-  }
-
-  statusEl.style.color = '#16a34a';
-  statusEl.textContent = `총 ${keywords.length}개 키워드 조회 완료 — ${new Date().toLocaleString('ko-KR')}`;
-  btn.disabled = false;
-  btn.textContent = '조회';
-}
-
-function renderRankTabs(){
-  const tabsEl = document.getElementById('rank-kw-tabs');
-  tabsEl.innerHTML = _rankResults.map((r, i) => `
-    <button class="tab-btn${i===_rankKwIdx?' active':''}" onclick="selectRankKw(${i})">
-      ${escHtml(r.keyword)}${r.error ? ' ⚠' : ''}
-    </button>
-  `).join('');
-}
-
-function selectRankKw(idx){
-  _rankKwIdx = idx;
-  renderRankTabs();
-  renderRankResult();
-}
-
-function switchRankDevice(device, el){
-  _rankDevice = device;
-  document.getElementById('rank-dev-pc').classList.toggle('active', device==='pc');
-  document.getElementById('rank-dev-mobile').classList.toggle('active', device==='mobile');
-  renderRankResult();
-}
-
-function renderRankResult(){
-  const data   = _rankResults[_rankKwIdx];
-  if(!data) return;
-  const src    = _rankDevice === 'pc' ? data.pc : data.mobile;
-  const plEl   = document.getElementById('rank-powerlink-list');
-  const pcEl   = document.getElementById('rank-powercontent-list');
-
-  if(data.error){
-    plEl.innerHTML = `<div style="padding:.75rem 1rem;font-size:12px;color:var(--red)">오류: ${escHtml(data.error)}</div>`;
-    pcEl.innerHTML = '';
-    return;
-  }
-
-  // 파워링크
-  if(src.powerlink && src.powerlink.length){
-    plEl.innerHTML = src.powerlink.map(item => `
-      <div style="display:flex;align-items:flex-start;gap:10px;padding:.55rem 1rem;border-bottom:1px solid var(--border)">
-        <span style="min-width:22px;height:22px;background:${item.rank<=3?'var(--accent)':'#f0f0ec'};color:${item.rank<=3?'#fff':'var(--muted)'};border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px">${item.rank}</span>
-        <div style="min-width:0;flex:1">
-          <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(item.title)}</div>
-          <div style="font-size:11px;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(item.url)}</div>
-        </div>
-      </div>`).join('');
-  } else {
-    plEl.innerHTML = '<div style="padding:.75rem 1rem;font-size:12px;color:var(--faint)">파워링크 광고 없음</div>';
-  }
-
-  // 파워컨텐츠
-  if(src.power_content && src.power_content.length){
-    pcEl.innerHTML = src.power_content.map(item => `
-      <div style="display:flex;align-items:flex-start;gap:10px;padding:.55rem 1rem;border-bottom:1px solid var(--border)">
-        <span style="min-width:22px;height:22px;background:#7c3aed;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px">${item.rank}</span>
-        <div style="min-width:0;flex:1">
-          <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(item.title)}</div>
-          <div style="font-size:11px;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(item.url)}</div>
-        </div>
-      </div>`).join('');
-  } else {
-    pcEl.innerHTML = '<div style="padding:.75rem 1rem;font-size:12px;color:var(--faint)">파워컨텐츠 광고 없음</div>';
-  }
-
-  document.getElementById('rank-timestamp').textContent =
-    `${_rankDevice==='pc'?'🖥 PC':'📱 모바일'} 기준 · 조회 시각: ${new Date().toLocaleString('ko-KR')}`;
 }
 
 function escHtml(str){
