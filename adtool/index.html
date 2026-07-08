@@ -227,7 +227,7 @@ body{
   text-rendering:optimizeLegibility;
 }
 .app-hero{
-  position:relative;top:auto;z-index:auto;height:auto;margin:20px auto 12px;padding:0 22px;border:0;background:transparent;display:block;max-width:1480px;
+  position:relative;top:auto;z-index:auto;height:auto;margin:20px auto 12px;padding:0 22px;border:0;background:transparent;display:block;max-width:1680px;
 }
 .app-hero-inner{
   min-height:68px;border-radius:22px;padding:16px 26px;display:flex;align-items:center;gap:20px;overflow:hidden;position:relative;color:#fff;
@@ -243,15 +243,15 @@ body{
 .hero-sub{display:none}
 .hero-chip{display:none}
 .app-main-nav{
-  position:sticky;top:10px;z-index:200;max-width:calc(1480px - 44px);margin:0 auto 12px;padding:7px 14px;display:flex;gap:7px;flex-wrap:wrap;
+  position:sticky;top:10px;z-index:200;max-width:calc(1680px - 44px);margin:0 auto 12px;padding:7px 14px;display:flex;gap:7px;flex-wrap:wrap;
   background:rgba(255,255,255,.88);border:1px solid rgba(226,232,240,.95);border-radius:20px;box-shadow:0 12px 30px rgba(15,23,42,.07);backdrop-filter:blur(10px);
   box-sizing:border-box;
 }
 .app-main-nav .media-group-tab{border:0;border-radius:14px;background:transparent;color:#42526b;padding:11px 18px;font-size:14px;font-weight:900;transition:.15s ease;line-height:1.35}
 .app-main-nav .media-group-tab:hover:not(.disabled){background:#f1f5f9;color:#111827}
 .app-main-nav .media-group-tab.active{background:#101828;color:#fff;box-shadow:0 10px 20px rgba(15,23,42,.16)}
-.container{max-width:1480px;padding:0 22px 46px}
-.container.display-mode{max-width:1480px;padding-left:22px;padding-right:22px;padding-top:0}
+.container{max-width:1680px;padding:0 22px 46px}
+.container.display-mode{max-width:1680px;padding-left:22px;padding-right:22px;padding-top:0}
 .card,.table-card,.alert-section,.cpc-chart-card,.cpc-metric,.metric,.sales-cmp-card{border-color:var(--border);border-radius:18px;box-shadow:var(--shadow-sm);background:rgba(255,255,255,.96)}
 .main-tabs{background:rgba(255,255,255,.92);border:1px solid var(--border);border-radius:20px;padding:7px;margin-bottom:8px;box-shadow:var(--shadow-sm);align-items:center;gap:4px;flex-wrap:wrap}
 .main-tab{border:0;border-radius:14px;padding:10px 16px;margin:0;color:#42526b;background:transparent;font-weight:850;border-bottom:0;transition:.15s ease}
@@ -277,6 +277,9 @@ button.run,.dl{box-shadow:none}
   .app-main-nav{margin-left:14px;margin-right:14px;padding:7px;overflow:auto;flex-wrap:nowrap}.app-main-nav .media-group-tab{white-space:nowrap}
   .container,.container.display-mode{padding-left:14px;padding-right:14px}
 }
+
+.report-sheet-tile{background:linear-gradient(180deg,#f5f8ff,#eef4ff);border:1px solid rgba(24,95,165,.12);border-radius:12px;padding:12px 10px;text-align:center;transition:transform .15s ease,box-shadow .15s ease}
+.report-sheet-tile:hover{transform:translateY(-2px);box-shadow:0 10px 22px rgba(24,95,165,.12)}
 
 </style>
 </head>
@@ -814,6 +817,7 @@ button.run,.dl{box-shadow:none}
         <button onclick="downloadDailyCsv()" style="border:1px solid var(--border-strong);border-radius:var(--rs);padding:5px 12px;font-size:12px;font-family:inherit;color:var(--text);background:var(--surface);cursor:pointer;white-space:nowrap">↓ CSV</button>
       </div>
     </div>
+    <div id="daily-media-toggle" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:8px 16px;border-bottom:1px solid var(--border)"></div>
     <!-- 테이블: 양방향 스크롤, sticky thead 작동 -->
     <div style="overflow:auto;max-height:calc(100vh - 220px)">
       <table id="daily-table" style="width:100%;border-collapse:collapse;font-size:11.5px">
@@ -839,28 +843,30 @@ button.run,.dl{box-shadow:none}
 
   <!-- 월 선택 + 다운로드 카드 -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem">
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.25rem">
-      <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem">당월 / 특정 월</div>
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+    <div class="card" style="padding:1.25rem;margin-bottom:0;position:relative;overflow:hidden">
+      <div style="position:absolute;right:-30px;top:-30px;width:110px;height:110px;border-radius:50%;background:var(--accent-bg)"></div>
+      <div style="position:relative;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem">당월 / 특정 월</div>
+      <div style="position:relative;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <select id="report-month-sel" style="border:1px solid var(--border-strong);border-radius:var(--rs);padding:6px 10px;font-size:12px;font-family:inherit;color:var(--text);background:var(--surface);outline:none">
           <option value="">최신 파일 기준</option>
         </select>
         <button onclick="downloadReport(document.getElementById('report-month-sel').value)"
-          style="padding:7px 16px;background:#185FA5;color:#fff;border:none;border-radius:var(--rs);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">
+          style="padding:7px 16px;background:#185FA5;color:#fff;border:none;border-radius:var(--rs);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 8px 18px rgba(24,95,165,.25)">
           📥 엑셀 다운로드
         </button>
       </div>
-      <div style="margin-top:.75rem;font-size:11px;color:var(--faint)">월 선택 시 해당 월 파워컨텐츠 파일만 집계</div>
+      <div style="position:relative;margin-top:.75rem;font-size:11px;color:var(--faint)">월 선택 시 해당 월 파워컨텐츠 파일만 집계</div>
     </div>
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.25rem">
-      <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem">전체 기간 (모든 파일 합산)</div>
-      <div style="display:flex;align-items:center;gap:8px">
+    <div class="card" style="padding:1.25rem;margin-bottom:0;position:relative;overflow:hidden">
+      <div style="position:absolute;right:-30px;top:-30px;width:110px;height:110px;border-radius:50%;background:#eafaf0"></div>
+      <div style="position:relative;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem">전체 기간 (모든 파일 합산)</div>
+      <div style="position:relative;display:flex;align-items:center;gap:8px">
         <button onclick="downloadReport('', true)"
-          style="padding:7px 16px;background:#166534;color:#fff;border:none;border-radius:var(--rs);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">
+          style="padding:7px 16px;background:#166534;color:#fff;border:none;border-radius:var(--rs);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 8px 18px rgba(22,101,52,.22)">
           📥 전체 기간 엑셀 다운로드
         </button>
       </div>
-      <div style="margin-top:.75rem;font-size:11px;color:var(--faint)">data 폴더 내 모든 월 파워컨텐츠 파일을 합산해서 생성</div>
+      <div style="position:relative;margin-top:.75rem;font-size:11px;color:var(--faint)">data 폴더 내 모든 월 파워컨텐츠 파일을 합산해서 생성</div>
     </div>
   </div>
 
@@ -870,33 +876,33 @@ button.run,.dl{box-shadow:none}
     ⚠️ <strong>template.xlsx</strong> 파일이 필요합니다 — 기존 파워컨텐츠 성과 모니터링 파일을 <code>template.xlsx</code>로 이름 변경 후 adtool 폴더에 넣어주세요.
   </div>
 
-  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.25rem;margin-bottom:1rem">
-    <div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:.75rem">생성되는 시트</div>
-    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px">
-      <div style="background:#f0f4ff;border-radius:6px;padding:10px;text-align:center">
-        <div style="font-size:18px;margin-bottom:4px">📋</div>
-        <div style="font-size:11px;font-weight:700;color:#185FA5">광고파일</div>
-        <div style="font-size:10px;color:var(--faint);margin-top:2px">원본 데이터 전체</div>
+  <div class="card" style="padding:1.25rem;margin-bottom:1rem">
+    <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:.75rem">생성되는 시트</div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px">
+      <div class="report-sheet-tile">
+        <div style="font-size:22px;margin-bottom:6px">📋</div>
+        <div style="font-size:11.5px;font-weight:700;color:#185FA5">광고파일</div>
+        <div style="font-size:10.5px;color:var(--faint);margin-top:3px">원본 데이터 전체</div>
       </div>
-      <div style="background:#f0f4ff;border-radius:6px;padding:10px;text-align:center">
-        <div style="font-size:18px;margin-bottom:4px">📊</div>
-        <div style="font-size:11px;font-weight:700;color:#185FA5">1-통합</div>
-        <div style="font-size:10px;color:var(--faint);margin-top:2px">월별 전체 집계</div>
+      <div class="report-sheet-tile">
+        <div style="font-size:22px;margin-bottom:6px">📊</div>
+        <div style="font-size:11.5px;font-weight:700;color:#185FA5">1-통합</div>
+        <div style="font-size:10.5px;color:var(--faint);margin-top:3px">월별 전체 집계</div>
       </div>
-      <div style="background:#f0f4ff;border-radius:6px;padding:10px;text-align:center">
-        <div style="font-size:18px;margin-bottom:4px">🏷️</div>
-        <div style="font-size:11px;font-weight:700;color:#185FA5">2-보종별</div>
-        <div style="font-size:10px;color:var(--faint);margin-top:2px">월별 × 보험종류</div>
+      <div class="report-sheet-tile">
+        <div style="font-size:22px;margin-bottom:6px">🏷️</div>
+        <div style="font-size:11.5px;font-weight:700;color:#185FA5">2-보종별</div>
+        <div style="font-size:10.5px;color:var(--faint);margin-top:3px">월별 × 보험종류</div>
       </div>
-      <div style="background:#f0f4ff;border-radius:6px;padding:10px;text-align:center">
-        <div style="font-size:18px;margin-bottom:4px">📱</div>
-        <div style="font-size:11px;font-weight:700;color:#185FA5">3-기기별</div>
-        <div style="font-size:10px;color:var(--faint);margin-top:2px">월별 × PC/모바일</div>
+      <div class="report-sheet-tile">
+        <div style="font-size:22px;margin-bottom:6px">📱</div>
+        <div style="font-size:11.5px;font-weight:700;color:#185FA5">3-기기별</div>
+        <div style="font-size:10.5px;color:var(--faint);margin-top:3px">월별 × PC/모바일</div>
       </div>
-      <div style="background:#f0f4ff;border-radius:6px;padding:10px;text-align:center">
-        <div style="font-size:18px;margin-bottom:4px">🔀</div>
-        <div style="font-size:11px;font-weight:700;color:#185FA5">4-보종기기별</div>
-        <div style="font-size:10px;color:var(--faint);margin-top:2px">보종 × 기기 교차</div>
+      <div class="report-sheet-tile">
+        <div style="font-size:22px;margin-bottom:6px">🔀</div>
+        <div style="font-size:11.5px;font-weight:700;color:#185FA5">4-보종기기별</div>
+        <div style="font-size:10.5px;color:var(--faint);margin-top:3px">보종 × 기기 교차</div>
       </div>
     </div>
   </div>
@@ -1380,8 +1386,8 @@ function _apiAnalyze(month,s){
 
 function _apiCrm(month,s){
   const rawR=month?_filterMon(s.raw,'상담등록일',month):s.raw;
-  const nR=(month?_filterMon(s.naver,'일별',month):s.naver).filter(r=>!r['캠페인'].includes('브랜드검색'));
-  const gR=(month?_filterMon(s.google,'일',month):s.google).filter(r=>r['캠페인 유형']!=='디스플레이'&&r['캠페인 유형']!=='실적 최대화');
+  const nR=(month?_filterMon(s.naver,'일별',month):s.naver).filter(r=>!(r['캠페인']||'').includes('브랜드검색'));
+  const gR=(month?_filterMon(s.google,'일',month):s.google).filter(r=>(r['캠페인 유형']||'')!=='디스플레이'&&(r['캠페인 유형']||'')!=='실적 최대화');
   const dR=month?_filterMon(s.daum,'시작일',month):s.daum;
   const dm={},ms=new Set();
   rawR.forEach(r=>{
@@ -1400,8 +1406,8 @@ function _apiCrm(month,s){
 }
 
 function _apiKeyword(month,s){
-  const nR=(month?_filterMon(s.naver,'일별',month):s.naver).filter(r=>!r['캠페인'].includes('브랜드검색'));
-  const gR=(month?_filterMon(s.google,'일',month):s.google).filter(r=>r['캠페인 유형']!=='디스플레이'&&r['캠페인 유형']!=='실적 최대화');
+  const nR=(month?_filterMon(s.naver,'일별',month):s.naver).filter(r=>!(r['캠페인']||'').includes('브랜드검색'));
+  const gR=(month?_filterMon(s.google,'일',month):s.google).filter(r=>(r['캠페인 유형']||'')!=='디스플레이'&&(r['캠페인 유형']||'')!=='실적 최대화');
   const dR=month?_filterMon(s.daum,'시작일',month):s.daum;
   const rawR=(month?_filterMon(s.raw,'상담등록일',month):s.raw).filter(r=>r['광고매체']==='키워드');
   const MOB=/^https?:\/\/m\./i,UKW=/바로가기|웹문서|즐겨찾기|미확인/i;
@@ -3122,6 +3128,31 @@ let CRM_MEDIA_LIST = [];
 let CRM_DATA = {};
 let KW_DAILY_COST = {};  // {date_key: {naver, google, daum}}
 
+// ===== Daily DB 현황: 소형 매체 컬럼 표시/숨기기 (가독성) =====
+let _dailyHiddenMedias = new Set(JSON.parse(localStorage.getItem('daily_hidden_medias')||'[]'));
+function _dailySaveHidden(){ localStorage.setItem('daily_hidden_medias', JSON.stringify([..._dailyHiddenMedias])); }
+function toggleDailyMedia(m){
+  if(_dailyHiddenMedias.has(m)) _dailyHiddenMedias.delete(m); else _dailyHiddenMedias.add(m);
+  _dailySaveHidden(); renderDailyMediaToggle(); renderDaily();
+}
+function setDailyMediaAll(show){
+  const crmMedias = CRM_MEDIA_LIST.filter(m=>m!=='파워컨텐츠'&&m!=='네이버'&&m!=='구글'&&m!=='다음');
+  _dailyHiddenMedias = show ? new Set() : new Set(crmMedias);
+  _dailySaveHidden(); renderDailyMediaToggle(); renderDaily();
+}
+function renderDailyMediaToggle(){
+  const el = document.getElementById('daily-media-toggle'); if(!el) return;
+  const crmMedias = CRM_MEDIA_LIST.filter(m=>m!=='파워컨텐츠'&&m!=='네이버'&&m!=='구글'&&m!=='다음');
+  if(!crmMedias.length){ el.innerHTML=''; return; }
+  const hiddenCount = crmMedias.filter(m=>_dailyHiddenMedias.has(m)).length;
+  el.innerHTML = '<span style="font-size:11px;color:var(--muted);font-weight:600;margin-right:2px">기타 매체 표시</span>'
+    + crmMedias.map(m=>{
+        const on = !_dailyHiddenMedias.has(m);
+        return `<button onclick="toggleDailyMedia('${m.replace(/'/g,"\\'")}')" style="border:1px solid ${on?'var(--accent)':'var(--border-strong)'};background:${on?'var(--accent-bg)':'transparent'};color:${on?'var(--accent)':'var(--faint)'};border-radius:14px;padding:3px 10px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap">${m}</button>`;
+      }).join('')
+    + `<button onclick="setDailyMediaAll(${hiddenCount>0})" style="border:1px solid var(--border-strong);background:transparent;color:var(--muted);border-radius:14px;padding:3px 10px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap">${hiddenCount>0?'전체 표시':'전체 숨기기'}</button>`;
+}
+
 async function loadCrmData(month){
   try {
     const s = await loadAllSheets();
@@ -3479,7 +3510,8 @@ function renderDaily(){
   // CRM_DATA 또는 resultData 중 하나라도 있으면 렌더
   if(!resultData.length && !Object.keys(CRM_DATA).length && !Object.keys(KW_DAILY_COST).length) return;
   const selMonth = document.getElementById('daily-month-sel').value;
-  const crmMedias = CRM_MEDIA_LIST.filter(m=>m!=='파워컨텐츠'&&m!=='네이버'&&m!=='구글'&&m!=='다음');
+  renderDailyMediaToggle();
+  const crmMedias = CRM_MEDIA_LIST.filter(m=>m!=='파워컨텐츠'&&m!=='네이버'&&m!=='구글'&&m!=='다음'&&!_dailyHiddenMedias.has(m));
   const kwMedias = ['네이버','구글','다음'];
   const allMedias = [...kwMedias, ...crmMedias];
 
