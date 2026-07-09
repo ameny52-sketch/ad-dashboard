@@ -3949,9 +3949,10 @@ function renderDisplayTab(){
     let db=0, contracts=0, perf=0;
     if(codes && codes.size){
       crmRows.forEach(r=>{
-        if(codes.has((r['인타입']||'').trim())){
-          db++; contracts+=Math.round(_cN(r['계약수'])); perf+=_cN(r['평가업적']);
-        }
+        if(!codes.has((r['인타입']||'').trim())) return;
+        // 월 필터가 걸려있으면 그 코드가 다른 달에도 쓰인 경우까지 잡히지 않도록 상담일도 같이 맞춘다
+        if(monSel && !_normDS(r['상담등록일']||'').startsWith(monSel)) return;
+        db++; contracts+=Math.round(_cN(r['계약수'])); perf+=_cN(r['평가업적']);
       });
     }
     return {db, contracts, perf};
