@@ -3905,13 +3905,13 @@ function _fillDisplayMonSel(){
   if(months.includes(cur)) sel.value = cur;
 }
 
-// {매체,영역,월} 기준으로 인타입 참조표에서 해당하는 모든 소재의 인타입 코드를 찾는다
+// {매체,영역} 기준으로 인타입 참조표에서 해당하는 모든 소재의 인타입 코드를 찾는다 (월 무관, 전체 기간)
 // (소재 A/B가 광고 리포트에서 안 구분되므로, 영역 단위로 코드를 모아 DB를 합산 매칭한다)
-function _displayIntypeCodes(media, area, monLabel){
+function _displayIntypeCodes(media, area){
   if(!_displayIntypeRef || !_displayIntypeRef.length) return [];
   const norm = s => (s||'').replace(/\s+/g,'');
   return _displayIntypeRef
-    .filter(r => norm(r['매체'])===norm(media) && norm(r['영역'])===norm(area) && (r['월']||'').trim()===monLabel)
+    .filter(r => norm(r['매체'])===norm(media) && norm(r['영역'])===norm(area))
     .map(r => (r['인타입']||'').trim())
     .filter(Boolean);
 }
@@ -3919,28 +3919,36 @@ function _displayIntypeCodes(media, area, monLabel){
 function renderDisplayTab(){
   if(!_displayData || !_displayData.length) return;
   const monSel = document.getElementById('display-month-sel').value; // "" 또는 "2026-01"
-  const rows = _displayData.filter(r=>{
-    if((r['매체명']||'').trim() !== _displayMedia) return false;
-    if(monSel && !(r['날짜']||'').startsWith(monSel)) return false;
-    return true;
-  });
+  const mediaRows = _displayData.filter(r=>(r['매체명']||'').trim() === _displayMedia);
 
-  // 영역(상품명)별 그룹 + 소재별 하위 그룹 — 인타입은 행 단위로 직접 수집(있으면 우선 사용)
+  // 영역(상품명)별 그룹 + 소재별 하위 그룹
+  // 인타입 코드는 월 상관없이 전체 기간 기준으로 모으고(DB는 상담등록일로 월을 판단하므로),
+  // 광고비/노출/클릭 등 광고 지표만 선택된 월에 맞는 행으로 한정한다
   const areas = {};
-  rows.forEach(r=>{
+  mediaRows.forEach(r=>{
     const area = (r['상품명']||'').trim() || '(미지정)';
-    if(!areas[area]) areas[area] = {area, cost:0, imp:0, clk:0, snd:0, kws:{}, months:new Set(), codes:new Set()};
+    if(!areas[area]) areas[area] = {area, cost:0, imp:0, clk:0, snd:0, kws:{}, codes:new Set(), codeLabelCost:{}};
     const a = areas[area];
-    const cost=_cN(r['비용']), imp=_cN(r['노출수(열람수)']), clk=_cN(r['클릭수']), snd=_cN(r['발송수']);
-    a.cost+=cost; a.imp+=imp; a.clk+=clk; a.snd+=snd;
-    const mon = (r['날짜']||'').slice(0,7);
-    if(mon) a.months.add(mon);
     const code = (r['인타입']||'').trim();
-    if(code) a.codes.add(code);
     const kw = (r['소재명']||'').trim() || '(소재 미기재)';
+    if(code) a.codes.add(code);
     if(!a.kws[kw]) a.kws[kw] = {kw, cost:0, imp:0, clk:0, snd:0, codes:new Set()};
-    a.kws[kw].cost+=cost; a.kws[kw].imp+=imp; a.kws[kw].clk+=clk; a.kws[kw].snd+=snd;
     if(code) a.kws[kw].codes.add(code);
+
+    const rowCost = _cN(r['비용']);
+    if(code){
+      // 코드별로 어떤 소재명 아래 "실제 광고비"가 찍혔는지 전체 기간 기준으로 기록
+      // (0원짜리 placeholder 행의 라벨한테 코드 소유권이 뺏기지 않게 하기 위함)
+      if(!a.codeLabelCost[code]) a.codeLabelCost[code] = {};
+      a.codeLabelCost[code][kw] = (a.codeLabelCost[code][kw]||0) + rowCost;
+    }
+
+    const inMonth = !monSel || (r['날짜']||'').startsWith(monSel);
+    if(inMonth){
+      const imp=_cN(r['노출수(열람수)']), clk=_cN(r['클릭수']), snd=_cN(r['발송수']);
+      a.cost+=rowCost; a.imp+=imp; a.clk+=clk; a.snd+=snd;
+      a.kws[kw].cost+=rowCost; a.kws[kw].imp+=imp; a.kws[kw].clk+=clk; a.kws[kw].snd+=snd;
+    }
   });
 
   const hasIntypeRef = !!(_displayIntypeRef && _displayIntypeRef.length);
@@ -3968,11 +3976,7 @@ function renderDisplayTab(){
     let codes = a.codes;
     let hasIntype = codes.size>0;
     if(!hasIntype && hasIntypeRef){
-      codes = new Set();
-      a.months.forEach(mon=>{
-        const monLabel = parseInt(mon.split('-')[1]) + '월';
-        _displayIntypeCodes(_displayMedia, a.area, monLabel).forEach(c=>codes.add(c));
-      });
+      codes = new Set(_displayIntypeCodes(_displayMedia, a.area));
       hasIntype = codes.size>0;
     }
     const {db, contracts, perf} = matchDb(codes);
@@ -3980,18 +3984,22 @@ function renderDisplayTab(){
     const cpc = a.clk>0 ? Math.round(a.cost/a.clk) : null;
     const {roas, cpd} = calcMetrics(a.cost, a.clk, db, perf);
 
-    // 같은 인타입 코드가 날짜별로 소재명이 다르게 찍힌 경우(예: 예전엔 "소재 B"였는데
-    // 그 소재 슬롯이 새 코드로 넘어간 뒤에도 옛 코드로 들어온 DB가 있어 "미확인"으로 남긴 경우) —
-    // 이 DB는 현재 그 소재의 광고비와 매칭되는 게 아니므로 소재별 효율에 섞이면 왜곡됨.
-    // 코드 하나는 소재 하나에만 귀속시키되, 충돌 시 "미확인"이 우선(그 소재 효율에서 제외)하도록 한다
+    // 같은 인타입 코드가 소재명별로 여러 번 찍힌 경우(예: 원래 "소재 B"로 광고비가 나갔는데,
+    // 그 코드로 들어온 DB 중 일부가 "미확인"이라는 0원짜리 placeholder 행으로도 남은 경우) —
+    // 코드 하나는 소재 하나에만 귀속시킨다. "실제 광고비가 찍힌 소재"가 있으면 그 소재가 우선(그래야
+    // 진짜 광고비 나간 소재의 효율이 정확해짐) — 그런 소재가 없는(전부 0원) 코드만 미확인 등에 남는다
     const isPlaceholderLabel = l => l==='(소재 미기재)' || l==='미확인';
     const kwEntries = Object.entries(a.kws);
     const codeOwner = {};
-    kwEntries.forEach(([label,k])=>{
-      k.codes.forEach(c=>{
-        const owner = codeOwner[c];
-        if(owner===undefined || (!isPlaceholderLabel(owner) && isPlaceholderLabel(label))) codeOwner[c]=label;
-      });
+    Object.entries(a.codeLabelCost).forEach(([code, labelCosts])=>{
+      const realLabels = Object.entries(labelCosts).filter(([l,c])=>c>0 && !isPlaceholderLabel(l));
+      if(realLabels.length){
+        realLabels.sort((x,y)=>y[1]-x[1]);
+        codeOwner[code] = realLabels[0][0];
+      } else {
+        const labels = Object.keys(labelCosts);
+        codeOwner[code] = labels.find(isPlaceholderLabel) || labels[0];
+      }
     });
     kwEntries.forEach(([label,k])=>{
       k.codes = new Set([...k.codes].filter(c=>codeOwner[c]===label));
