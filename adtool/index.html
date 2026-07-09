@@ -3897,7 +3897,11 @@ async function loadDisplayData(){
 
 function _fillDisplayMonSel(){
   const sel = document.getElementById('display-month-sel');
-  const months = [...new Set(_displayData.map(r=>(r['날짜']||'').slice(0,7)))].filter(Boolean).sort().reverse();
+  // 광고 리포트에 아직 그 달 행이 없어도(광고비 업로드 전) CRM에 상담등록일이 있으면 월 선택지에 넣는다
+  // — DB는 상담등록일 기준으로 이미 잡히므로, 광고비만 나중에 채워지는 구조를 지원
+  const reportMonths = _displayData.map(r=>(r['날짜']||'').slice(0,7));
+  const crmMonths = (_displayCrmRaw||[]).map(r=>_normDS(r['상담등록일']||'').slice(0,7));
+  const months = [...new Set([...reportMonths, ...crmMonths])].filter(m=>/^\d{4}-\d{2}$/.test(m)).sort().reverse();
   const cur = sel.value;
   sel.innerHTML = '<option value="">전체 월</option>' + months.map(m=>{
     const [y,mo]=m.split('-'); return `<option value="${m}">${y}년 ${parseInt(mo)}월</option>`;
