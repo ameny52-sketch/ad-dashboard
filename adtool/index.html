@@ -3833,6 +3833,38 @@ function downloadCpcCsv(){
   a.click();
 }
 
+// ===== 초기 로딩: 전체 탭 / Daily DB 현황 패널 표시 =====
+document.addEventListener('DOMContentLoaded', function(){
+  // panel-daily에 show 클래스 부여 (HTML 기본값에는 없음)
+  document.getElementById('panel-daily').classList.add('show');
+
+  // 전체 서브탭바만 표시 (pc/kw는 숨김 유지)
+  const subtabsAll = document.getElementById('subtabs-all');
+  const subtabsPc  = document.getElementById('subtabs-pc');
+  const subtabsKw  = document.getElementById('subtabs-kw');
+  if(subtabsAll) subtabsAll.style.display = '';
+  if(subtabsPc)  subtabsPc.style.display  = 'none';
+  if(subtabsKw)  subtabsKw.style.display  = 'none';
+
+  // 미디어 그룹 탭 active 상태 확인 (전체 버튼이 active인지)
+  const allBtn = document.querySelector('.media-group-tab.active');
+  if(!allBtn || allBtn.textContent.trim() !== '전체'){
+    const firstBtn = document.querySelector('.media-group-tab');
+    if(firstBtn) firstBtn.classList.add('active');
+  }
+
+  // CRM 데이터 자동 로드 후 Daily 탭 초기화
+  const monthEl = document.getElementById('month-select-all');
+  const month = monthEl?.value || '';
+  if(Object.keys(CRM_DATA).length === 0){
+    loadCrmData(month).then(()=>{
+      initDailyTab();
+    });
+  } else {
+    initDailyTab();
+  }
+});
+
 function escHtml(str){
   return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
