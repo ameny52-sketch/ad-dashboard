@@ -491,7 +491,7 @@ button.run,.dl{box-shadow:none}
 
   <!-- 디스플레이(뉴미디어) 패널 -->
   <div class="tab-panel" id="panel-display">
-    <div id="display-media-tabs" style="display:flex;align-items:center;gap:6px;margin-bottom:1rem;flex-wrap:wrap">
+    <div class="main-tabs" id="display-media-tabs" style="display:flex">
       <button class="main-tab active" onclick="switchDisplayMedia('카카오페이',this)">카카오페이</button>
       <button class="main-tab" onclick="switchDisplayMedia('T멤버십',this)">T멤버십</button>
       <button class="main-tab" onclick="switchDisplayMedia('가스락',this)">가스락</button>
@@ -4040,9 +4040,17 @@ function renderDisplayAreaTable(areaList){
     document.getElementById('display-tbody').innerHTML = '<tr><td colspan="12" style="padding:1rem;color:var(--faint)">데이터 없음</td></tr>';
     return;
   }
+  // 소재 A,B,C... 순으로, "미확인"/소재 미기재 등은 맨 뒤로
+  const kwSortKey = label => {
+    const m = (label||'').match(/^소재\s*([A-Za-z])$/);
+    return m ? m[1].toUpperCase().charCodeAt(0) : 999;
+  };
   document.getElementById('display-tbody').innerHTML = areaList.map((a,i)=>{
     const rowCls = `disp-kwdet-${i}`;
-    const kwRows = [...a.kws].sort((x,y)=>y.cost-x.cost).map(k=>{
+    const kwRows = [...a.kws].sort((x,y)=>{
+      const kx=kwSortKey(x.kw), ky=kwSortKey(y.kw);
+      return kx!==ky ? kx-ky : x.kw.localeCompare(y.kw,'ko');
+    }).map(k=>{
       const kctr = k.imp>0 ? Math.round(k.clk/k.imp*10000)/100 : null;
       const kcpc = k.clk>0 ? Math.round(k.cost/k.clk) : null;
       const dbCells = k.hasIntype
