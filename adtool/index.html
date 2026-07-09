@@ -170,8 +170,8 @@ tbody td.intype-cell{font-family:'SF Mono','Fira Code',monospace;font-size:11px;
 .cpc-legend{display:flex;gap:10px;font-size:11px;color:var(--faint)}
 .cpc-legend span{display:flex;align-items:center;gap:4px}
 .cpc-leg-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
-.cpc-device-tabs{display:flex;gap:0;margin-bottom:1rem}
-.cpc-dtab{border:1px solid var(--border-strong);background:var(--surface);border-radius:0;padding:7px 18px;font-size:12px;font-weight:600;cursor:pointer;color:var(--muted);font-family:inherit;transition:all .12s}
+.cpc-device-tabs{display:flex;gap:0}
+.cpc-dtab{height:32px;box-sizing:border-box;border:1px solid var(--border-strong);background:var(--surface);border-radius:0;padding:0 18px;font-size:12px;font-weight:600;cursor:pointer;color:var(--muted);font-family:inherit;transition:all .12s}
 .cpc-dtab:first-child{border-radius:var(--rs) 0 0 var(--rs)}
 .cpc-dtab:last-child{border-radius:0 var(--rs) var(--rs) 0}
 .cpc-dtab+.cpc-dtab{border-left:none}
@@ -321,26 +321,26 @@ button.run,.dl{box-shadow:none}
     <button class="main-tab active" onclick="switchTab('kw-insight',this)">성과 진단</button>
     <button class="main-tab" onclick="switchTab('kw-main',this)">데이터 현황</button>
     <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
-      <select id="month-select-kw" style="border:1px solid var(--border-strong);border-radius:var(--rs);padding:5px 10px;font-size:13px;font-family:inherit;color:var(--text);background:var(--surface);outline:none;cursor:pointer" onchange="onMonthChange()">
-      </select>
+      <div id="kw-month-sel-wrap" style="display:none;align-items:center;gap:8px">
+        <select id="month-select-kw" style="border:1px solid var(--border-strong);border-radius:var(--rs);padding:5px 10px;font-size:13px;font-family:inherit;color:var(--text);background:var(--surface);outline:none;cursor:pointer" onchange="onMonthChange()">
+        </select>
+      </div>
       <span class="status" id="status-kw" style="font-size:12px;display:none"></span>
     </div>
   </div>
 
   <!-- 키워드 성과 진단 패널 -->
   <div class="tab-panel" id="panel-kw-insight">
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.25rem">
-      <div></div>
-      <select id="kw-insight-range" onchange="renderKwInsight()" style="border:1px solid var(--border-strong);border-radius:var(--rs);padding:6px 12px;font-size:12px;font-family:inherit;color:var(--text);background:var(--surface);outline:none;cursor:pointer">
-        <option value="yesterday">오늘 vs 어제</option>
-        <option value="week">이번 7일 vs 이전 7일</option>
-        <option value="7days">최근 7일 추이</option>
-      </select>
-    </div>
-
     <!-- 한줄 요약 배너 -->
     <div id="kw-insight-banner" style="background:linear-gradient(135deg,#2e2e2e 0%,#4a4a4a 100%);border-radius:12px;padding:1.5rem 2rem;margin-bottom:1.25rem">
-      <div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:6px">오늘의 한줄 요약</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;gap:1rem">
+        <div style="font-size:11px;color:rgba(255,255,255,.5)">오늘의 한줄 요약</div>
+        <select id="kw-insight-range" onchange="renderKwInsight()" style="border:1px solid rgba(255,255,255,.25);border-radius:var(--rs);padding:5px 10px;font-size:11px;font-family:inherit;color:#fff;background:rgba(255,255,255,.08);outline:none;cursor:pointer">
+          <option value="yesterday">오늘 vs 어제</option>
+          <option value="week">이번 7일 vs 이전 7일</option>
+          <option value="7days">최근 7일 추이</option>
+        </select>
+      </div>
       <div id="kw-insight-summary-text" style="font-size:20px;font-weight:700;color:#fff;margin-bottom:12px;line-height:1.4"></div>
       <div id="kw-insight-badges" style="display:flex;gap:8px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px"></div>
     </div>
@@ -521,17 +521,15 @@ button.run,.dl{box-shadow:none}
 
   <!-- 성과 분석 패널 -->
   <div class="tab-panel" id="panel-insight">
-    <!-- 헤더 -->
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.25rem;gap:1rem">
-      <div></div>
-      <select id="insight-range" onchange="renderInsight()" style="border:1px solid var(--border-strong);border-radius:var(--rs);padding:6px 12px;font-size:12px;font-family:inherit;color:var(--text);background:var(--surface);outline:none;cursor:pointer">
-        <option value="yesterday">오늘 vs 어제</option>
-        <option value="week">이번주 vs 지난주</option>
-        <option value="7days">최근 7일 추이</option>
-      </select>
-    </div>
     <div id="insight-banner" style="background:linear-gradient(135deg,#2e2e2e 0%,#4a4a4a 100%);border-radius:12px;padding:1.5rem 2rem;margin-bottom:1.25rem">
-      <div style="font-size:11px;color:rgba(255,255,255,.55);margin-bottom:8px">오늘의 한줄 요약</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:1rem">
+        <div style="font-size:11px;color:rgba(255,255,255,.55)">오늘의 한줄 요약</div>
+        <select id="insight-range" onchange="renderInsight()" style="border:1px solid rgba(255,255,255,.25);border-radius:var(--rs);padding:5px 10px;font-size:11px;font-family:inherit;color:#fff;background:rgba(255,255,255,.08);outline:none;cursor:pointer">
+          <option value="yesterday">오늘 vs 어제</option>
+          <option value="week">이번주 vs 지난주</option>
+          <option value="7days">최근 7일 추이</option>
+        </select>
+      </div>
       <div id="insight-summary-text" style="font-size:20px;font-weight:700;color:#fff;line-height:1.4;margin-bottom:14px">
         데이터 로딩 중...
       </div>
@@ -739,12 +737,6 @@ button.run,.dl{box-shadow:none}
   <div class="tab-panel" id="panel-data">
   <div id="file-info" style="display:none"></div>
 
-  <!-- 기간 토글 -->
-  <div style="display:flex;gap:0;margin-bottom:.75rem">
-    <button id="data-period-month" onclick="setDataPeriod('month')" style="padding:5px 14px;font-size:12px;font-weight:600;border:1px solid var(--border-strong);border-radius:var(--rs) 0 0 var(--rs);background:var(--text);color:#fff;cursor:pointer;font-family:inherit">당월</button>
-    <button id="data-period-all"   onclick="setDataPeriod('all')"   style="padding:5px 14px;font-size:12px;font-weight:600;border:1px solid var(--border-strong);border-left:none;border-radius:0 var(--rs) var(--rs) 0;background:var(--surface);color:var(--muted);cursor:pointer;font-family:inherit">전체 기간</button>
-  </div>
-
   <div class="results" id="results">
     <div class="metrics-grid" id="metrics"></div>
     <div id="sales-compare-data" style="display:none;margin-bottom:1rem"></div>
@@ -837,14 +829,6 @@ button.run,.dl{box-shadow:none}
 
 <!-- ===== 예상 CPC 대시보드 패널 ===== -->
 <div class="tab-panel" id="panel-cpc">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:10px">
-    <div></div>
-    <div class="cpc-legend">
-      <span><span class="cpc-leg-dot" style="background:#595959"></span>PC</span>
-      <span><span class="cpc-leg-dot" style="background:#166534"></span>모바일</span>
-    </div>
-  </div>
-
   <!-- 컨트롤 통합 한 줄 -->
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:1rem;flex-wrap:wrap">
     <div class="cpc-device-tabs" id="cpc-period-tabs">
@@ -859,12 +843,11 @@ button.run,.dl{box-shadow:none}
       <button class="cpc-dtab" id="cpc-tab-mo" onclick="cpcDevice('모바일')">모바일</button>
     </div>
     <div style="width:1px;height:20px;background:var(--border);margin:0 4px"></div>
-    <select id="cpc-cat" onchange="renderCpc()" style="border:1px solid var(--border-strong);border-radius:var(--rs);padding:5px 10px;font-size:12px;font-family:inherit;color:var(--text);background:var(--surface);outline:none">
+    <select id="cpc-cat" onchange="renderCpc()" style="height:32px;box-sizing:border-box;border:1px solid var(--border-strong);border-radius:var(--rs);padding:0 10px;font-size:12px;font-family:inherit;color:var(--text);background:var(--surface);outline:none">
       <option value="all">전체 보종</option>
     </select>
-    <input type="text" id="cpc-search" placeholder="광고그룹 검색..." oninput="renderCpc()" style="border:1px solid var(--border-strong);border-radius:var(--rs);padding:5px 10px;font-size:12px;font-family:inherit;color:var(--text);background:var(--surface);outline:none;width:160px">
-    <button id="cpc-key-btn" onclick="toggleKeyFilter('cpc')" style="padding:4px 12px;font-size:11px;border:1px solid var(--border);border-radius:20px;background:var(--surface);color:var(--muted);cursor:pointer;font-family:inherit">⭐ 주요그룹만</button>
-    <span id="cpc-row-count" style="font-size:11px;color:var(--faint);margin-left:auto"></span>
+    <input type="text" id="cpc-search" placeholder="광고그룹 검색..." oninput="renderCpc()" style="height:32px;box-sizing:border-box;border:1px solid var(--border-strong);border-radius:var(--rs);padding:0 10px;font-size:12px;font-family:inherit;color:var(--text);background:var(--surface);outline:none;width:160px">
+    <button id="cpc-key-btn" onclick="toggleKeyFilter('cpc')" style="height:32px;box-sizing:border-box;padding:0 14px;font-size:11px;border:1px solid var(--border);border-radius:20px;background:var(--surface);color:var(--muted);cursor:pointer;font-family:inherit">⭐ 주요그룹만</button>
   </div>
 
   <!-- 기간별 CPC 멘트 -->
@@ -1185,6 +1168,9 @@ function _fillMonSels(months){
   ['month-select','month-select-all','month-select-kw'].forEach(id=>{
     const sel=document.getElementById(id);if(!sel)return;
     sel.innerHTML='';
+    if(id==='month-select'||id==='month-select-kw'){
+      const allOpt=document.createElement('option');allOpt.value='';allOpt.textContent='전체 월';sel.appendChild(allOpt);
+    }
     months.forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;sel.appendChild(o);});
     if(months.length)sel.value=months[0];
   });
@@ -1914,9 +1900,11 @@ function switchMediaGroup(group, btn){
       if(!window.kwData || !window.kwData.length) window.kwData = kwData;
       if(kwTabName === 'kw-insight'){
         document.getElementById('panel-kw-insight').classList.add('show');
+        document.getElementById('kw-month-sel-wrap').style.display='none';
         renderKwInsight();
       } else {
         document.getElementById('panel-kw-main').classList.add('show');
+        document.getElementById('kw-month-sel-wrap').style.display='flex';
         initKwTab();
       }
     };
@@ -1941,56 +1929,6 @@ function switchMediaGroup(group, btn){
   } else if(group === 'display'){
     document.getElementById('panel-display').classList.add('show');
     initDisplayTab();
-  }
-}
-
-let _dataPeriod = 'month';
-let _dataMonthCache = null; // 당월 데이터 백업
-
-function setDataPeriod(p){
-  _dataPeriod = p;
-  const mBtn = document.getElementById('data-period-month');
-  const aBtn = document.getElementById('data-period-all');
-  const lbl  = document.getElementById('data-period-label');
-  const active = 'background:var(--text);color:#fff;';
-  const idle   = 'background:var(--surface);color:var(--muted);';
-  mBtn.style.cssText = mBtn.style.cssText.replace(/background:[^;]+;color:[^;]+;/,'') + (p==='month' ? active : idle);
-  aBtn.style.cssText = aBtn.style.cssText.replace(/background:[^;]+;color:[^;]+;/,'') + (p==='all'   ? active : idle);
-
-  if(p === 'all'){
-    // 당월 데이터 백업
-    _dataMonthCache = resultData.length ? [...resultData] : null;
-    lbl.textContent = '로드 중...';
-    setStatus('전체 기간 로드 중...','');
-    const monthPc = document.getElementById('month-select')?.value || '';
-    loadAllSheets().then(s=>{
-      const data = _apiAnalyze('', s);
-      const crmR = _apiCrm('', s);
-      CRM_DATA=crmR.crm_data||{};CRM_MEDIA_LIST=crmR.media_list||[];KW_DAILY_COST=crmR.kw_daily_cost||{};
-      (([data])=>{
-      if(data.error){ setStatus('오류: '+data.error,'err'); lbl.textContent=''; return; }
-      resultData = data.result || [];
-      filteredData = [...resultData];
-      const months = [...new Set(resultData.flatMap(r=>(r.daily_raw||[]).map(d=>d.date?.substring(0,7)).filter(Boolean)))].sort();
-      lbl.textContent = months.length ? `(${months[0]} ~ ${months[months.length-1]})` : '';
-      setStatus('전체 기간 로드 완료','ok');
-      renderMetrics(filteredData);
-      renderTable();
-      renderAlertBoard();
-      document.getElementById('results').classList.add('show');
-    })([data]); }).catch(()=>{ setStatus('로드 실패','err'); lbl.textContent=''; });
-  } else {
-    // 당월 복원
-    lbl.textContent = '';
-    if(_dataMonthCache){
-      resultData = [..._dataMonthCache];
-      filteredData = [...resultData];
-      renderMetrics(filteredData);
-      renderTable();
-      renderAlertBoard();
-    } else {
-      runAnalysis();
-    }
   }
 }
 
@@ -2022,10 +1960,12 @@ function switchTab(tab, btn){
   } else if(tab === 'kw-insight'){
     document.getElementById('panel-kw-main').classList.remove('show');
     document.getElementById('panel-kw-insight').classList.add('show');
+    document.getElementById('kw-month-sel-wrap').style.display='none';
     renderKwInsight();
   } else if(tab === 'kw-main'){
     document.getElementById('panel-kw-insight').classList.remove('show');
     document.getElementById('panel-kw-main').classList.add('show');
+    document.getElementById('kw-month-sel-wrap').style.display='flex';
     initKwTab();
   } else {
     document.getElementById('panel-daily').classList.remove('show');
@@ -3728,8 +3668,6 @@ function renderCpc(){
     return;
   }
   noData.style.display='none'; tableCard.style.display='block';
-
-  document.getElementById('cpc-row-count').textContent = rows.length+'개 그룹';
 
   // 요약 지표
   const estimates = rows.map(cpcCalcEstimates);
