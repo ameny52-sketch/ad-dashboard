@@ -3871,25 +3871,14 @@ async function loadDisplayData(){
   pending.textContent = '▶ 데이터 로드 중...';
   pending.style.display=''; content.style.display='none';
   try{
-    const [reportC, intypeC, s] = await Promise.all([
-      _getCached('display_report', _TTL_DYNAMIC),
-      SHEETS_URLS.display_intype ? _getCached('display_intype', _TTL_STATIC) : Promise.resolve(null),
+    // 준비 단계라 시트가 자주 바뀌므로 display_report/display_intype는 캐싱 없이 매번 새로 받는다
+    const [reportText, intypeText, s] = await Promise.all([
+      fetch(SHEETS_URLS.display_report).then(r=>r.text()),
+      SHEETS_URLS.display_intype ? fetch(SHEETS_URLS.display_intype).then(r=>r.text()) : Promise.resolve(''),
       loadAllSheets(),
     ]);
-    let report = reportC;
-    if(!report){
-      const t = await fetch(SHEETS_URLS.display_report).then(r=>r.text());
-      report = _pCSV(t);
-      await _setCached('display_report', report);
-    }
-    let intype = intypeC;
-    if(!intype && SHEETS_URLS.display_intype){
-      const t = await fetch(SHEETS_URLS.display_intype).then(r=>r.text());
-      intype = _pCSV(t);
-      await _setCached('display_intype', intype);
-    }
-    _displayData = report || [];
-    _displayIntypeRef = intype || [];
+    _displayData = _pCSV(reportText) || [];
+    _displayIntypeRef = intypeText ? (_pCSV(intypeText) || []) : [];
     _displayCrmRaw = (s.raw||[]).filter(r=>(r['광고매체세부']||'').trim()==='애드온컴퍼니');
   }catch(e){
     pending.textContent = '▶ 데이터 로드 실패: ' + e.message;
