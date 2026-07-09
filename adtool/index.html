@@ -260,7 +260,8 @@ body{
 .table-header{background:#fff;padding:1rem 1.25rem}
 thead th{background:#f8fafc;color:#475569;font-weight:800}
 tbody tr:hover td{background:#eef6ff}
-.filter-row input,.filter-row select,.tab-btn,.cpc-dtab{border-color:var(--border-strong);border-radius:12px}
+.filter-row input,.filter-row select,.tab-btn{border-color:var(--border-strong);border-radius:12px}
+.cpc-dtab{border-color:var(--border-strong)}
 button.run,.dl{box-shadow:none}
 .status{margin-left:auto}
 #daily-month-summary{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
@@ -335,10 +336,7 @@ button.run,.dl{box-shadow:none}
   <!-- 키워드 성과 진단 패널 -->
   <div class="tab-panel" id="panel-kw-insight">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.25rem">
-      <div>
-        <div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:4px">성과 진단 <span style="font-size:13px;font-weight:400;color:var(--faint)">(네이버 키워드 기준)</span></div>
-        <div style="font-size:12px;color:var(--faint)">업로드된 키워드 데이터를 기준으로 변화 원인을 자동 요약합니다.</div>
-      </div>
+      <div></div>
       <select id="kw-insight-range" onchange="renderKwInsight()" style="border:1px solid var(--border-strong);border-radius:var(--rs);padding:6px 12px;font-size:12px;font-family:inherit;color:var(--text);background:var(--surface);outline:none;cursor:pointer">
         <option value="yesterday">오늘 vs 어제</option>
         <option value="week">이번 7일 vs 이전 7일</option>
@@ -455,13 +453,6 @@ button.run,.dl{box-shadow:none}
 
   <!-- 키워드 성과 패널 -->
   <div class="tab-panel" id="panel-kw-main">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px">
-      <div>
-        <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:2px">광고 키워드별 성과</div>
-        <div style="font-size:12px;color:var(--faint)">상담시스템 기준 · 광고매체=키워드 · 네이버/구글/다음 광고비 자동 매칭</div>
-      </div>
-    </div>
-
     <!-- 요약 지표 -->
     <div id="kw-metrics" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:1rem"></div>
     <div id="sales-compare-kw" style="display:none;margin-bottom:1rem"></div>
@@ -508,10 +499,7 @@ button.run,.dl{box-shadow:none}
   <div class="tab-panel" id="panel-insight">
     <!-- 헤더 -->
     <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.25rem;gap:1rem">
-      <div>
-        <div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:4px">🧠 성과 분석</div>
-        <div style="font-size:12px;color:var(--faint)">업로드된 광고 데이터와 DB 데이터를 기준으로 변화 원인을 자동 요약합니다.</div>
-      </div>
+      <div></div>
       <select id="insight-range" onchange="renderInsight()" style="border:1px solid var(--border-strong);border-radius:var(--rs);padding:6px 12px;font-size:12px;font-family:inherit;color:var(--text);background:var(--surface);outline:none;cursor:pointer">
         <option value="yesterday">오늘 vs 어제</option>
         <option value="week">이번주 vs 지난주</option>
@@ -826,10 +814,7 @@ button.run,.dl{box-shadow:none}
 <!-- ===== 예상 CPC 대시보드 패널 ===== -->
 <div class="tab-panel" id="panel-cpc">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:10px">
-    <div>
-      <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:2px">광고그룹별 순위별 예상 CPC</div>
-      <div style="font-size:12px;color:var(--faint)">네이버 평균노출순위 기반 · 1~5위 구간별 클릭당 예상 비용 · 데이터 로드 후 사용 가능</div>
-    </div>
+    <div></div>
     <div class="cpc-legend">
       <span><span class="cpc-leg-dot" style="background:#185FA5"></span>PC</span>
       <span><span class="cpc-leg-dot" style="background:#166534"></span>모바일</span>
@@ -1186,10 +1171,11 @@ function _apiAnalyze(month,s){
     const g=(r['광고그룹']||'').trim();if(!g)return;
     const cost=Math.round(_cN(r['총비용'])),clk=Math.round(_cN(r['클릭수'])),imp=Math.round(_cN(r['노출수']));
     const rank=_cN(r['평균노출순위']),date=_normDK(r['일별']||'');
+    const keyword=(r['키워드']||'').trim();
     if(!adG[g])adG[g]={cost:0,clicks:0,impressions:0,rS:0,rIS:0};
     adG[g].cost+=cost;adG[g].clicks+=clk;adG[g].impressions+=imp;
     if(rank>0&&imp>0){adG[g].rS+=rank*imp;adG[g].rIS+=imp;}
-    if(!adRaw[g])adRaw[g]=[];adRaw[g].push({date,cost,clicks:clk,impressions:imp,rank});
+    if(!adRaw[g])adRaw[g]=[];adRaw[g].push({date,cost,clicks:clk,impressions:imp,rank,keyword});
   });
   const sIT={},sITD={};
   rawR.forEach(r=>{
@@ -1668,17 +1654,20 @@ function openDetail(idx){
     <div class="modal-metric"><div class="label">DB단가 / DB전환율</div><div class="val" style="font-size:14px">${r.cpd!==null?r.cpd.toLocaleString()+'원':'-'} / ${r.dbcvr!==null?r.dbcvr+'%':'-'}</div></div>
   `;
 
-  // 일별 광고비 테이블
+  // 일별 광고비 테이블 — 광고그룹+날짜 기준 1행 (키워드별 raw 데이터를 날짜 기준으로 합산)
   const daily=(r.daily_raw || r.dailyRaw || []);
   if(!daily.length){
     document.getElementById('modal-thead').innerHTML='';
     document.getElementById('modal-tbody').innerHTML='<tr><td style="padding:1rem;color:var(--faint)">일별 데이터 없음</td></tr>';
   } else {
     document.getElementById('modal-thead').innerHTML=`<tr>
+      <th></th>
       <th>날짜</th>
       <th class="num">광고비(원)</th>
       <th class="num">클릭수</th>
       <th class="num">노출수</th>
+      <th class="num">CTR(%)</th>
+      <th class="num">CPC(원)</th>
       <th class="num">DB수</th>
       <th class="num">계약수</th>
       <th class="num">평가업적(원)</th>
@@ -1688,20 +1677,52 @@ function openDetail(idx){
       <th class="num">계약률(%)</th>
       <th class="num">평균순위</th>
     </tr>`;
-    const sorted=[...daily].sort((a,b)=>a.date.localeCompare(b.date));
-    document.getElementById('modal-tbody').innerHTML=sorted.map(d=>{
+
+    // 키워드별 raw 행 → 날짜 기준으로 광고비/클릭수/노출수/순위 합산 (DB 데이터 중복 방지)
+    const byDate = {};
+    daily.forEach(d=>{
+      if(!byDate[d.date]) byDate[d.date]={date:d.date,cost:0,clicks:0,impressions:0,rS:0,rIS:0,kws:[]};
+      const g=byDate[d.date];
+      g.cost+=d.cost||0; g.clicks+=d.clicks||0; g.impressions+=d.impressions||0;
+      if(d.rank>0 && d.impressions>0){ g.rS+=d.rank*d.impressions; g.rIS+=d.impressions; }
+      g.kws.push(d);
+    });
+    const sorted=Object.values(byDate).sort((a,b)=>a.date.localeCompare(b.date));
+    const fmt = v => v!==null ? v.toLocaleString() : '-';
+    const fmtP = v => v!==null ? v+'%' : '-';
+
+    document.getElementById('modal-tbody').innerHTML=sorted.map((d,i)=>{
       const ds = (r.daily_sales_map || r.dailySalesMap || {})[d.date] || {db:0,contracts:0,performance:0};
-      const dayRoas   = ds.performance>0 ? Math.round(d.cost/ds.performance*100) : null;
-      const dayCpd    = ds.db>0 ? Math.round(d.cost/ds.db) : null;
+      const dayCtr    = d.impressions>0 ? Math.round(d.clicks/d.impressions*1000)/10 : null;
+      const dayCpc    = d.clicks>0 ? Math.round(d.cost/d.clicks) : null;
+      const dayRoas   = ds.performance>0 && d.cost>0 ? Math.round(d.cost/ds.performance*100) : null;
+      const dayCpd    = ds.db>0 && d.cost>0 ? Math.round(d.cost/ds.db) : null;
       const dayDbcvr  = d.clicks>0 ? Math.round(ds.db/d.clicks*1000)/10 : null;
       const dayCvr    = ds.db>0 ? Math.round(ds.contracts/ds.db*1000)/10 : null;
-      const fmt = v => v!==null ? v.toLocaleString() : '-';
-      const fmtP = v => v!==null ? v+'%' : '-';
-      return `<tr>
-        <td>${d.date}</td>
+      const avgRank   = d.rIS>0 ? Math.round(d.rS/d.rIS*10)/10 : null;
+      const rowCls = `daily-kwdet-${idx}-${i}`;
+      const kwRows = d.kws.slice().sort((a,b)=>(b.cost||0)-(a.cost||0)).map(k=>{
+        const ctr = k.impressions>0 ? Math.round(k.clicks/k.impressions*1000)/10 : null;
+        const cpc = k.clicks>0 ? Math.round(k.cost/k.clicks) : null;
+        return `<tr class="${rowCls}" style="display:none;background:var(--bg)">
+          <td></td>
+          <td style="padding-left:1.5rem;color:var(--muted)">${escHtml(k.keyword||'-')}</td>
+          <td class="num">${(k.cost||0).toLocaleString()}</td>
+          <td class="num">${(k.clicks||0).toLocaleString()}</td>
+          <td class="num">${(k.impressions||0).toLocaleString()}</td>
+          <td class="num">${ctr!==null?ctr+'%':'-'}</td>
+          <td class="num">${cpc!==null?cpc.toLocaleString():'-'}</td>
+          <td class="num" colspan="8" style="color:var(--faint);font-size:11px;text-align:left;padding-left:1rem">DB/계약 데이터는 광고그룹 기준으로만 집계됩니다</td>
+        </tr>`;
+      }).join('');
+      return `<tr style="cursor:pointer" onclick="toggleDailyKwDetail('${rowCls}',this)">
+        <td class="dk-caret" style="color:var(--faint);text-align:center">▸</td>
+        <td>${d.date} <span style="font-size:11px;color:var(--faint)">(키워드 ${d.kws.length}개)</span></td>
         <td class="num">${d.cost.toLocaleString()}</td>
         <td class="num">${d.clicks.toLocaleString()}</td>
         <td class="num">${d.impressions.toLocaleString()}</td>
+        <td class="num">${dayCtr!==null?dayCtr+'%':'-'}</td>
+        <td class="num">${fmt(dayCpc)}</td>
         <td class="num">${ds.db.toLocaleString()}</td>
         <td class="num">${ds.contracts.toLocaleString()}</td>
         <td class="num">${ds.performance.toLocaleString()}</td>
@@ -1709,8 +1730,8 @@ function openDetail(idx){
         <td class="num">${fmt(dayCpd)}</td>
         <td class="num">${fmtP(dayDbcvr)}</td>
         <td class="num">${fmtP(dayCvr)}</td>
-        <td class="num">${d.rank>0?d.rank+'위':'-'}</td>
-      </tr>`;
+        <td class="num">${avgRank!==null?avgRank+'위':'-'}</td>
+      </tr>${kwRows}`;
     }).join('');
   }
 
@@ -1723,6 +1744,15 @@ function openDetail(idx){
   document.getElementById('modal-keywords').innerHTML = kwHtml;
 
   document.getElementById('modal-bg').classList.add('show');
+}
+
+function toggleDailyKwDetail(rowCls, trigger){
+  const rows = document.querySelectorAll('.'+rowCls);
+  if(!rows.length) return;
+  const show = rows[0].style.display === 'none';
+  rows.forEach(tr=>{ tr.style.display = show ? 'table-row' : 'none'; });
+  const caret = trigger.querySelector('.dk-caret');
+  if(caret) caret.textContent = show ? '▾' : '▸';
 }
 
 function closeModal(e){
