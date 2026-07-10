@@ -3969,10 +3969,12 @@ function renderDisplayTab(){
     }
     return {db, contracts, perf};
   }
-  function calcMetrics(cost, clk, db, perf){
+  function calcMetrics(cost, clk, db, perf, contracts){
     const roas = (db>0 && perf>0 && cost>0) ? Math.round(cost/perf*100) : null;
     const cpd  = (db>0 && cost>0) ? Math.round(cost/db) : null;
-    return {roas, cpd};
+    const dbcvr = (clk>0 && db>0) ? Math.round(db/clk*1000)/10 : null;
+    const cvr = (db>0 && contracts>0) ? Math.round(contracts/db*1000)/10 : null;
+    return {roas, cpd, dbcvr, cvr};
   }
 
   // DB에는 들어왔지만 광고비 시트에는 없는(과거) 인타입 코드 처리:
@@ -4014,8 +4016,7 @@ function renderDisplayTab(){
     }
     const {db, contracts, perf} = matchDb(codes);
     const ctr = a.imp>0 ? Math.round(a.clk/a.imp*10000)/100 : null;
-    const cpc = a.clk>0 ? Math.round(a.cost/a.clk) : null;
-    const {roas, cpd} = calcMetrics(a.cost, a.clk, db, perf);
+    const {roas, cpd, dbcvr, cvr} = calcMetrics(a.cost, a.clk, db, perf, contracts);
 
     // 같은 인타입 코드가 소재명별로 여러 번 찍힌 경우(예: 원래 "소재 B"로 광고비가 나갔는데,
     // 그 코드로 들어온 DB 중 일부가 "미확인"이라는 0원짜리 placeholder 행으로도 남은 경우) —
@@ -4042,11 +4043,11 @@ function renderDisplayTab(){
     const kws = Object.values(a.kws).map(k=>{
       const kHasIntype = k.codes.size>0;
       const {db:kdb, contracts:kcon, perf:kperf} = matchDb(k.codes);
-      const {roas:kroas, cpd:kcpd} = calcMetrics(k.cost, k.clk, kdb, kperf);
-      return {...k, hasIntype:kHasIntype, db:kdb, contracts:kcon, perf:kperf, roas:kroas, cpd:kcpd};
+      const {roas:kroas, cpd:kcpd, dbcvr:kdbcvr, cvr:kcvr} = calcMetrics(k.cost, k.clk, kdb, kperf, kcon);
+      return {...k, hasIntype:kHasIntype, db:kdb, contracts:kcon, perf:kperf, roas:kroas, cpd:kcpd, dbcvr:kdbcvr, cvr:kcvr};
     });
 
-    return {...a, ctr, cpc, db, contracts, perf, roas, cpd, hasIntype, kws};
+    return {...a, ctr, db, contracts, perf, roas, cpd, dbcvr, cvr, hasIntype, kws, codes};
   }).sort((a,b)=>b.cost-a.cost);
 
   const hasIntype = areaList.some(a=>a.hasIntype);
@@ -4059,27 +4060,38 @@ function renderDisplaySummary(areaList, hasIntype){
   const totalImp  = areaList.reduce((s,a)=>s+a.imp,0);
   const totalClk  = areaList.reduce((s,a)=>s+a.clk,0);
   const totalDb   = areaList.reduce((s,a)=>s+a.db,0);
-  const ctr = totalImp>0 ? Math.round(totalClk/totalImp*10000)/100 : null;
-  const cpd = (hasIntype && totalDb>0) ? Math.round(totalCost/totalDb) : null;
-  const card = (label,val) => `<div class="metric"><div class="metric-label">${label}</div><div class="metric-value blue">${val}</div></div>`;
+  const totalCon  = areaList.reduce((s,a)=>s+a.contracts,0);
+  const totalPerf = areaList.reduce((s,a)=>s+a.perf,0);
+  const ctr   = totalImp>0 ? Math.round(totalClk/totalImp*10000)/100 : null;
+  const cpd   = (hasIntype && totalDb>0) ? Math.round(totalCost/totalDb) : null;
+  const dbcvr = (hasIntype && totalClk>0 && totalDb>0) ? Math.round(totalDb/totalClk*1000)/10 : null;
+  const cvr   = (hasIntype && totalDb>0 && totalCon>0) ? Math.round(totalCon/totalDb*1000)/10 : null;
+  const roas  = (hasIntype && totalPerf>0 && totalCost>0) ? Math.round(totalCost/totalPerf*100) : null;
+  const card = (label,colorCls,val,sub) => `<div class="metric"><div class="metric-label">${label}</div><div class="metric-value${colorCls?' '+colorCls:''}">${val}</div>${sub?`<div class="metric-sub">${sub}</div>`:''}</div>`;
   document.getElementById('display-summary').innerHTML = [
-    card('광고비', totalCost.toLocaleString()+'원'),
-    card('노출수', totalImp.toLocaleString()),
-    card('클릭수', totalClk.toLocaleString()),
-    card('CTR', ctr!==null?ctr+'%':'-'),
-    card('DB수', hasIntype ? totalDb.toLocaleString() : '-'),
-    card('DB단가', cpd!==null?cpd.toLocaleString()+'원':'-'),
+    card('광고비', '', totalCost.toLocaleString(), '원'),
+    card('노출수', '', totalImp.toLocaleString()),
+    card('클릭수', '', totalClk.toLocaleString()),
+    card('CTR', '', ctr!==null?ctr+'%':'-'),
+    card('DB수', 'blue', hasIntype ? totalDb.toLocaleString() : '-', hasIntype?'건':''),
+    card('DB전환율', 'blue', dbcvr!==null?dbcvr+'%':'-'),
+    card('계약수', 'green', hasIntype ? totalCon.toLocaleString() : '-', hasIntype?'계약':''),
+    card('계약률', 'green', cvr!==null?cvr+'%':'-'),
+    card('평가업적', 'amber', (hasIntype && totalPerf>0) ? Math.round(totalPerf).toLocaleString() : '-', (hasIntype && totalPerf>0)?'원':''),
+    card('ROAS', 'amber', roas!==null?roas+'%':'-'),
+    card('DB단가', 'purple', cpd!==null?cpd.toLocaleString():'-', cpd!==null?'원':''),
   ].join('');
 }
 
 function renderDisplayAreaTable(areaList){
   document.getElementById('display-thead').innerHTML = `<tr>
-    <th></th><th>영역</th><th class="num">광고비</th><th class="num">노출수</th><th class="num">클릭수</th>
-    <th class="num">발송수</th><th class="num">CTR</th><th class="num">CPC</th>
-    <th class="num">DB수</th><th class="num">계약수</th><th class="num">ROAS</th><th class="num">DB단가</th>
+    <th></th><th>영역</th><th>인타입</th><th class="num">광고비</th><th class="num">노출수</th><th class="num">클릭수</th>
+    <th class="num">발송수</th><th class="num">CTR</th>
+    <th class="num">DB수</th><th class="num">DB전환율</th><th class="num">계약수</th><th class="num">계약률</th>
+    <th class="num">평가업적</th><th class="num">ROAS</th><th class="num">DB단가</th>
   </tr>`;
   if(!areaList.length){
-    document.getElementById('display-tbody').innerHTML = '<tr><td colspan="12" style="padding:1rem;color:var(--faint)">데이터 없음</td></tr>';
+    document.getElementById('display-tbody').innerHTML = '<tr><td colspan="15" style="padding:1rem;color:var(--faint)">데이터 없음</td></tr>';
     return;
   }
   // 소재 A,B,C... 순으로, "미확인"/소재 미기재 등은 맨 뒤로
@@ -4094,36 +4106,43 @@ function renderDisplayAreaTable(areaList){
       return kx!==ky ? kx-ky : x.kw.localeCompare(y.kw,'ko');
     }).map(k=>{
       const kctr = k.imp>0 ? Math.round(k.clk/k.imp*10000)/100 : null;
-      const kcpc = k.clk>0 ? Math.round(k.cost/k.clk) : null;
       const dbCells = k.hasIntype
         ? `<td class="num">${k.db.toLocaleString()}</td>
+        <td class="num">${k.dbcvr!==null?k.dbcvr.toLocaleString()+'%':'-'}</td>
         <td class="num">${k.contracts.toLocaleString()}</td>
+        <td class="num">${k.cvr!==null?k.cvr.toLocaleString()+'%':'-'}</td>
+        <td class="num">${k.perf>0?Math.round(k.perf).toLocaleString()+'원':'-'}</td>
         <td class="num">${k.roas!==null?k.roas.toLocaleString()+'%':'-'}</td>
         <td class="num">${k.cpd!==null?k.cpd.toLocaleString()+'원':'-'}</td>`
-        : `<td class="num" colspan="4" style="color:var(--faint);font-size:11px;text-align:left;padding-left:1rem">DB/계약 데이터는 영역 기준으로만 집계됩니다</td>`;
+        : `<td class="num" colspan="7" style="color:var(--faint);font-size:11px;text-align:left;padding-left:1rem">DB/계약 데이터는 영역 기준으로만 집계됩니다</td>`;
+      const kCodesTxt = [...k.codes].join(', ');
       return `<tr class="${rowCls}" style="display:none;background:var(--bg)">
         <td></td>
         <td style="padding-left:1.5rem;color:var(--muted);max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(k.kw)}">${escHtml(k.kw)}</td>
+        <td style="color:var(--faint);font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(kCodesTxt)}">${escHtml(kCodesTxt)||'-'}</td>
         <td class="num">${k.cost.toLocaleString()}</td>
         <td class="num">${k.imp.toLocaleString()}</td>
         <td class="num">${k.clk.toLocaleString()}</td>
         <td class="num">${k.snd.toLocaleString()}</td>
         <td class="num">${kctr!==null?kctr+'%':'-'}</td>
-        <td class="num">${kcpc!==null?kcpc.toLocaleString():'-'}</td>
         ${dbCells}
       </tr>`;
     }).join('');
+    const aCodesTxt = [...a.codes].join(', ');
     return `<tr style="cursor:pointer" onclick="toggleDailyKwDetail('${rowCls}',this)">
       <td class="dk-caret" style="color:var(--faint);text-align:center">▸</td>
-      <td>${escHtml(a.area)} <span style="font-size:11px;color:var(--faint)">(소재 ${a.kws.length}개)</span></td>
+      <td>${escHtml(a.area)}</td>
+      <td style="color:var(--faint);font-size:12px" title="${escHtml(aCodesTxt)}">${a.codes.size ? a.codes.size+'개' : '-'}</td>
       <td class="num">${a.cost.toLocaleString()}</td>
       <td class="num">${a.imp.toLocaleString()}</td>
       <td class="num">${a.clk.toLocaleString()}</td>
       <td class="num">${a.snd.toLocaleString()}</td>
       <td class="num">${a.ctr!==null?a.ctr+'%':'-'}</td>
-      <td class="num">${a.cpc!==null?a.cpc.toLocaleString():'-'}</td>
       <td class="num">${a.hasIntype?a.db.toLocaleString():'-'}</td>
+      <td class="num">${a.dbcvr!==null?a.dbcvr.toLocaleString()+'%':'-'}</td>
       <td class="num">${a.hasIntype?a.contracts.toLocaleString():'-'}</td>
+      <td class="num">${a.cvr!==null?a.cvr.toLocaleString()+'%':'-'}</td>
+      <td class="num">${a.perf>0?Math.round(a.perf).toLocaleString()+'원':'-'}</td>
       <td class="num">${a.roas!==null?a.roas.toLocaleString()+'%':'-'}</td>
       <td class="num">${a.cpd!==null?a.cpd.toLocaleString()+'원':'-'}</td>
     </tr>${kwRows}`;
