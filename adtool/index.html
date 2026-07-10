@@ -2900,7 +2900,14 @@ let CRM_DATA = {};
 let KW_DAILY_COST = {};  // {date_key: {naver, google, daum}}
 
 // ===== Daily DB 현황: 소형 매체 컬럼 표시/숨기기 (가독성) =====
+// '파워컨텐츠'/'키워드'(네이버+구글+다음 묶음)는 기본적으로 숨기고 전체합계만 보이게 함 (최초 1회만 적용)
 let _dailyHiddenMedias = new Set(JSON.parse(localStorage.getItem('daily_hidden_medias')||'[]'));
+if(!localStorage.getItem('daily_hidden_medias_v2')){
+  _dailyHiddenMedias.add('파워컨텐츠');
+  _dailyHiddenMedias.add('키워드');
+  localStorage.setItem('daily_hidden_medias_v2', '1');
+  localStorage.setItem('daily_hidden_medias', JSON.stringify([..._dailyHiddenMedias]));
+}
 function _dailySaveHidden(){ localStorage.setItem('daily_hidden_medias', JSON.stringify([..._dailyHiddenMedias])); }
 function toggleDailyMedia(m){
   if(_dailyHiddenMedias.has(m)) _dailyHiddenMedias.delete(m); else _dailyHiddenMedias.add(m);
@@ -2908,16 +2915,15 @@ function toggleDailyMedia(m){
 }
 function setDailyMediaAll(show){
   const crmMedias = CRM_MEDIA_LIST.filter(m=>m!=='파워컨텐츠'&&m!=='네이버'&&m!=='구글'&&m!=='다음');
-  _dailyHiddenMedias = show ? new Set() : new Set(crmMedias);
+  _dailyHiddenMedias = show ? new Set() : new Set(['파워컨텐츠', '키워드', ...crmMedias]);
   _dailySaveHidden(); renderDailyMediaToggle(); renderDaily();
 }
 function renderDailyMediaToggle(){
   const el = document.getElementById('daily-media-toggle'); if(!el) return;
   const crmMedias = CRM_MEDIA_LIST.filter(m=>m!=='파워컨텐츠'&&m!=='네이버'&&m!=='구글'&&m!=='다음');
-  if(!crmMedias.length){ el.innerHTML=''; return; }
-  const hiddenCount = crmMedias.filter(m=>_dailyHiddenMedias.has(m)).length;
-  el.innerHTML = '<span style="font-size:11px;color:var(--muted);font-weight:600;margin-right:2px">기타 매체 표시</span>'
-    + crmMedias.map(m=>{
+  const toggleMedias = ['파워컨텐츠', '키워드', ...crmMedias];
+  const hiddenCount = toggleMedias.filter(m=>_dailyHiddenMedias.has(m)).length;
+  el.innerHTML = toggleMedias.map(m=>{
         const on = !_dailyHiddenMedias.has(m);
         return `<button onclick="toggleDailyMedia('${m.replace(/'/g,"\\'")}')" style="border:1px solid ${on?'var(--accent)':'var(--border-strong)'};background:${on?'var(--accent-bg)':'transparent'};color:${on?'var(--accent)':'var(--faint)'};border-radius:14px;padding:3px 10px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap">${m}</button>`;
       }).join('')
@@ -3300,7 +3306,8 @@ function renderDaily(){
   const selMonth = document.getElementById('daily-month-sel').value;
   renderDailyMediaToggle();
   const crmMedias = CRM_MEDIA_LIST.filter(m=>m!=='파워컨텐츠'&&m!=='네이버'&&m!=='구글'&&m!=='다음'&&!_dailyHiddenMedias.has(m));
-  const kwMedias = ['네이버','구글','다음'];
+  const showPc = !_dailyHiddenMedias.has('파워컨텐츠');
+  const kwMedias = _dailyHiddenMedias.has('키워드') ? [] : ['네이버','구글','다음'];
   const allMedias = [...kwMedias, ...crmMedias];
 
   const dayMap = {};
@@ -3339,12 +3346,12 @@ function renderDaily(){
 
   let theadHtml = '<tr style="background:#fafaf8"><th rowspan="2" style="padding:7px 10px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);font-size:11px;font-weight:600;color:var(--muted);text-align:center;min-width:80px;position:sticky;left:0;z-index:4;background:#fafaf8">구분</th>';
   theadHtml += '<th colspan="' + COL + '" style="padding:6px 10px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);font-size:11px;font-weight:600;color:#854F0B;text-align:center;background:#fff8ec">전체합계</th>';
-  theadHtml += '<th colspan="' + COL + '" style="padding:6px 10px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);font-size:11px;font-weight:600;color:#ff9b00;text-align:center">파워컨텐츠</th>';
+  if(showPc) theadHtml += '<th colspan="' + COL + '" style="padding:6px 10px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);font-size:11px;font-weight:600;color:#ff9b00;text-align:center">파워컨텐츠</th>';
   allMedias.forEach(m=>{
     const color = kwMedias.includes(m) ? '#1a5c2a' : '#444';
     theadHtml += '<th colspan="' + COL + '" style="padding:6px 10px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);font-size:11px;font-weight:600;color:' + color + ';text-align:center">' + m + '</th>';
   });
-  theadHtml += '</tr><tr style="background:#fafaf8">' + totalSubCols() + subCols();
+  theadHtml += '</tr><tr style="background:#fafaf8">' + totalSubCols() + (showPc?subCols():'');
   allMedias.forEach(()=>{ theadHtml += subCols(); });
   theadHtml += '</tr>';
   document.getElementById('daily-thead').innerHTML = theadHtml;
@@ -3391,7 +3398,9 @@ function renderDaily(){
       const c=crmDay[m]||{};
       crmCells+=makeMediaCells(c.db||0,c.contracts||0,c.perf||0,0);
     });
-    return '<tr style="'+bg+'"><td style="padding:7px 10px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);font-size:12px;'+dateColor+';text-align:center;position:sticky;left:0;z-index:1;background:'+bgSticky+'">'+item.label+'</td>'+makeTotalCells(totalDb,totalCon,totalPerf,totalCost)+makeMediaCells(pc_db,pc_con,pc_perf,pc_cost)+makeMediaCells(naverDb,naverCon,naverPerf,naverCost)+makeMediaCells(googleDb,googleCon,googlePerf,googleCost)+makeMediaCells(daumDb,daumCon,daumPerf,daumCost)+crmCells+'</tr>';
+    const pcCells = showPc ? makeMediaCells(pc_db,pc_con,pc_perf,pc_cost) : '';
+    const kwCells = kwMedias.length ? makeMediaCells(naverDb,naverCon,naverPerf,naverCost)+makeMediaCells(googleDb,googleCon,googlePerf,googleCost)+makeMediaCells(daumDb,daumCon,daumPerf,daumCost) : '';
+    return '<tr style="'+bg+'"><td style="padding:7px 10px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);font-size:12px;'+dateColor+';text-align:center;position:sticky;left:0;z-index:1;background:'+bgSticky+'">'+item.label+'</td>'+makeTotalCells(totalDb,totalCon,totalPerf,totalCost)+pcCells+kwCells+crmCells+'</tr>';
   }
 
   document.getElementById('daily-tbody').innerHTML = allDays.map(item=>makeRow(item, item.type==='month-total')).join('');
