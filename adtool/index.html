@@ -4041,7 +4041,16 @@ function _displayBuildChartSeries(areaList, mediaRows, crmRows, monSel){
   const byMonth = !monSel;
   const periodOf = date => byMonth ? date.slice(0,7) : date;
   const dayRows = mediaRows.filter(r=>!monSel || (r['날짜']||'').startsWith(monSel));
-  const periods = [...new Set(dayRows.map(r=>periodOf(r['날짜']||'')).filter(Boolean))].sort();
+
+  let periods;
+  if(byMonth){
+    periods = [...new Set(dayRows.map(r=>periodOf(r['날짜']||'')).filter(Boolean))].sort();
+  } else {
+    // 선택된 월의 달력상 모든 날짜를 채워서 데이터 없는 날도 0으로 표시
+    const [y, m] = monSel.split('-').map(Number);
+    const daysInMonth = new Date(y, m, 0).getDate();
+    periods = Array.from({length: daysInMonth}, (_, i) => `${monSel}-${String(i+1).padStart(2,'0')}`);
+  }
 
   const data = {};
   areaList.forEach(a=>{
