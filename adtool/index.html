@@ -4225,21 +4225,95 @@ function openCreativeModal(idx){
   const body = document.getElementById('creative-modal-body');
   document.getElementById('creative-modal-bg').style.display = 'flex';
   if(!monSel){
-    body.innerHTML = `<div style="padding:2rem;color:var(--faint);font-size:13px">월을 선택하면 해당 월의 크리에이티브 이미지를 볼 수 있습니다.</div>`;
+    body.innerHTML = `<div style="padding:2rem;color:var(--faint);font-size:13px">월을 선택하면 크리에이티브 이미지와 일별 데이터를 볼 수 있습니다.</div>`;
     return;
   }
-  if(!info.codes.length){
-    body.innerHTML = `<div style="padding:2rem;color:var(--faint);font-size:13px">이 소재에 연결된 인타입 코드가 없어 이미지를 찾을 수 없습니다.</div>`;
-    return;
+
+  body.innerHTML = `
+    <div id="creative-modal-image"><div style="padding:2rem;color:var(--faint);font-size:13px">이미지를 불러오는 중...</div></div>
+    <div id="creative-modal-daily" style="margin-top:1rem;text-align:left"></div>
+  `;
+
+  if(info.codes.length){
+    const ym = monSel.replace('-','');
+    const exts = ['jpg','jpeg','png'];
+    const urls = [];
+    info.codes.forEach(code=>{
+      exts.forEach(ext=>urls.push(`data/creatives/${encodeURIComponent(info.media)}/${code}_${ym}.${ext}`));
+    });
+    _tryLoadCreativeImage(urls, 0, document.getElementById('creative-modal-image'));
+  } else {
+    document.getElementById('creative-modal-image').innerHTML = `<div style="padding:1rem;color:var(--faint);font-size:13px">이 소재에 연결된 인타입 코드가 없어 이미지를 찾을 수 없습니다.</div>`;
   }
-  const ym = monSel.replace('-','');
-  const exts = ['jpg','jpeg','png'];
-  const urls = [];
-  info.codes.forEach(code=>{
-    exts.forEach(ext=>urls.push(`data/creatives/${encodeURIComponent(info.media)}/${code}_${ym}.${ext}`));
+
+  _renderCreativeDaily(info, monSel);
+}
+
+// 소재 단위 일별 데이터: 광고비/노출수/발송수/클릭수/CTR/DB수/DB단가/DB전환율
+function _renderCreativeDaily(info, monSel){
+  const dayRows = (_displayData||[]).filter(r=>
+    (r['매체명']||'').trim()===info.media &&
+    (r['상품명']||'').trim()===info.area &&
+    ((r['소재명']||'').trim()||'(소재 미기재)')===info.kw &&
+    (r['날짜']||'').startsWith(monSel)
+  );
+  const byDate = {};
+  dayRows.forEach(r=>{
+    const d = r['날짜'];
+    if(!byDate[d]) byDate[d] = {date:d, cost:0, imp:0, clk:0, snd:0, db:0};
+    byDate[d].cost += _cN(r['비용']);
+    byDate[d].imp  += _cN(r['노출수(열람수)']);
+    byDate[d].clk  += _cN(r['클릭수']);
+    byDate[d].snd  += _cN(r['발송수']);
   });
-  body.innerHTML = `<div style="padding:2rem;color:var(--faint);font-size:13px">이미지를 불러오는 중...</div>`;
-  _tryLoadCreativeImage(urls, 0, body);
+  // 일별 DB수 — 이 소재에 귀속된 인타입 코드 기준, 상담등록일로 매칭
+  if(info.codes && info.codes.length){
+    const codeSet = new Set(info.codes);
+    (_displayCrmRaw||[]).forEach(r=>{
+      if(!codeSet.has((r['인타입']||'').trim())) return;
+      const d = _normDS(r['상담등록일']||'');
+      if(!d.startsWith(monSel)) return;
+      if(!byDate[d]) byDate[d] = {date:d, cost:0, imp:0, clk:0, snd:0, db:0};
+      byDate[d].db++;
+    });
+  }
+  const days = Object.values(byDate).sort((a,b)=>a.date.localeCompare(b.date));
+  const dailyEl = document.getElementById('creative-modal-daily');
+  if(!dailyEl) return;
+  if(!days.length){
+    dailyEl.innerHTML = `<div style="color:var(--faint);font-size:12px;padding:.5rem 0">이 달에 집계된 일별 데이터가 없습니다.</div>`;
+    return;
+  }
+  const th = label => `<th class="num" style="padding:6px 10px;text-align:right;background:#fafaf8;border-bottom:1px solid var(--border);position:sticky;top:0">${label}</th>`;
+  dailyEl.innerHTML = `
+    <div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px">일별 데이터</div>
+    <div style="max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--rs)">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr>
+          <th style="padding:6px 10px;text-align:left;background:#fafaf8;border-bottom:1px solid var(--border);position:sticky;top:0">날짜</th>
+          ${th('광고비')}${th('노출수')}${th('발송수')}${th('클릭수')}${th('CTR')}${th('DB수')}${th('DB단가')}${th('DB전환율')}
+        </tr></thead>
+        <tbody>
+          ${days.map(d=>{
+            const ctr = d.imp>0 ? Math.round(d.clk/d.imp*10000)/100 : null;
+            const cpd = d.db>0 ? Math.round(d.cost/d.db) : null;
+            const dbcvr = d.clk>0 ? Math.round(d.db/d.clk*1000)/10 : null;
+            return `<tr>
+            <td style="padding:6px 10px;border-bottom:1px solid var(--border)">${d.date}</td>
+            <td class="num" style="padding:6px 10px;text-align:right;border-bottom:1px solid var(--border)">${d.cost.toLocaleString()}</td>
+            <td class="num" style="padding:6px 10px;text-align:right;border-bottom:1px solid var(--border)">${d.imp.toLocaleString()}</td>
+            <td class="num" style="padding:6px 10px;text-align:right;border-bottom:1px solid var(--border)">${d.snd.toLocaleString()}</td>
+            <td class="num" style="padding:6px 10px;text-align:right;border-bottom:1px solid var(--border)">${d.clk.toLocaleString()}</td>
+            <td class="num" style="padding:6px 10px;text-align:right;border-bottom:1px solid var(--border)">${ctr!==null?ctr+'%':'-'}</td>
+            <td class="num" style="padding:6px 10px;text-align:right;border-bottom:1px solid var(--border)">${d.db.toLocaleString()}</td>
+            <td class="num" style="padding:6px 10px;text-align:right;border-bottom:1px solid var(--border)">${cpd!==null?cpd.toLocaleString()+'원':'-'}</td>
+            <td class="num" style="padding:6px 10px;text-align:right;border-bottom:1px solid var(--border)">${dbcvr!==null?dbcvr+'%':'-'}</td>
+          </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
 }
 
 function _tryLoadCreativeImage(urls, i, body){
