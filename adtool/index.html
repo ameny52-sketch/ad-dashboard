@@ -521,7 +521,7 @@ button.run,.dl{box-shadow:none}
   <!-- 디스플레이(뉴미디어) 패널 -->
   <div class="tab-panel" id="panel-display">
     <div class="main-tabs" id="display-media-tabs" style="display:flex">
-      <button class="main-tab" onclick="switchDisplayInsight(this)">🔍 성과진단</button>
+      <button class="main-tab" onclick="switchDisplayInsight(this)">성과진단</button>
       <button class="main-tab active" onclick="switchDisplayMedia('카카오페이',this)">카카오페이</button>
       <button class="main-tab" onclick="switchDisplayMedia('T멤버십',this)">T멤버십</button>
       <button class="main-tab" onclick="switchDisplayMedia('가스락',this)">가스락</button>
@@ -539,13 +539,17 @@ button.run,.dl{box-shadow:none}
 
     <div id="display-content" style="display:none">
       <div id="display-summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:1rem"></div>
-      <div class="cpc-chart-row" style="margin-bottom:1rem">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px;margin-bottom:1rem">
         <div class="cpc-chart-card">
-          <div class="cpc-chart-title"><span>영역별 광고비 · DB수 · DB단가</span></div>
+          <div class="cpc-chart-title"><span>일별 광고비 · DB단가</span></div>
           <div style="position:relative;height:220px"><canvas id="display-chart-cost"></canvas></div>
         </div>
         <div class="cpc-chart-card">
-          <div class="cpc-chart-title"><span>영역별 CTR · DB전환율</span></div>
+          <div class="cpc-chart-title"><span>일별 DB수 (영역별 누적)</span></div>
+          <div style="position:relative;height:220px"><canvas id="display-chart-db"></canvas></div>
+        </div>
+        <div class="cpc-chart-card">
+          <div class="cpc-chart-title"><span>일별 CTR · DB전환율</span></div>
           <div style="position:relative;height:220px"><canvas id="display-chart-ctr"></canvas></div>
         </div>
       </div>
@@ -3920,7 +3924,9 @@ let _displayLoaded = false;
 let _displayMedia = '카카오페이';
 let _displayChartJsLoading = false;
 let _displayChartCost = null;
+let _displayChartDb = null;
 let _displayChartCtr = null;
+const _DISPLAY_AREA_COLORS = ['#ff9b00','#2b68ee','#00a874','#7224ea','#ef3554','#595959'];
 
 function initDisplayTab(){
   if(!_displayLoaded){ _displayLoaded = true; loadDisplayData(); }
@@ -3945,7 +3951,9 @@ function switchDisplayInsight(btn){
   renderDisplayInsight();
 }
 
-// 매체 전체 기준, 어제→오늘 광고비 급변 감지 (매체×영역 단위)
+// 매체 전체 기준, 최근 이틀 광고비 급변 감지 (매체×영역 단위)
+// 매체마다 데이터 입력 시차가 있을 수 있어(예: A매체는 오늘까지, B매체는 그제까지),
+// 전체 공통 날짜가 아니라 "매체별로 자기 자신의 최신 2일"을 기준으로 비교한다
 function renderDisplayInsight(){
   const body = document.getElementById('display-insight-body');
   const rows = _displayData || [];
@@ -3953,24 +3961,31 @@ function renderDisplayInsight(){
     body.innerHTML = `<div style="padding:2rem;text-align:center;color:var(--faint)">데이터를 불러오면 이 영역에 결과가 표시됩니다.</div>`;
     return;
   }
-  const dates = [...new Set(rows.map(r=>r['날짜']).filter(Boolean))].sort();
-  if(dates.length < 2){
-    body.innerHTML = `<div style="padding:2rem;text-align:center;color:var(--faint)">비교할 날짜 데이터가 부족합니다.</div>`;
-    return;
-  }
-  const today = dates[dates.length-1];
-  const yesterday = dates[dates.length-2];
+  const datesByMedia = {};
+  rows.forEach(r=>{
+    const media = (r['매체명']||'').trim();
+    const d = r['날짜'];
+    if(!media || !d) return;
+    if(!datesByMedia[media]) datesByMedia[media] = new Set();
+    datesByMedia[media].add(d);
+  });
 
   const groups = {};
-  rows.forEach(r=>{
-    const date = r['날짜'];
-    if(date!==today && date!==yesterday) return;
-    const media = (r['매체명']||'').trim();
-    const area = (r['상품명']||'').trim() || '(미지정)';
-    const key = `${media}||${area}`;
-    if(!groups[key]) groups[key] = {media, area, today:0, yesterday:0};
-    if(date===today) groups[key].today += _cN(r['비용']);
-    else groups[key].yesterday += _cN(r['비용']);
+  Object.entries(datesByMedia).forEach(([media, dateSet])=>{
+    const dates = [...dateSet].sort();
+    if(dates.length < 2) return;
+    const today = dates[dates.length-1];
+    const yesterday = dates[dates.length-2];
+    rows.forEach(r=>{
+      if((r['매체명']||'').trim() !== media) return;
+      const d = r['날짜'];
+      if(d!==today && d!==yesterday) return;
+      const area = (r['상품명']||'').trim() || '(미지정)';
+      const key = `${media}||${area}`;
+      if(!groups[key]) groups[key] = {media, area, today:0, yesterday:0, todayDate:today, yesterdayDate:yesterday};
+      if(d===today) groups[key].today += _cN(r['비용']);
+      else groups[key].yesterday += _cN(r['비용']);
+    });
   });
 
   const MIN_BASE = 10000;  // 이 미만 소액 변동은 노이즈로 간주해 제외
@@ -3990,13 +4005,13 @@ function renderDisplayInsight(){
   if(!issues.length){
     body.innerHTML = `<div style="padding:3rem;text-align:center;color:var(--faint)">
       <div style="font-size:24px;margin-bottom:8px">✅</div>
-      ${yesterday} → ${today} 사이 광고비 급변 사항이 없습니다.
+      매체별 최신 이틀 기준, 광고비 급변 사항이 없습니다.
     </div>`;
     return;
   }
 
   body.innerHTML = `
-    <div style="font-size:12px;color:var(--faint);margin-bottom:.75rem">${yesterday} → ${today} 기준 · 광고비 ±${THRESHOLD}% 이상 변동 (${MIN_BASE.toLocaleString()}원 미만 소액 변동은 제외)</div>
+    <div style="font-size:12px;color:var(--faint);margin-bottom:.75rem">매체별 최신 이틀(입력된 날짜 기준) 비교 · 광고비 ±${THRESHOLD}% 이상 변동 (${MIN_BASE.toLocaleString()}원 미만 소액 변동은 제외)</div>
     <div style="display:flex;flex-direction:column;gap:8px">
       ${issues.map(g=>{
         const icon = g.kind==='up' ? '🔺' : g.kind==='down' ? '🔻' : '🆕';
@@ -4006,7 +4021,7 @@ function renderDisplayInsight(){
           <div style="font-size:20px">${icon}</div>
           <div style="flex:1">
             <div style="font-weight:600;font-size:13px">${escHtml(g.media)} · ${escHtml(g.area)}</div>
-            <div style="font-size:11px;color:var(--faint)">어제 ${g.yesterday.toLocaleString()}원 → 오늘 ${g.today.toLocaleString()}원</div>
+            <div style="font-size:11px;color:var(--faint)">${g.yesterdayDate} ${g.yesterday.toLocaleString()}원 → ${g.todayDate} ${g.today.toLocaleString()}원</div>
           </div>
           <div style="font-size:15px;font-weight:700;color:${color}">${pctTxt}</div>
         </div>`;
@@ -4015,61 +4030,126 @@ function renderDisplayInsight(){
   `;
 }
 
-// 영역별 차트: 광고비·DB수·DB단가 / CTR·DB전환율
-function renderDisplayCharts(areaList){
+// 일별 차트: 광고비·DB단가 / DB수(영역별 누적) / CTR·DB전환율
+function renderDisplayCharts(areaList, mediaRows, crmRows, monSel){
   if(!window.Chart){
     if(!_displayChartJsLoading){
       _displayChartJsLoading = true;
       const s = document.createElement('script');
       s.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js';
-      s.onload = () => { renderDisplayCharts(areaList); };
+      s.onload = () => { renderDisplayCharts(areaList, mediaRows, crmRows, monSel); };
       document.head.appendChild(s);
     }
     return;
   }
-  const labels = areaList.map(a=>a.area);
+
+  const dayRows = mediaRows.filter(r=>!monSel || (r['날짜']||'').startsWith(monSel));
+  const days = [...new Set(dayRows.map(r=>r['날짜']).filter(Boolean))].sort();
+  if(!days.length){
+    ['display-chart-cost','display-chart-db','display-chart-ctr'].forEach(id=>{
+      if(_displayChartCost) _displayChartCost.destroy();
+      if(_displayChartDb) _displayChartDb.destroy();
+      if(_displayChartCtr) _displayChartCtr.destroy();
+    });
+    return;
+  }
+
+  const byDay = {};
+  days.forEach(d=>byDay[d] = {cost:0, imp:0, clk:0});
+  dayRows.forEach(r=>{
+    const d = r['날짜'];
+    const b = byDay[d];
+    b.cost += _cN(r['비용']);
+    b.imp  += _cN(r['노출수(열람수)']);
+    b.clk  += _cN(r['클릭수']);
+  });
+
+  // 영역별 일별 DB수 (영역의 인타입 코드 집합 기준, 상담등록일로 매칭)
+  const dayIdx = {}; days.forEach((d,i)=>dayIdx[d]=i);
+  const areaDbByDay = {}; // area -> [일별 DB수 배열]
+  areaList.forEach(a=>{ areaDbByDay[a.area] = days.map(()=>0); });
+  (crmRows||[]).forEach(r=>{
+    const code = (r['인타입']||'').trim();
+    if(!code) return;
+    const d = _normDS(r['상담등록일']||'');
+    const idx = dayIdx[d];
+    if(idx===undefined) return;
+    const area = areaList.find(a=>a.codes.has(code));
+    if(!area) return;
+    areaDbByDay[area.area][idx]++;
+  });
+  const totalDbByDay = days.map((d,i)=>areaList.reduce((s,a)=>s+areaDbByDay[a.area][i],0));
+
+  const costData = days.map(d=>byDay[d].cost);
+  const cpdData  = days.map((d,i)=>totalDbByDay[i]>0 ? Math.round(byDay[d].cost/totalDbByDay[i]) : null);
+  const ctrData  = days.map(d=>byDay[d].imp>0 ? Math.round(byDay[d].clk/byDay[d].imp*10000)/100 : null);
+  const dbcvrData= days.map((d,i)=>byDay[d].clk>0 ? Math.round(totalDbByDay[i]/byDay[d].clk*1000)/10 : null);
 
   const ctx1 = document.getElementById('display-chart-cost')?.getContext('2d');
   if(ctx1){
     if(_displayChartCost) _displayChartCost.destroy();
     _displayChartCost = new Chart(ctx1, {
       data: {
-        labels,
+        labels: days,
         datasets: [
-          {type:'bar',  label:'광고비', data: areaList.map(a=>a.cost), backgroundColor:'#ff9b00', yAxisID:'y', order:2},
-          {type:'line', label:'DB단가', data: areaList.map(a=>a.cpd),  borderColor:'#534AB7', backgroundColor:'#534AB7', yAxisID:'y', tension:0.3, order:1},
-          {type:'line', label:'DB수',   data: areaList.map(a=>a.db),   borderColor:'#2b68ee', backgroundColor:'#2b68ee', yAxisID:'y1', tension:0.3, order:0}
+          {type:'bar',  label:'광고비', data: costData, backgroundColor:'#ff9b00', yAxisID:'y', order:1},
+          {type:'line', label:'DB단가', data: cpdData,  borderColor:'#534AB7', backgroundColor:'#534AB7', yAxisID:'y1', tension:0.3, order:0}
         ]
       },
       options: {
         responsive:true, maintainAspectRatio:false,
         plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:11}}}},
         scales:{
-          x:{grid:{display:false},ticks:{font:{size:11},color:'#888'}},
+          x:{grid:{display:false},ticks:{font:{size:10},color:'#888',maxRotation:0,autoSkip:true}},
           y:{position:'left',ticks:{callback:v=>v.toLocaleString(),font:{size:10},color:'#888'},grid:{color:'rgba(0,0,0,0.05)'}},
-          y1:{position:'right',ticks:{font:{size:10},color:'#888'},grid:{display:false}}
+          y1:{position:'right',ticks:{callback:v=>v.toLocaleString(),font:{size:10},color:'#888'},grid:{display:false}}
         }
       }
     });
   }
 
-  const ctx2 = document.getElementById('display-chart-ctr')?.getContext('2d');
+  const ctx2 = document.getElementById('display-chart-db')?.getContext('2d');
   if(ctx2){
+    if(_displayChartDb) _displayChartDb.destroy();
+    _displayChartDb = new Chart(ctx2, {
+      type:'bar',
+      data:{
+        labels: days,
+        datasets: areaList.map((a,i)=>({
+          label: a.area,
+          data: areaDbByDay[a.area],
+          backgroundColor: _DISPLAY_AREA_COLORS[i % _DISPLAY_AREA_COLORS.length],
+          stack: 'db'
+        }))
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:11}}}},
+        scales:{
+          x:{stacked:true,grid:{display:false},ticks:{font:{size:10},color:'#888',maxRotation:0,autoSkip:true}},
+          y:{stacked:true,ticks:{font:{size:10},color:'#888'},grid:{color:'rgba(0,0,0,0.05)'}}
+        }
+      }
+    });
+  }
+
+  const ctx3 = document.getElementById('display-chart-ctr')?.getContext('2d');
+  if(ctx3){
     if(_displayChartCtr) _displayChartCtr.destroy();
-    _displayChartCtr = new Chart(ctx2, {
+    _displayChartCtr = new Chart(ctx3, {
       type:'line',
       data:{
-        labels,
+        labels: days,
         datasets:[
-          {label:'CTR',      data: areaList.map(a=>a.ctr),   borderColor:'#ef3554', backgroundColor:'#ef3554', tension:0.3},
-          {label:'DB전환율', data: areaList.map(a=>a.dbcvr), borderColor:'#2b68ee', backgroundColor:'#2b68ee', tension:0.3}
+          {label:'CTR',      data: ctrData,   borderColor:'#ef3554', backgroundColor:'#ef3554', tension:0.3},
+          {label:'DB전환율', data: dbcvrData, borderColor:'#2b68ee', backgroundColor:'#2b68ee', tension:0.3}
         ]
       },
       options:{
         responsive:true, maintainAspectRatio:false,
         plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:11}}},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.parsed.y}%`}}},
         scales:{
-          x:{grid:{display:false},ticks:{font:{size:11},color:'#888'}},
+          x:{grid:{display:false},ticks:{font:{size:10},color:'#888',maxRotation:0,autoSkip:true}},
           y:{ticks:{callback:v=>v+'%',font:{size:10},color:'#888'},grid:{color:'rgba(0,0,0,0.05)'}}
         }
       }
@@ -4279,7 +4359,7 @@ function renderDisplayTab(){
   const hasIntype = areaList.some(a=>a.hasIntype);
   renderDisplaySummary(areaList, hasIntype);
   renderDisplayAreaTable(areaList);
-  renderDisplayCharts(areaList);
+  renderDisplayCharts(areaList, mediaRows, crmRows, monSel);
 }
 
 function renderDisplaySummary(areaList, hasIntype){
