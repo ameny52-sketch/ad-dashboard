@@ -3975,6 +3975,35 @@ function renderDisplayTab(){
     return {roas, cpd};
   }
 
+  // DB에는 들어왔지만 광고비 시트에는 없는(과거) 인타입 코드 처리:
+  // 참조표에서 그 코드의 매체/영역만 확인해 해당 영역의 DB로는 잡아주되,
+  // 어떤 소재였는지는 알 수 없으므로 소재 구분 없이 "미확인"으로만 묶는다
+  // (영역 자체가 광고비 데이터 없이 참조표 전체 코드로 대체되는 경우는 위 fallback이 이미 커버하므로 제외)
+  if(hasIntypeRef){
+    const norm = s => (s||'').replace(/\s+/g,'');
+    const refAreaByCode = {};
+    _displayIntypeRef.forEach(r=>{
+      if(norm(r['매체'])!==norm(_displayMedia)) return;
+      const code = (r['인타입']||'').trim();
+      const area = (r['영역']||'').trim();
+      if(code && area && !refAreaByCode[code]) refAreaByCode[code] = area;
+    });
+    const claimedCodes = new Set();
+    Object.values(areas).forEach(a=>a.codes.forEach(c=>claimedCodes.add(c)));
+    const crmCodes = new Set(crmRows.map(r=>(r['인타입']||'').trim()).filter(Boolean));
+    crmCodes.forEach(code=>{
+      if(claimedCodes.has(code)) return; // 광고비 시트에 이미 있는 코드는 기존 로직으로 처리
+      const area = refAreaByCode[code];
+      if(!area) return; // 참조표에도 없으면 매체/영역 판단 불가
+      const a = areas[area];
+      if(!a) return; // 광고비가 아예 없는 영역은 위 hasIntype fallback이 이미 전체 코드로 커버함
+      a.codes.add(code);
+      if(!a.kws['미확인']) a.kws['미확인'] = {kw:'미확인', cost:0, imp:0, clk:0, snd:0, codes:new Set()};
+      a.kws['미확인'].codes.add(code);
+      if(!a.codeLabelCost[code]) a.codeLabelCost[code] = {'미확인':0};
+    });
+  }
+
   const areaList = Object.values(areas).map(a=>{
     // 리포트 행에 인타입이 있으면 그걸로, 없으면(레거시 대비) 참조표에서 영역 기준으로 조회
     let codes = a.codes;
