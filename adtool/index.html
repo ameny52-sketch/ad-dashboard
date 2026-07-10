@@ -957,7 +957,7 @@ button.run,.dl{box-shadow:none}
 
 <!-- 디스플레이 소재 크리에이티브 모달 -->
 <div class="modal-bg" id="creative-modal-bg" onclick="if(event.target===this)document.getElementById('creative-modal-bg').style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center">
-  <div class="modal" style="width:520px;max-width:95vw;max-height:85vh;overflow-y:auto">
+  <div class="modal" style="width:820px;max-width:95vw;max-height:85vh;overflow-y:auto">
     <div class="modal-head">
       <h3 id="creative-modal-title">소재 크리에이티브</h3>
       <button class="close-btn" onclick="document.getElementById('creative-modal-bg').style.display='none'">✕</button>
@@ -4266,7 +4266,8 @@ function _renderCreativeDaily(info, monSel){
     byDate[d].clk  += _cN(r['클릭수']);
     byDate[d].snd  += _cN(r['발송수']);
   });
-  // 일별 DB수 — 이 소재에 귀속된 인타입 코드 기준, 상담등록일로 매칭
+  // 일별 DB수/계약수 — 이 소재에 귀속된 인타입 코드 기준, 상담등록일로 매칭
+  let totalContracts = 0;
   if(info.codes && info.codes.length){
     const codeSet = new Set(info.codes);
     (_displayCrmRaw||[]).forEach(r=>{
@@ -4275,6 +4276,7 @@ function _renderCreativeDaily(info, monSel){
       if(!d.startsWith(monSel)) return;
       if(!byDate[d]) byDate[d] = {date:d, cost:0, imp:0, clk:0, snd:0, db:0};
       byDate[d].db++;
+      totalContracts += Math.round(_cN(r['계약수']));
     });
   }
   const days = Object.values(byDate).sort((a,b)=>a.date.localeCompare(b.date));
@@ -4284,9 +4286,24 @@ function _renderCreativeDaily(info, monSel){
     dailyEl.innerHTML = `<div style="color:var(--faint);font-size:12px;padding:.5rem 0">이 달에 집계된 일별 데이터가 없습니다.</div>`;
     return;
   }
+  const totalCost = days.reduce((s,d)=>s+d.cost,0);
+  const totalImp  = days.reduce((s,d)=>s+d.imp,0);
+  const totalClk  = days.reduce((s,d)=>s+d.clk,0);
+  const totalDb   = days.reduce((s,d)=>s+d.db,0);
+  const sumCtr   = totalImp>0 ? Math.round(totalClk/totalImp*10000)/100 : null;
+  const sumCpd   = totalDb>0 ? Math.round(totalCost/totalDb) : null;
+  const sumDbcvr = totalClk>0 ? Math.round(totalDb/totalClk*1000)/10 : null;
+  const sumCvr   = totalDb>0 ? Math.round(totalContracts/totalDb*1000)/10 : null;
+  const sumCard = (label,colorCls,val) => `<div class="metric"><div class="metric-label">${label}</div><div class="metric-value ${colorCls}">${val}</div></div>`;
   const th = label => `<th class="num" style="padding:6px 10px;text-align:right;background:#fafaf8;border-bottom:1px solid var(--border);position:sticky;top:0">${label}</th>`;
   dailyEl.innerHTML = `
     <div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px">일별 데이터</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:.75rem">
+      ${sumCard('CTR','brand-red', sumCtr!==null?sumCtr+'%':'-')}
+      ${sumCard('DB단가','purple', sumCpd!==null?sumCpd.toLocaleString()+'원':'-')}
+      ${sumCard('DB전환율','brand-red', sumDbcvr!==null?sumDbcvr+'%':'-')}
+      ${sumCard('계약률','green', sumCvr!==null?sumCvr+'%':'-')}
+    </div>
     <div style="max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--rs)">
       <table style="width:100%;border-collapse:collapse;font-size:12px">
         <thead><tr>
