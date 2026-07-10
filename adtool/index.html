@@ -2936,6 +2936,15 @@ async function _loadDisplayDailyCost(){
   }catch(e){ console.warn('디스플레이 일별 광고비 로드 실패:', e); return {}; }
 }
 
+// 기타 매체 중 실제 광고비 데이터가 없는 매체는 환산료/DB수 기반 역산 공식으로 광고비를 추정한다
+// (제공받은 공식 그대로 적용, 나머지 매체는 추후 공식 전달 예정)
+function _crmMediaCost(media, c, dispCost){
+  if(media==='애드온컴퍼니') return dispCost||0;
+  if(media==='디티엔' || media==='에이온비' || media==='신성미디어') return Math.round((c?.perf||0)*9.99/11000)*11000;
+  if(media==='두드림') return (c?.db||0)*55000;
+  return 0;
+}
+
 // ===== Daily DB 현황: 소형 매체 컬럼 표시/숨기기 (가독성) =====
 // '파워컨텐츠'/'키워드'(네이버+구글+다음 묶음)는 기본적으로 숨기고 전체합계만 보이게 함 (최초 1회만 적용)
 let _dailyHiddenMedias = new Set(JSON.parse(localStorage.getItem('daily_hidden_medias')||'[]'));
@@ -3431,17 +3440,18 @@ function renderDaily(){
     const totalDb=isMonthTotal?(item.totalDb||0):(pc_db+Object.values(crmDay).reduce((s,c)=>s+(c.db||0),0));
     const totalCon=isMonthTotal?(item.totalCon||0):(pc_con+Object.values(crmDay).reduce((s,c)=>s+(c.contracts||0),0));
     const totalPerf=isMonthTotal?(item.totalPerf||0):(pc_perf+Object.values(crmDay).reduce((s,c)=>s+(c.perf||0),0));
-    const totalCost=isMonthTotal?(item.totalCost||0):(pc_cost+naverCost+googleCost+daumCost+dispCost);
     const bg = isMonthTotal?'background:#eff4ff;font-weight:700':'';
     const bgSticky = isMonthTotal?'#eff4ff':'var(--surface)';
     const dateColor= isMonthTotal?'color:#ff9b00':
       (item.pd&&(new Date(item.pd.year,item.pd.month-1,item.pd.day).getDay()===0||new Date(item.pd.year,item.pd.month-1,item.pd.day).getDay()===6)?'color:#dc2626':'color:var(--text)');
-    let crmCells='';
+    let crmCells='', crmCostSum=0;
     crmMedias.forEach(m=>{
       const c=crmDay[m]||{};
-      const cost = m==='애드온컴퍼니' ? dispCost : 0;
+      const cost = _crmMediaCost(m, c, dispCost);
+      crmCostSum += cost;
       crmCells+=makeMediaCells(c.db||0,c.contracts||0,c.perf||0,cost);
     });
+    const totalCost=isMonthTotal?(item.totalCost||0):(pc_cost+naverCost+googleCost+daumCost+crmCostSum);
     const pcCells = showPc ? makeMediaCells(pc_db,pc_con,pc_perf,pc_cost) : '';
     const kwCells = kwMedias.length ? makeMediaCells(naverDb,naverCon,naverPerf,naverCost)+makeMediaCells(googleDb,googleCon,googlePerf,googleCost)+makeMediaCells(daumDb,daumCon,daumPerf,daumCost) : '';
     return '<tr style="'+bg+'"><td style="padding:7px 10px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);font-size:12px;'+dateColor+';text-align:center;position:sticky;left:0;z-index:1;background:'+bgSticky+'">'+item.label+'</td>'+makeTotalCells(totalDb,totalCon,totalPerf,totalCost)+pcCells+kwCells+crmCells+'</tr>';
@@ -3541,7 +3551,8 @@ function makeMonthTotal(label, rows){
   const allDb  = pc_db + kwDb.naver + kwDb.google + kwDb.daum + crmMedias.reduce((s,m)=>s+(crmTotals[m]?.db||0),0);
   const allCon = pc_con+ kwCon.naver+ kwCon.google+ kwCon.daum+ crmMedias.reduce((s,m)=>s+(crmTotals[m]?.contracts||0),0);
   const allPerf= pc_perf+kwPerf.naver+kwPerf.google+kwPerf.daum+crmMedias.reduce((s,m)=>s+(crmTotals[m]?.perf||0),0);
-  const allCost= pc_cost+(kwCost.naver||0)+(kwCost.google||0)+(kwCost.daum||0)+(crmCost['애드온컴퍼니']||0);
+  const crmCostTotal = crmMedias.reduce((s,m)=>s+_crmMediaCost(m, crmTotals[m], crmCost['애드온컴퍼니']||0), 0);
+  const allCost= pc_cost+(kwCost.naver||0)+(kwCost.google||0)+(kwCost.daum||0)+crmCostTotal;
   return {type:'month-total',label,pc_db,pc_con,pc_perf,pc_cost,kwCost,kwDb,kwCon,kwPerf,crmTotals,crmCost,totalDb:allDb,totalCon:allCon,totalPerf:allPerf,totalCost:allCost};
 }
 
