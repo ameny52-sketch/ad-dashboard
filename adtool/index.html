@@ -521,6 +521,7 @@ button.run,.dl{box-shadow:none}
   <!-- 디스플레이(뉴미디어) 패널 -->
   <div class="tab-panel" id="panel-display">
     <div class="main-tabs" id="display-media-tabs" style="display:flex">
+      <button class="main-tab" onclick="switchDisplayInsight(this)">🔍 성과진단</button>
       <button class="main-tab active" onclick="switchDisplayMedia('카카오페이',this)">카카오페이</button>
       <button class="main-tab" onclick="switchDisplayMedia('T멤버십',this)">T멤버십</button>
       <button class="main-tab" onclick="switchDisplayMedia('가스락',this)">가스락</button>
@@ -532,8 +533,22 @@ button.run,.dl{box-shadow:none}
 
     <div id="display-pending" style="display:none;padding:3rem;text-align:center;color:var(--faint);font-size:13px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r)"></div>
 
+    <div id="display-insight" style="display:none">
+      <div id="display-insight-body"></div>
+    </div>
+
     <div id="display-content" style="display:none">
       <div id="display-summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:1rem"></div>
+      <div class="cpc-chart-row" style="margin-bottom:1rem">
+        <div class="cpc-chart-card">
+          <div class="cpc-chart-title"><span>영역별 광고비 · DB수 · DB단가</span></div>
+          <div style="position:relative;height:220px"><canvas id="display-chart-cost"></canvas></div>
+        </div>
+        <div class="cpc-chart-card">
+          <div class="cpc-chart-title"><span>영역별 CTR · DB전환율</span></div>
+          <div style="position:relative;height:220px"><canvas id="display-chart-ctr"></canvas></div>
+        </div>
+      </div>
       <div class="table-card">
         <div class="table-header">
           <h2>영역별 성과 <span style="font-size:11px;font-weight:400;color:var(--faint)">(행 클릭 → 소재별 상세)</span></h2>
@@ -3903,6 +3918,9 @@ let _displayIntypeRef = null;  // 인타입 참조표 행들 (인타입,매체,�
 let _displayCrmRaw = null;     // CRM raw 중 애드온컴퍼니(뉴미디어) 행들
 let _displayLoaded = false;
 let _displayMedia = '카카오페이';
+let _displayChartJsLoading = false;
+let _displayChartCost = null;
+let _displayChartCtr = null;
 
 function initDisplayTab(){
   if(!_displayLoaded){ _displayLoaded = true; loadDisplayData(); }
@@ -3913,7 +3931,150 @@ function switchDisplayMedia(media, btn){
   document.querySelectorAll('#display-media-tabs .main-tab').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   _displayMedia = media;
+  document.getElementById('display-insight').style.display = 'none';
+  document.getElementById('display-content').style.display = '';
   renderDisplayTab();
+}
+
+function switchDisplayInsight(btn){
+  document.querySelectorAll('#display-media-tabs .main-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('display-pending').style.display = 'none';
+  document.getElementById('display-content').style.display = 'none';
+  document.getElementById('display-insight').style.display = '';
+  renderDisplayInsight();
+}
+
+// 매체 전체 기준, 어제→오늘 광고비 급변 감지 (매체×영역 단위)
+function renderDisplayInsight(){
+  const body = document.getElementById('display-insight-body');
+  const rows = _displayData || [];
+  if(!rows.length){
+    body.innerHTML = `<div style="padding:2rem;text-align:center;color:var(--faint)">데이터를 불러오면 이 영역에 결과가 표시됩니다.</div>`;
+    return;
+  }
+  const dates = [...new Set(rows.map(r=>r['날짜']).filter(Boolean))].sort();
+  if(dates.length < 2){
+    body.innerHTML = `<div style="padding:2rem;text-align:center;color:var(--faint)">비교할 날짜 데이터가 부족합니다.</div>`;
+    return;
+  }
+  const today = dates[dates.length-1];
+  const yesterday = dates[dates.length-2];
+
+  const groups = {};
+  rows.forEach(r=>{
+    const date = r['날짜'];
+    if(date!==today && date!==yesterday) return;
+    const media = (r['매체명']||'').trim();
+    const area = (r['상품명']||'').trim() || '(미지정)';
+    const key = `${media}||${area}`;
+    if(!groups[key]) groups[key] = {media, area, today:0, yesterday:0};
+    if(date===today) groups[key].today += _cN(r['비용']);
+    else groups[key].yesterday += _cN(r['비용']);
+  });
+
+  const MIN_BASE = 10000;  // 이 미만 소액 변동은 노이즈로 간주해 제외
+  const THRESHOLD = 40;    // ±40% 이상만 이슈로 표시
+  const issues = [];
+  Object.values(groups).forEach(g=>{
+    if(g.yesterday < MIN_BASE && g.today < MIN_BASE) return;
+    if(g.yesterday > 0){
+      const pct = Math.round((g.today-g.yesterday)/g.yesterday*1000)/10;
+      if(Math.abs(pct) >= THRESHOLD) issues.push({...g, pct, kind: pct>0?'up':'down'});
+    } else if(g.today >= MIN_BASE){
+      issues.push({...g, pct:null, kind:'new'});
+    }
+  });
+  issues.sort((a,b)=>(b.pct===null?9999:Math.abs(b.pct))-(a.pct===null?9999:Math.abs(a.pct)));
+
+  if(!issues.length){
+    body.innerHTML = `<div style="padding:3rem;text-align:center;color:var(--faint)">
+      <div style="font-size:24px;margin-bottom:8px">✅</div>
+      ${yesterday} → ${today} 사이 광고비 급변 사항이 없습니다.
+    </div>`;
+    return;
+  }
+
+  body.innerHTML = `
+    <div style="font-size:12px;color:var(--faint);margin-bottom:.75rem">${yesterday} → ${today} 기준 · 광고비 ±${THRESHOLD}% 이상 변동 (${MIN_BASE.toLocaleString()}원 미만 소액 변동은 제외)</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      ${issues.map(g=>{
+        const icon = g.kind==='up' ? '🔺' : g.kind==='down' ? '🔻' : '🆕';
+        const color = g.kind==='down' ? '#dc2626' : g.kind==='new' ? 'var(--accent)' : '#d97706';
+        const pctTxt = g.pct===null ? '신규 집행' : `${g.pct>0?'+':''}${g.pct}%`;
+        return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:.75rem 1rem;display:flex;align-items:center;gap:12px">
+          <div style="font-size:20px">${icon}</div>
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:13px">${escHtml(g.media)} · ${escHtml(g.area)}</div>
+            <div style="font-size:11px;color:var(--faint)">어제 ${g.yesterday.toLocaleString()}원 → 오늘 ${g.today.toLocaleString()}원</div>
+          </div>
+          <div style="font-size:15px;font-weight:700;color:${color}">${pctTxt}</div>
+        </div>`;
+      }).join('')}
+    </div>
+  `;
+}
+
+// 영역별 차트: 광고비·DB수·DB단가 / CTR·DB전환율
+function renderDisplayCharts(areaList){
+  if(!window.Chart){
+    if(!_displayChartJsLoading){
+      _displayChartJsLoading = true;
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js';
+      s.onload = () => { renderDisplayCharts(areaList); };
+      document.head.appendChild(s);
+    }
+    return;
+  }
+  const labels = areaList.map(a=>a.area);
+
+  const ctx1 = document.getElementById('display-chart-cost')?.getContext('2d');
+  if(ctx1){
+    if(_displayChartCost) _displayChartCost.destroy();
+    _displayChartCost = new Chart(ctx1, {
+      data: {
+        labels,
+        datasets: [
+          {type:'bar',  label:'광고비', data: areaList.map(a=>a.cost), backgroundColor:'#ff9b00', yAxisID:'y', order:2},
+          {type:'line', label:'DB단가', data: areaList.map(a=>a.cpd),  borderColor:'#534AB7', backgroundColor:'#534AB7', yAxisID:'y', tension:0.3, order:1},
+          {type:'line', label:'DB수',   data: areaList.map(a=>a.db),   borderColor:'#2b68ee', backgroundColor:'#2b68ee', yAxisID:'y1', tension:0.3, order:0}
+        ]
+      },
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:11}}}},
+        scales:{
+          x:{grid:{display:false},ticks:{font:{size:11},color:'#888'}},
+          y:{position:'left',ticks:{callback:v=>v.toLocaleString(),font:{size:10},color:'#888'},grid:{color:'rgba(0,0,0,0.05)'}},
+          y1:{position:'right',ticks:{font:{size:10},color:'#888'},grid:{display:false}}
+        }
+      }
+    });
+  }
+
+  const ctx2 = document.getElementById('display-chart-ctr')?.getContext('2d');
+  if(ctx2){
+    if(_displayChartCtr) _displayChartCtr.destroy();
+    _displayChartCtr = new Chart(ctx2, {
+      type:'line',
+      data:{
+        labels,
+        datasets:[
+          {label:'CTR',      data: areaList.map(a=>a.ctr),   borderColor:'#ef3554', backgroundColor:'#ef3554', tension:0.3},
+          {label:'DB전환율', data: areaList.map(a=>a.dbcvr), borderColor:'#2b68ee', backgroundColor:'#2b68ee', tension:0.3}
+        ]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:11}}},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.parsed.y}%`}}},
+        scales:{
+          x:{grid:{display:false},ticks:{font:{size:11},color:'#888'}},
+          y:{ticks:{callback:v=>v+'%',font:{size:10},color:'#888'},grid:{color:'rgba(0,0,0,0.05)'}}
+        }
+      }
+    });
+  }
 }
 
 async function loadDisplayData(){
@@ -4118,6 +4279,7 @@ function renderDisplayTab(){
   const hasIntype = areaList.some(a=>a.hasIntype);
   renderDisplaySummary(areaList, hasIntype);
   renderDisplayAreaTable(areaList);
+  renderDisplayCharts(areaList);
 }
 
 function renderDisplaySummary(areaList, hasIntype){
