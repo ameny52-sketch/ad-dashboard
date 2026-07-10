@@ -3957,9 +3957,9 @@ function switchDisplayInsight(btn){
   renderDisplayInsight();
 }
 
-// 매체 전체 기준, 최근 이틀 광고비 급변 감지 (매체×영역 단위)
-// 매체마다 데이터 입력 시차가 있을 수 있어(예: A매체는 오늘까지, B매체는 그제까지),
-// 전체 공통 날짜가 아니라 "매체별로 자기 자신의 최신 2일"을 기준으로 비교한다
+// 매체 전체 기준, 최근 이틀 변화 감지 (매체마다 데이터 입력 시차가 있을 수 있어
+// 전체 공통 날짜가 아니라 "매체별로 자기 자신의 최신 2일"을 기준으로 비교한다)
+// 다른 탭(성과 진단)과 같은 형식의 "오늘의 요약" 배너 + 영역·소재 단위 변화 TOP 리스트로 구성
 function renderDisplayInsight(){
   const body = document.getElementById('display-insight-body');
   const rows = _displayData || [];
@@ -3967,6 +3967,8 @@ function renderDisplayInsight(){
     body.innerHTML = `<div style="padding:2rem;text-align:center;color:var(--faint)">데이터를 불러오면 이 영역에 결과가 표시됩니다.</div>`;
     return;
   }
+
+  // 매체별 자기 날짜 기준 어제/오늘 산출
   const datesByMedia = {};
   rows.forEach(r=>{
     const media = (r['매체명']||'').trim();
@@ -3975,63 +3977,164 @@ function renderDisplayInsight(){
     if(!datesByMedia[media]) datesByMedia[media] = new Set();
     datesByMedia[media].add(d);
   });
-
-  const groups = {};
+  const mediaDates = {};
   Object.entries(datesByMedia).forEach(([media, dateSet])=>{
     const dates = [...dateSet].sort();
-    if(dates.length < 2) return;
-    const today = dates[dates.length-1];
-    const yesterday = dates[dates.length-2];
-    rows.forEach(r=>{
-      if((r['매체명']||'').trim() !== media) return;
-      const d = r['날짜'];
-      if(d!==today && d!==yesterday) return;
-      const area = (r['상품명']||'').trim() || '(미지정)';
-      const key = `${media}||${area}`;
-      if(!groups[key]) groups[key] = {media, area, today:0, yesterday:0, todayDate:today, yesterdayDate:yesterday};
-      if(d===today) groups[key].today += _cN(r['비용']);
-      else groups[key].yesterday += _cN(r['비용']);
-    });
+    if(dates.length>=2) mediaDates[media] = {today:dates[dates.length-1], yesterday:dates[dates.length-2]};
   });
-
-  const MIN_BASE = 10000;  // 이 미만 소액 변동은 노이즈로 간주해 제외
-  const THRESHOLD = 40;    // ±40% 이상만 이슈로 표시
-  const issues = [];
-  Object.values(groups).forEach(g=>{
-    if(g.yesterday < MIN_BASE && g.today < MIN_BASE) return;
-    if(g.yesterday > 0){
-      const pct = Math.round((g.today-g.yesterday)/g.yesterday*1000)/10;
-      if(Math.abs(pct) >= THRESHOLD) issues.push({...g, pct, kind: pct>0?'up':'down'});
-    } else if(g.today >= MIN_BASE){
-      issues.push({...g, pct:null, kind:'new'});
-    }
-  });
-  issues.sort((a,b)=>(b.pct===null?9999:Math.abs(b.pct))-(a.pct===null?9999:Math.abs(a.pct)));
-
-  if(!issues.length){
-    body.innerHTML = `<div style="padding:3rem;text-align:center;color:var(--faint)">
-      <div style="font-size:24px;margin-bottom:8px">✅</div>
-      매체별 최신 이틀 기준, 광고비 급변 사항이 없습니다.
-    </div>`;
+  const mediaList = Object.keys(mediaDates);
+  if(!mediaList.length){
+    body.innerHTML = `<div style="padding:2rem;text-align:center;color:var(--faint)">비교할 날짜 데이터가 부족합니다.</div>`;
     return;
   }
 
+  // 매체 > 영역 > 소재 단위로 어제/오늘 광고비·노출·클릭 집계 (+ 인타입 코드 집합)
+  const tree = {};
+  rows.forEach(r=>{
+    const media = (r['매체명']||'').trim();
+    const md = mediaDates[media];
+    if(!md) return;
+    const d = r['날짜'];
+    if(d!==md.today && d!==md.yesterday) return;
+    const area = (r['상품명']||'').trim() || '(미지정)';
+    const kw = (r['소재명']||'').trim() || '(소재 미기재)';
+    if(!tree[media]) tree[media] = {};
+    if(!tree[media][area]) tree[media][area] = {kws:{}, code:new Set()};
+    if(!tree[media][area].kws[kw]) tree[media][area].kws[kw] = {today:{cost:0,imp:0,clk:0,db:0}, yesterday:{cost:0,imp:0,clk:0,db:0}, code:new Set()};
+    const bucket = d===md.today ? tree[media][area].kws[kw].today : tree[media][area].kws[kw].yesterday;
+    bucket.cost += _cN(r['비용']);
+    bucket.imp  += _cN(r['노출수(열람수)']);
+    bucket.clk  += _cN(r['클릭수']);
+    const code = (r['인타입']||'').trim();
+    if(code){ tree[media][area].kws[kw].code.add(code); tree[media][area].code.add(code); }
+  });
+
+  // 인타입 코드 -> 소재 노드 매핑 (DB수 매칭용)
+  const codeToKwNode = {};
+  Object.entries(tree).forEach(([media, areas])=>{
+    Object.entries(areas).forEach(([area, aObj])=>{
+      Object.entries(aObj.kws).forEach(([kw, kObj])=>{
+        kObj.code.forEach(c=>{ codeToKwNode[c] = {media, kObj}; });
+      });
+    });
+  });
+  (_displayCrmRaw||[]).forEach(r=>{
+    const code = (r['인타입']||'').trim();
+    if(!code) return;
+    const node = codeToKwNode[code];
+    if(!node) return;
+    const md = mediaDates[node.media];
+    if(!md) return;
+    const d = _normDS(r['상담등록일']||'');
+    if(d===md.today) node.kObj.today.db++;
+    else if(d===md.yesterday) node.kObj.yesterday.db++;
+  });
+
+  function calcRatios(b){
+    return {
+      cpd: b.db>0 ? Math.round(b.cost/b.db) : null,
+      ctr: b.imp>0 ? Math.round(b.clk/b.imp*10000)/100 : null,
+      dbcvr: b.clk>0 ? Math.round(b.db/b.clk*1000)/10 : null
+    };
+  }
+  function pctChg(y,t){ return y>0 ? Math.round((t-y)/y*1000)/10 : null; }
+
+  const MIN_BASE = 10000; // 이 미만 소액 변동은 노이즈로 간주
+
+  // 영역 단위 집계(소재 합) — 매체별 헤드라인 대상 영역 선정용
+  const areaAgg = [];
+  Object.entries(tree).forEach(([media, areas])=>{
+    Object.entries(areas).forEach(([area, aObj])=>{
+      const today={cost:0,imp:0,clk:0,db:0}, yesterday={cost:0,imp:0,clk:0,db:0};
+      Object.values(aObj.kws).forEach(k=>{
+        ['cost','imp','clk','db'].forEach(f=>{ today[f]+=k.today[f]; yesterday[f]+=k.yesterday[f]; });
+      });
+      areaAgg.push({media, area, today, yesterday});
+    });
+  });
+
+  // ── 매체별 헤드라인 한 줄 요약 (가장 변화가 큰 영역을 대표로) ──
+  const headlines = mediaList.map(media=>{
+    const cands = areaAgg.filter(a=>a.media===media);
+    let best=null, bestScore=-1;
+    cands.forEach(a=>{
+      if(a.yesterday.cost<MIN_BASE && a.today.cost<MIN_BASE) return;
+      const score = a.yesterday.cost>0 ? Math.abs((a.today.cost-a.yesterday.cost)/a.yesterday.cost) : (a.today.cost>0?999:0);
+      if(score>bestScore){ bestScore=score; best=a; }
+    });
+    if(!best) return `<strong>${escHtml(media)}</strong>: 어제 대비 큰 변화가 없습니다.`;
+    const yc = calcRatios(best.yesterday), tc = calcRatios(best.today);
+    const parts = [];
+    const costPct = pctChg(best.yesterday.cost, best.today.cost);
+    if(costPct!==null && Math.abs(costPct)>=10) parts.push(`광고비 <b style="color:${costPct>0?'#facc15':'#f87171'}">${costPct>0?'+':''}${costPct}%</b>`);
+    else if(costPct===null && best.today.cost>=MIN_BASE) parts.push(`광고비 <b style="color:#facc15">신규 집행</b>`);
+    const dbPct = pctChg(best.yesterday.db, best.today.db);
+    if(dbPct!==null && Math.abs(dbPct)>=10) parts.push(`DB수 <b style="color:${dbPct>0?'#4ade80':'#f87171'}">${dbPct>0?'+':''}${dbPct}%</b>`);
+    if(yc.cpd!=null && tc.cpd!=null){
+      const p = pctChg(yc.cpd, tc.cpd);
+      if(p!==null && Math.abs(p)>=10) parts.push(`DB단가 <b style="color:${p<0?'#4ade80':'#f87171'}">${p>0?'+':''}${p}%</b>`);
+    }
+    if(yc.ctr!=null && tc.ctr!=null){
+      const diff = Math.round((tc.ctr-yc.ctr)*10)/10;
+      if(Math.abs(diff)>=0.3) parts.push(`CTR <b style="color:${diff>0?'#4ade80':'#f87171'}">${diff>0?'+':''}${diff}%p</b>`);
+    }
+    if(yc.dbcvr!=null && tc.dbcvr!=null){
+      const diff = Math.round((tc.dbcvr-yc.dbcvr)*10)/10;
+      if(Math.abs(diff)>=0.3) parts.push(`DB전환율 <b style="color:${diff>0?'#4ade80':'#f87171'}">${diff>0?'+':''}${diff}%p</b>`);
+    }
+    if(!parts.length) return `<strong>${escHtml(media)}</strong>: 어제 대비 큰 변화가 없습니다.`;
+    return `<strong>${escHtml(media)} ${escHtml(best.area)}</strong>에서 ${parts.join(', ')}했습니다.`;
+  });
+
+  // ── 영역·소재 단위 변화 TOP (광고비 ±40% 이상) ──
+  const THRESHOLD = 40;
+  const kwIssues = [];
+  Object.entries(tree).forEach(([media, areas])=>{
+    Object.entries(areas).forEach(([area, aObj])=>{
+      Object.entries(aObj.kws).forEach(([kw, k])=>{
+        const y=k.yesterday.cost, t=k.today.cost;
+        if(y<MIN_BASE && t<MIN_BASE) return;
+        if(y>0){
+          const pct = Math.round((t-y)/y*1000)/10;
+          if(Math.abs(pct)>=THRESHOLD) kwIssues.push({media, area, kw, yesterday:y, today:t, pct, kind: pct>0?'up':'down'});
+        } else if(t>=MIN_BASE){
+          kwIssues.push({media, area, kw, yesterday:y, today:t, pct:null, kind:'new'});
+        }
+      });
+    });
+  });
+  kwIssues.sort((a,b)=>(b.pct===null?9999:Math.abs(b.pct))-(a.pct===null?9999:Math.abs(a.pct)));
+  const topIssues = kwIssues.slice(0, 10);
+
   body.innerHTML = `
-    <div style="font-size:12px;color:var(--faint);margin-bottom:.75rem">매체별 최신 이틀(입력된 날짜 기준) 비교 · 광고비 ±${THRESHOLD}% 이상 변동 (${MIN_BASE.toLocaleString()}원 미만 소액 변동은 제외)</div>
-    <div style="display:flex;flex-direction:column;gap:8px">
-      ${issues.map(g=>{
-        const icon = g.kind==='up' ? '🔺' : g.kind==='down' ? '🔻' : '🆕';
-        const color = g.kind==='down' ? '#dc2626' : g.kind==='new' ? 'var(--accent)' : '#d97706';
-        const pctTxt = g.pct===null ? '신규 집행' : `${g.pct>0?'+':''}${g.pct}%`;
-        return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:.75rem 1rem;display:flex;align-items:center;gap:12px">
-          <div style="font-size:20px">${icon}</div>
-          <div style="flex:1">
-            <div style="font-weight:600;font-size:13px">${escHtml(g.media)} · ${escHtml(g.area)}</div>
-            <div style="font-size:11px;color:var(--faint)">${g.yesterdayDate} ${g.yesterday.toLocaleString()}원 → ${g.todayDate} ${g.today.toLocaleString()}원</div>
-          </div>
-          <div style="font-size:15px;font-weight:700;color:${color}">${pctTxt}</div>
-        </div>`;
-      }).join('')}
+    <div style="background:linear-gradient(135deg,#2e2e2e 0%,#4a4a4a 100%);border-radius:12px;padding:1.5rem 2rem;margin-bottom:1.25rem">
+      <div style="font-size:11px;color:rgba(255,255,255,.6);margin-bottom:10px;letter-spacing:.03em">📋 오늘의 요약 · 매체별 최신 이틀 비교</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${headlines.map(h=>`<div style="font-size:15px;color:#fff;line-height:1.6">${h}</div>`).join('')}
+      </div>
+    </div>
+    <div class="table-card">
+      <div class="table-header">
+        <h2>영역·소재별 변화 TOP <span style="font-size:11px;font-weight:400;color:var(--faint)">(광고비 ±${THRESHOLD}% 이상, ${MIN_BASE.toLocaleString()}원 미만 제외)</span></h2>
+      </div>
+      <div style="padding:1rem 1.25rem">
+        ${!topIssues.length ? `<div style="text-align:center;color:var(--faint);padding:2rem 0">눈에 띄는 소재 단위 변화가 없습니다.</div>` : `
+        <div style="display:flex;flex-direction:column;gap:2px">
+          ${topIssues.map(g=>{
+            const icon = g.kind==='up' ? '🔺' : g.kind==='down' ? '🔻' : '🆕';
+            const color = g.kind==='down' ? '#dc2626' : g.kind==='new' ? 'var(--accent)' : '#d97706';
+            const pctTxt = g.pct===null ? '신규 집행' : `${g.pct>0?'+':''}${g.pct}%`;
+            return `<div style="display:flex;align-items:center;gap:12px;padding:.6rem 0;border-bottom:1px solid var(--border)">
+              <div style="font-size:18px">${icon}</div>
+              <div style="flex:1">
+                <div style="font-weight:600;font-size:13px">${escHtml(g.media)} · ${escHtml(g.area)} · ${escHtml(g.kw)}</div>
+                <div style="font-size:11px;color:var(--faint)">어제 ${g.yesterday.toLocaleString()}원 → 오늘 ${g.today.toLocaleString()}원</div>
+              </div>
+              <div style="font-size:14px;font-weight:700;color:${color}">${pctTxt}</div>
+            </div>`;
+          }).join('')}
+        </div>`}
+      </div>
     </div>
   `;
 }
