@@ -539,19 +539,18 @@ button.run,.dl{box-shadow:none}
 
     <div id="display-content" style="display:none">
       <div id="display-summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:1rem"></div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px;margin-bottom:1rem">
-        <div class="cpc-chart-card">
-          <div class="cpc-chart-title"><span>일별 광고비 · DB단가</span></div>
-          <div style="position:relative;height:220px"><canvas id="display-chart-cost"></canvas></div>
+      <div class="cpc-chart-card" style="margin-bottom:1rem">
+        <div class="cpc-chart-title">
+          <span id="display-chart-title-text">영역별 광고비 추이</span>
         </div>
-        <div class="cpc-chart-card">
-          <div class="cpc-chart-title"><span>일별 DB수 (영역별 누적)</span></div>
-          <div style="position:relative;height:220px"><canvas id="display-chart-db"></canvas></div>
+        <div class="tab-bar" id="display-chart-tabs" style="margin:0 0 .75rem">
+          <button class="tab-btn active" onclick="switchDisplayChartMetric('cost',this)">광고비</button>
+          <button class="tab-btn" onclick="switchDisplayChartMetric('db',this)">DB수</button>
+          <button class="tab-btn" onclick="switchDisplayChartMetric('cpd',this)">DB단가</button>
+          <button class="tab-btn" onclick="switchDisplayChartMetric('ctr',this)">CTR</button>
+          <button class="tab-btn" onclick="switchDisplayChartMetric('dbcvr',this)">DB전환율</button>
         </div>
-        <div class="cpc-chart-card">
-          <div class="cpc-chart-title"><span>일별 CTR · DB전환율</span></div>
-          <div style="position:relative;height:220px"><canvas id="display-chart-ctr"></canvas></div>
-        </div>
+        <div style="position:relative;height:280px"><canvas id="display-chart-single"></canvas></div>
       </div>
       <div class="table-card">
         <div class="table-header">
@@ -3923,10 +3922,17 @@ let _displayCrmRaw = null;     // CRM raw 중 애드온컴퍼니(뉴미디어) �
 let _displayLoaded = false;
 let _displayMedia = '카카오페이';
 let _displayChartJsLoading = false;
-let _displayChartCost = null;
-let _displayChartDb = null;
-let _displayChartCtr = null;
+let _displayChartSingle = null;
+let _displayChartMetric = 'cost';
+let _displayLastChartArgs = null; // 토글 버튼 클릭 시 재사용 (areaList, mediaRows, crmRows, monSel)
 const _DISPLAY_AREA_COLORS = ['#ff9b00','#2b68ee','#00a874','#7224ea','#ef3554','#595959'];
+const _DISPLAY_CHART_METRICS = {
+  cost:  {label:'광고비',   type:'bar',  unit:'원'},
+  db:    {label:'DB수',     type:'bar',  unit:'건'},
+  cpd:   {label:'DB단가',   type:'line', unit:'원'},
+  ctr:   {label:'CTR',      type:'line', unit:'%'},
+  dbcvr: {label:'DB전환율', type:'line', unit:'%'}
+};
 
 function initDisplayTab(){
   if(!_displayLoaded){ _displayLoaded = true; loadDisplayData(); }
@@ -4030,8 +4036,47 @@ function renderDisplayInsight(){
   `;
 }
 
-// 일별 차트: 광고비·DB단가 / DB수(영역별 누적) / CTR·DB전환율
+// 영역별 추이 데이터 준비: 특정 월 선택 시 일별, 전체 월 선택 시 월별로 집계
+function _displayBuildChartSeries(areaList, mediaRows, crmRows, monSel){
+  const byMonth = !monSel;
+  const periodOf = date => byMonth ? date.slice(0,7) : date;
+  const dayRows = mediaRows.filter(r=>!monSel || (r['날짜']||'').startsWith(monSel));
+  const periods = [...new Set(dayRows.map(r=>periodOf(r['날짜']||'')).filter(Boolean))].sort();
+
+  const data = {};
+  areaList.forEach(a=>{
+    data[a.area] = {};
+    periods.forEach(p=>data[a.area][p] = {cost:0, imp:0, clk:0, db:0});
+  });
+
+  dayRows.forEach(r=>{
+    const area = (r['상품명']||'').trim() || '(미지정)';
+    const b = data[area] && data[area][periodOf(r['날짜']||'')];
+    if(!b) return;
+    b.cost += _cN(r['비용']);
+    b.imp  += _cN(r['노출수(열람수)']);
+    b.clk  += _cN(r['클릭수']);
+  });
+
+  (crmRows||[]).forEach(r=>{
+    const code = (r['인타입']||'').trim();
+    if(!code) return;
+    const d = _normDS(r['상담등록일']||'');
+    if(!d || (monSel && !d.startsWith(monSel))) return;
+    const p = periodOf(d);
+    const area = areaList.find(a=>a.codes.has(code));
+    if(!area) return;
+    const b = data[area.area] && data[area.area][p];
+    if(!b) return;
+    b.db++;
+  });
+
+  return {periods, data, byMonth};
+}
+
+// 토글 버튼으로 지표 하나씩 전환하는 영역별 추이 차트
 function renderDisplayCharts(areaList, mediaRows, crmRows, monSel){
+  _displayLastChartArgs = {areaList, mediaRows, crmRows, monSel};
   if(!window.Chart){
     if(!_displayChartJsLoading){
       _displayChartJsLoading = true;
@@ -4043,117 +4088,58 @@ function renderDisplayCharts(areaList, mediaRows, crmRows, monSel){
     return;
   }
 
-  const dayRows = mediaRows.filter(r=>!monSel || (r['날짜']||'').startsWith(monSel));
-  const days = [...new Set(dayRows.map(r=>r['날짜']).filter(Boolean))].sort();
-  if(!days.length){
-    ['display-chart-cost','display-chart-db','display-chart-ctr'].forEach(id=>{
-      if(_displayChartCost) _displayChartCost.destroy();
-      if(_displayChartDb) _displayChartDb.destroy();
-      if(_displayChartCtr) _displayChartCtr.destroy();
-    });
-    return;
-  }
+  const {periods, data, byMonth} = _displayBuildChartSeries(areaList, mediaRows, crmRows, monSel);
+  const metric = _DISPLAY_CHART_METRICS[_displayChartMetric] || _DISPLAY_CHART_METRICS.cost;
+  const titleEl = document.getElementById('display-chart-title-text');
+  if(titleEl) titleEl.textContent = `영역별 ${metric.label} 추이 (${byMonth?'월별':'일별'})`;
 
-  const byDay = {};
-  days.forEach(d=>byDay[d] = {cost:0, imp:0, clk:0});
-  dayRows.forEach(r=>{
-    const d = r['날짜'];
-    const b = byDay[d];
-    b.cost += _cN(r['비용']);
-    b.imp  += _cN(r['노출수(열람수)']);
-    b.clk  += _cN(r['클릭수']);
+  const ctx = document.getElementById('display-chart-single')?.getContext('2d');
+  if(!ctx) return;
+  if(_displayChartSingle) _displayChartSingle.destroy();
+  if(!periods.length) return;
+
+  const valueOf = (b) => {
+    if(_displayChartMetric==='cost')   return b.cost;
+    if(_displayChartMetric==='db')     return b.db;
+    if(_displayChartMetric==='cpd')    return b.db>0 ? Math.round(b.cost/b.db) : null;
+    if(_displayChartMetric==='ctr')    return b.imp>0 ? Math.round(b.clk/b.imp*10000)/100 : null;
+    if(_displayChartMetric==='dbcvr')  return b.clk>0 ? Math.round(b.db/b.clk*1000)/10 : null;
+    return null;
+  };
+
+  const datasets = areaList.map((a,i)=>{
+    const color = _DISPLAY_AREA_COLORS[i % _DISPLAY_AREA_COLORS.length];
+    const values = periods.map(p=>valueOf(data[a.area][p]));
+    return metric.type==='bar'
+      ? {type:'bar', label:a.area, data:values, backgroundColor:color, stack:'s'}
+      : {type:'line', label:a.area, data:values, borderColor:color, backgroundColor:color, tension:0.3};
   });
 
-  // 영역별 일별 DB수 (영역의 인타입 코드 집합 기준, 상담등록일로 매칭)
-  const dayIdx = {}; days.forEach((d,i)=>dayIdx[d]=i);
-  const areaDbByDay = {}; // area -> [일별 DB수 배열]
-  areaList.forEach(a=>{ areaDbByDay[a.area] = days.map(()=>0); });
-  (crmRows||[]).forEach(r=>{
-    const code = (r['인타입']||'').trim();
-    if(!code) return;
-    const d = _normDS(r['상담등록일']||'');
-    const idx = dayIdx[d];
-    if(idx===undefined) return;
-    const area = areaList.find(a=>a.codes.has(code));
-    if(!area) return;
-    areaDbByDay[area.area][idx]++;
+  const fmtVal = v => v===null||v===undefined ? '-' : (metric.unit==='%' ? v+'%' : v.toLocaleString()+(metric.unit==='원'?'원':''));
+  _displayChartSingle = new Chart(ctx, {
+    type: metric.type,
+    data: {labels: periods, datasets},
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{position:'bottom',labels:{boxWidth:10,font:{size:11}}},
+        tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${fmtVal(c.parsed.y)}`}}
+      },
+      scales:{
+        x:{stacked: metric.type==='bar', grid:{display:false},ticks:{font:{size:10},color:'#888',maxRotation:0,autoSkip:true}},
+        y:{stacked: metric.type==='bar', ticks:{callback:v=>metric.unit==='%'?v+'%':v.toLocaleString(),font:{size:10},color:'#888'},grid:{color:'rgba(0,0,0,0.05)'}}
+      }
+    }
   });
-  const totalDbByDay = days.map((d,i)=>areaList.reduce((s,a)=>s+areaDbByDay[a.area][i],0));
+}
 
-  const costData = days.map(d=>byDay[d].cost);
-  const cpdData  = days.map((d,i)=>totalDbByDay[i]>0 ? Math.round(byDay[d].cost/totalDbByDay[i]) : null);
-  const ctrData  = days.map(d=>byDay[d].imp>0 ? Math.round(byDay[d].clk/byDay[d].imp*10000)/100 : null);
-  const dbcvrData= days.map((d,i)=>byDay[d].clk>0 ? Math.round(totalDbByDay[i]/byDay[d].clk*1000)/10 : null);
-
-  const ctx1 = document.getElementById('display-chart-cost')?.getContext('2d');
-  if(ctx1){
-    if(_displayChartCost) _displayChartCost.destroy();
-    _displayChartCost = new Chart(ctx1, {
-      data: {
-        labels: days,
-        datasets: [
-          {type:'bar',  label:'광고비', data: costData, backgroundColor:'#ff9b00', yAxisID:'y', order:1},
-          {type:'line', label:'DB단가', data: cpdData,  borderColor:'#534AB7', backgroundColor:'#534AB7', yAxisID:'y1', tension:0.3, order:0}
-        ]
-      },
-      options: {
-        responsive:true, maintainAspectRatio:false,
-        plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:11}}}},
-        scales:{
-          x:{grid:{display:false},ticks:{font:{size:10},color:'#888',maxRotation:0,autoSkip:true}},
-          y:{position:'left',ticks:{callback:v=>v.toLocaleString(),font:{size:10},color:'#888'},grid:{color:'rgba(0,0,0,0.05)'}},
-          y1:{position:'right',ticks:{callback:v=>v.toLocaleString(),font:{size:10},color:'#888'},grid:{display:false}}
-        }
-      }
-    });
-  }
-
-  const ctx2 = document.getElementById('display-chart-db')?.getContext('2d');
-  if(ctx2){
-    if(_displayChartDb) _displayChartDb.destroy();
-    _displayChartDb = new Chart(ctx2, {
-      type:'bar',
-      data:{
-        labels: days,
-        datasets: areaList.map((a,i)=>({
-          label: a.area,
-          data: areaDbByDay[a.area],
-          backgroundColor: _DISPLAY_AREA_COLORS[i % _DISPLAY_AREA_COLORS.length],
-          stack: 'db'
-        }))
-      },
-      options:{
-        responsive:true, maintainAspectRatio:false,
-        plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:11}}}},
-        scales:{
-          x:{stacked:true,grid:{display:false},ticks:{font:{size:10},color:'#888',maxRotation:0,autoSkip:true}},
-          y:{stacked:true,ticks:{font:{size:10},color:'#888'},grid:{color:'rgba(0,0,0,0.05)'}}
-        }
-      }
-    });
-  }
-
-  const ctx3 = document.getElementById('display-chart-ctr')?.getContext('2d');
-  if(ctx3){
-    if(_displayChartCtr) _displayChartCtr.destroy();
-    _displayChartCtr = new Chart(ctx3, {
-      type:'line',
-      data:{
-        labels: days,
-        datasets:[
-          {label:'CTR',      data: ctrData,   borderColor:'#ef3554', backgroundColor:'#ef3554', tension:0.3},
-          {label:'DB전환율', data: dbcvrData, borderColor:'#2b68ee', backgroundColor:'#2b68ee', tension:0.3}
-        ]
-      },
-      options:{
-        responsive:true, maintainAspectRatio:false,
-        plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:11}}},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.parsed.y}%`}}},
-        scales:{
-          x:{grid:{display:false},ticks:{font:{size:10},color:'#888',maxRotation:0,autoSkip:true}},
-          y:{ticks:{callback:v=>v+'%',font:{size:10},color:'#888'},grid:{color:'rgba(0,0,0,0.05)'}}
-        }
-      }
-    });
+function switchDisplayChartMetric(metric, btn){
+  document.querySelectorAll('#display-chart-tabs .tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  _displayChartMetric = metric;
+  if(_displayLastChartArgs){
+    const {areaList, mediaRows, crmRows, monSel} = _displayLastChartArgs;
+    renderDisplayCharts(areaList, mediaRows, crmRows, monSel);
   }
 }
 
