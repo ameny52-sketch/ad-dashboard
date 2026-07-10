@@ -451,32 +451,33 @@ button.run,.dl{box-shadow:none}
     <div id="kw-metrics" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:1rem"></div>
     <div id="sales-compare-kw" style="display:none;margin-bottom:1rem"></div>
 
-    <!-- 필터 -->
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1rem;align-items:center">
-      <div class="tab-bar" id="kw-media-tabs">
-        <button class="tab-btn active" onclick="setKwFilter('media','all',this)">전체</button>
-        <button class="tab-btn" onclick="setKwFilter('media','네이버',this)">네이버</button>
-        <button class="tab-btn" onclick="setKwFilter('media','구글',this)">구글</button>
-        <button class="tab-btn" onclick="setKwFilter('media','다음',this)">다음</button>
-      </div>
-      <div style="width:1px;height:20px;background:var(--border);margin:0 4px"></div>
-      <div class="tab-bar" id="kw-device-tabs">
-        <button class="tab-btn active" onclick="setKwFilter('device','all',this)">전체</button>
-        <button class="tab-btn pc" onclick="setKwFilter('device','PC',this)">PC</button>
-        <button class="tab-btn mo" onclick="setKwFilter('device','모바일',this)">모바일</button>
-      </div>
-      <div style="width:1px;height:20px;background:var(--border);margin:0 4px"></div>
-      <select id="kw-cat-sel" onchange="kwPage=1;renderKwTable()" style="border:1px solid var(--border-strong);border-radius:var(--rs);padding:5px 10px;font-size:12px;font-family:inherit;color:var(--text);background:var(--surface);outline:none">
-        <option value="all">전체 보종</option>
-      </select>
-      <input type="text" id="kw-search" placeholder="키워드/인타입 검색..." oninput="kwPage=1;renderKwTable()" style="border:1px solid var(--border-strong);border-radius:var(--rs);padding:5px 10px;font-size:12px;font-family:inherit;color:var(--text);background:var(--surface);outline:none;width:180px">
-      <span id="kw-row-count" style="font-size:11px;color:var(--faint);margin-left:4px"></span>
-    </div>
-
     <!-- 테이블 -->
     <div class="table-card">
+      <div class="table-header">
+        <h2>광고 키워드별 성과</h2>
+      </div>
+      <div style="padding:.75rem 1.25rem .25rem;border-bottom:0px">
+        <div class="tab-bar" id="kw-device-tabs">
+          <button class="tab-btn active" onclick="setKwFilter('device','all',this)">전체</button>
+          <button class="tab-btn pc" onclick="setKwFilter('device','PC',this)">PC</button>
+          <button class="tab-btn mo" onclick="setKwFilter('device','모바일',this)">모바일</button>
+        </div>
+      </div>
+      <div class="filter-row">
+        <div class="tab-bar" id="kw-media-tabs" style="margin-bottom:0">
+          <button class="tab-btn active" onclick="setKwFilter('media','all',this)">전체</button>
+          <button class="tab-btn" onclick="setKwFilter('media','네이버',this)">네이버</button>
+          <button class="tab-btn" onclick="setKwFilter('media','구글',this)">구글</button>
+          <button class="tab-btn" onclick="setKwFilter('media','다음',this)">다음</button>
+        </div>
+        <select id="kw-cat-sel" onchange="kwPage=1;renderKwTable()">
+          <option value="all">전체 보종</option>
+        </select>
+        <input type="text" id="kw-search" placeholder="키워드/인타입 검색..." oninput="kwPage=1;renderKwTable()">
+        <span class="row-count" id="kw-row-count"></span>
+      </div>
       <div class="table-wrap">
-        <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <table>
           <thead id="kw-thead"></thead>
           <tbody id="kw-tbody"></tbody>
         </table>
@@ -742,20 +743,18 @@ button.run,.dl{box-shadow:none}
     <div id="sales-compare-data" style="display:none;margin-bottom:1rem"></div>
     <div class="table-card">
       <div class="table-header">
-        <h2>광고그룹별 성과 <span style="font-size:11px;font-weight:400;color:var(--faint)">(행 클릭 → 일별 상세)</span></h2>
+        <h2>광고 그룹별 성과 <span style="font-size:11px;font-weight:400;color:var(--faint)">(행 클릭 → 일별 상세)</span></h2>
         <div class="table-actions">
           <span style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px;margin-right:4px">⭐ 메인키워드 중요그룹</span>
         </div>
       </div>
       <!-- PC/모바일 탭 -->
       <div style="padding:.75rem 1.25rem .25rem;border-bottom:0px">
-        <div style="font-size:11px;color:var(--faint);margin-bottom:6px;font-weight:500">PC / 모바일</div>
         <div class="tab-bar" id="media-tabs">
           <button class="tab-btn active" onclick="setMediaFilter('all',this)">전체</button>
           <button class="tab-btn pc" onclick="setMediaFilter('PC',this)">PC</button>
           <button class="tab-btn mobile" onclick="setMediaFilter('모바일',this)">모바일</button>
         </div>
-        <div style="font-size:11px;color:var(--faint);margin-bottom:6px;font-weight:500;margin-top:10px">보종 / 캠페인</div>
         <div class="tab-bar" id="cat-tabs">
           <button class="tab-btn active" onclick="setCatFilter('all',this)">전체</button>
           <button class="tab-btn cat" onclick="setCatFilter('보험',this)">보험</button>
@@ -1210,6 +1209,7 @@ function _apiAnalyze(month,s){
       db:sv.db,contracts:sv.contracts,performance:Math.round(sv.performance),
       contracts_cum:sv.contracts_cum||0,performance_cum:Math.round(sv.performance_cum||0),
       roas:(ad.cost>0&&sv.performance>0)?Math.round(ad.cost/sv.performance*100):null,
+      cpc:ad.clicks>0?Math.round(ad.cost/ad.clicks):null,
       cpd:sv.db>0?Math.round(ad.cost/sv.db):null,
       cvr:sv.db>0?Math.round(sv.contracts/sv.db*1000)/10:null,
       dbcvr:ad.clicks>0?Math.round(sv.db/ad.clicks*1000)/10:null,
@@ -1512,7 +1512,6 @@ function renderSalesCompare(elId, data){
 
   el.style.display = 'block';
   el.innerHTML = `
-    <div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:.5rem;letter-spacing:.03em">📋 영업 성과 비교 <span style="font-size:10px;font-weight:400;color:var(--faint)">(당월 vs 누적)</span></div>
     <div class="sales-compare-wrap">
       ${card('계약수',   'green', mCon,  hasCum?cCon:null)}
       ${card('계약률',   'green', mCvr!==null?mCvr+'%':null,  hasCum&&cCvr!==null?cCvr+'%':null)}
@@ -1534,13 +1533,13 @@ function renderMetrics(data){
   const totalImpSum=data.reduce((a,r)=>a+((r.rank_imp_sum ?? r.rankImpSum ?? 0)),0);
   const avgRankAll=totalImpSum>0?(Math.round(totalRankSum/totalImpSum*10)/10)+'위':'-';
   document.getElementById('metrics').innerHTML=`
-    <div class="metric"><div class="metric-label">총 DB수</div><div class="metric-value blue">${td.toLocaleString()}</div><div class="metric-sub">건</div></div>
-    <div class="metric"><div class="metric-label">총 계약수</div><div class="metric-value green">${tco.toLocaleString()}</div><div class="metric-sub">계약</div></div>
-    <div class="metric"><div class="metric-label">평균 계약률</div><div class="metric-value green">${tcvr}</div></div>
-    <div class="metric"><div class="metric-label">총 평가업적</div><div class="metric-value amber">${tp.toLocaleString()}</div><div class="metric-sub">원</div></div>
     <div class="metric"><div class="metric-label">총 광고비</div><div class="metric-value">${tc.toLocaleString()}</div><div class="metric-sub">원</div></div>
-    <div class="metric"><div class="metric-label">평균 DB단가</div><div class="metric-value purple">${tcpd}</div><div class="metric-sub">원</div></div>
-    <div class="metric"><div class="metric-label">전체 ROAS</div><div class="metric-value amber">${tr}</div></div>
+    <div class="metric"><div class="metric-label">총 DB수</div><div class="metric-value blue">${td.toLocaleString()}</div><div class="metric-sub">건</div></div>
+    <div class="metric"><div class="metric-label">DB단가</div><div class="metric-value purple">${tcpd}</div><div class="metric-sub">원</div></div>
+    <div class="metric"><div class="metric-label">총 계약수</div><div class="metric-value green">${tco.toLocaleString()}</div><div class="metric-sub">계약</div></div>
+    <div class="metric"><div class="metric-label">계약률</div><div class="metric-value green">${tcvr}</div></div>
+    <div class="metric"><div class="metric-label">총 평가업적</div><div class="metric-value amber">${tp.toLocaleString()}</div><div class="metric-sub">원</div></div>
+    <div class="metric"><div class="metric-label">ROAS</div><div class="metric-value amber">${tr}</div></div>
     <div class="metric"><div class="metric-label">전체 평균순위</div><div class="metric-value blue">${avgRankAll}</div></div>
   `
   renderSalesCompare('sales-compare-data', data);
@@ -1551,15 +1550,17 @@ const COLS=[
   {key:'group',label:'광고그룹',cls:'group-name'},
   {key:'intype',label:'인타입',cls:'intype-cell'},
   {key:'cost',label:'광고비(원)',cls:'num',fmt:v=>v.toLocaleString()},
+  {key:'impressions',label:'노출수',cls:'num',fmt:v=>(v||0).toLocaleString()},
   {key:'clicks',label:'클릭수',cls:'num',fmt:v=>v.toLocaleString()},
+  {key:'cpc',label:'평균CPC',cls:'num',fmt:v=>v===null?'-':v.toLocaleString()},
   {key:'db',label:'DB수',cls:'num',fmt:v=>v.toLocaleString()},
-  {key:'contracts',label:'계약수',cls:'num',fmt:v=>v.toLocaleString()},
-  {key:'performance',label:'평가업적(원)',cls:'num',fmt:v=>v.toLocaleString()},
-  {key:'roas',label:'ROAS(%)',cls:'num',special:'roas'},
   {key:'cpd',label:'DB단가(원)',cls:'num',fmt:v=>v===null?'-':v.toLocaleString()},
   {key:'dbcvr',label:'DB전환율(%)',cls:'num',fmt:v=>v===null?'-':v+'%'},
+  {key:'contracts',label:'계약수',cls:'num',fmt:v=>v.toLocaleString()},
   {key:'cvr',label:'계약률(%)',cls:'num',fmt:v=>v===null?'-':v+'%'},
-  {key:'avgRank',label:'평균순위',cls:'num',fmt:v=>(v===null||v===undefined)?'-':v+'위'},
+  {key:'performance',label:'평가업적(원)',cls:'num',fmt:v=>v.toLocaleString()},
+  {key:'roas',label:'ROAS(%)',cls:'num',special:'roas'},
+  {key:'avg_rank',label:'평균순위',cls:'num',fmt:v=>(v===null||v===undefined)?'-':v+'위'},
 ];
 
 function roasBadge(v){
@@ -2931,10 +2932,14 @@ function getKwFiltered(){
 
 function renderKwTable(){
   const rows = getKwFiltered();
+  rows.forEach(r=>{
+    r.cpc = (r.clicks>0 && r.cost!=null) ? Math.round(r.cost/r.clicks) : null;
+    r.dbcvr = r.clicks>0 ? Math.round(r.db/r.clicks*1000)/10 : null;
+  });
   const sorted = [...rows].sort((a,b)=>{
     let va=a[kwSortCol], vb=b[kwSortCol];
-    // ROAS / DB단가는 값이 없거나 0이면 정렬에서 제외 (항상 맨 뒤)
-    if(kwSortCol==='roas' || kwSortCol==='cpd'){
+    // ROAS / DB단가 / 평균CPC / DB전환율은 값이 없거나 0이면 정렬에서 제외 (항상 맨 뒤)
+    if(kwSortCol==='roas' || kwSortCol==='cpd' || kwSortCol==='cpc' || kwSortCol==='dbcvr'){
       const ea = va==null||va===0, eb = vb==null||vb===0;
       if(ea && eb) return 0;
       if(ea) return 1;
@@ -2964,13 +2969,13 @@ function renderKwTable(){
   const totalRoas = totalPerf>0 && totalCost>0 ? Math.round(totalCost/totalPerf*100) : null;
 
   document.getElementById('kw-metrics').innerHTML = `
-    <div class="metric"><div class="metric-label">총 DB수</div><div class="metric-value blue">${totalDb.toLocaleString()}</div><div class="metric-sub">건</div></div>
-    <div class="metric"><div class="metric-label">총 계약수</div><div class="metric-value green">${totalCon.toLocaleString()}</div><div class="metric-sub">계약</div></div>
-    <div class="metric"><div class="metric-label">평균 계약률</div><div class="metric-value green">${avgCvr}%</div></div>
-    <div class="metric"><div class="metric-label">총 평가업적</div><div class="metric-value amber">${Math.round(totalPerf).toLocaleString()}</div><div class="metric-sub">원</div></div>
     <div class="metric"><div class="metric-label">총 광고비</div><div class="metric-value">${totalCost?totalCost.toLocaleString():'-'}</div><div class="metric-sub">원</div></div>
-    <div class="metric"><div class="metric-label">평균 DB단가</div><div class="metric-value purple">${avgCpd?avgCpd.toLocaleString():'-'}</div><div class="metric-sub">원</div></div>
-    <div class="metric"><div class="metric-label">전체 ROAS</div><div class="metric-value amber">${totalRoas?totalRoas.toLocaleString()+'%':'-'}</div></div>
+    <div class="metric"><div class="metric-label">총 DB수</div><div class="metric-value blue">${totalDb.toLocaleString()}</div><div class="metric-sub">건</div></div>
+    <div class="metric"><div class="metric-label">DB단가</div><div class="metric-value purple">${avgCpd?avgCpd.toLocaleString():'-'}</div><div class="metric-sub">원</div></div>
+    <div class="metric"><div class="metric-label">총 계약수</div><div class="metric-value green">${totalCon.toLocaleString()}</div><div class="metric-sub">계약</div></div>
+    <div class="metric"><div class="metric-label">계약률</div><div class="metric-value green">${avgCvr}%</div></div>
+    <div class="metric"><div class="metric-label">총 평가업적</div><div class="metric-value amber">${Math.round(totalPerf).toLocaleString()}</div><div class="metric-sub">원</div></div>
+    <div class="metric"><div class="metric-label">ROAS</div><div class="metric-value amber">${totalRoas?totalRoas.toLocaleString()+'%':'-'}</div></div>
     <div class="metric"><div class="metric-label">키워드 수</div><div class="metric-value blue">${rows.length.toLocaleString()}</div></div>`;
 
   renderSalesCompare('sales-compare-kw', rows.map(r=>({
@@ -2985,13 +2990,16 @@ function renderKwTable(){
     {key:'sub_media', label:'매체'},
     {key:'device',    label:'기기'},
     {key:'cost',      label:'광고비(원)', r:true},
+    {key:'impressions', label:'노출수', r:true},
     {key:'clicks',    label:'클릭수', r:true},
+    {key:'cpc',       label:'평균CPC', r:true},
     {key:'db',        label:'DB수', r:true},
+    {key:'cpd',       label:'DB단가(원)', r:true},
+    {key:'dbcvr',     label:'DB전환율(%)', r:true},
     {key:'contracts', label:'계약수', r:true},
+    {key:'cvr',       label:'계약률(%)', r:true},
     {key:'perf',      label:'평가업적(원)', r:true},
     {key:'roas',      label:'ROAS(%)', r:true},
-    {key:'cpd',       label:'DB단가(원)', r:true},
-    {key:'cvr',       label:'계약율(%)', r:true},
   ];
   document.getElementById('kw-thead').innerHTML = '<tr>'+cols.map(c=>{
     const arr = c.key===kwSortCol?(kwSortAsc?' ↑':' ↓'):'';
@@ -3022,15 +3030,18 @@ function renderKwTable(){
       <td style="padding:7px 10px">${mediaPill}</td>
       <td style="padding:7px 10px">${devPill}</td>
       <td style="padding:7px 10px;text-align:right">${r.cost!=null?r.cost.toLocaleString():'-'}</td>
+      <td style="padding:7px 10px;text-align:right">${r.impressions!=null?r.impressions.toLocaleString():'-'}</td>
       <td style="padding:7px 10px;text-align:right">${r.clicks!=null?r.clicks.toLocaleString():'-'}</td>
+      <td style="padding:7px 10px;text-align:right">${r.cpc!=null?r.cpc.toLocaleString():'-'}</td>
       <td style="padding:7px 10px;text-align:right;font-weight:600">${r.db.toLocaleString()}</td>
+      <td style="padding:7px 10px;text-align:right">${r.cpd!=null?r.cpd.toLocaleString():'-'}</td>
+      <td style="padding:7px 10px;text-align:right">${r.dbcvr!=null?r.dbcvr.toFixed(1)+'%':'-'}</td>
       <td style="padding:7px 10px;text-align:right">${r.contracts.toLocaleString()}</td>
+      <td style="padding:7px 10px;text-align:right;${cvrStyle}">${r.cvr!=null?r.cvr.toFixed(1)+'%':'-'}</td>
       <td style="padding:7px 10px;text-align:right">${r.perf?Math.round(r.perf).toLocaleString():'-'}</td>
       <td style="padding:7px 10px;text-align:right">${roasBadge(r.roas)}</td>
-      <td style="padding:7px 10px;text-align:right">${r.cpd!=null?r.cpd.toLocaleString():'-'}</td>
-      <td style="padding:7px 10px;text-align:right;${cvrStyle}">${r.cvr!=null?r.cvr.toFixed(1)+'%':'-'}</td>
     </tr>`;
-  }).join('') || '<tr><td colspan="11" style="padding:2rem;text-align:center;color:var(--faint)">데이터 없음</td></tr>';
+  }).join('') || '<tr><td colspan="14" style="padding:2rem;text-align:center;color:var(--faint)">데이터 없음</td></tr>';
 
   // 페이지 네비게이션
   const nav = document.getElementById('kw-page-nav');
@@ -3931,12 +3942,12 @@ function renderDisplayTab(){
   const areas = {};
   mediaRows.forEach(r=>{
     const area = (r['상품명']||'').trim() || '(미지정)';
-    if(!areas[area]) areas[area] = {area, cost:0, imp:0, clk:0, snd:0, kws:{}, codes:new Set(), codeLabelCost:{}};
+    if(!areas[area]) areas[area] = {area, cost:0, imp:0, clk:0, snd:0, kws:{}, codes:new Set(), monthCodes:new Set(), codeLabelCost:{}};
     const a = areas[area];
     const code = (r['인타입']||'').trim();
     const kw = (r['소재명']||'').trim() || '(소재 미기재)';
     if(code) a.codes.add(code);
-    if(!a.kws[kw]) a.kws[kw] = {kw, cost:0, imp:0, clk:0, snd:0, codes:new Set()};
+    if(!a.kws[kw]) a.kws[kw] = {kw, cost:0, imp:0, clk:0, snd:0, codes:new Set(), monthCodes:new Set()};
     if(code) a.kws[kw].codes.add(code);
 
     const rowCost = _cN(r['비용']);
@@ -3952,6 +3963,7 @@ function renderDisplayTab(){
       const imp=_cN(r['노출수(열람수)']), clk=_cN(r['클릭수']), snd=_cN(r['발송수']);
       a.cost+=rowCost; a.imp+=imp; a.clk+=clk; a.snd+=snd;
       a.kws[kw].cost+=rowCost; a.kws[kw].imp+=imp; a.kws[kw].clk+=clk; a.kws[kw].snd+=snd;
+      if(code){ a.monthCodes.add(code); a.kws[kw].monthCodes.add(code); }
     }
   });
 
@@ -4000,9 +4012,12 @@ function renderDisplayTab(){
       const a = areas[area];
       if(!a) return; // 광고비가 아예 없는 영역은 위 hasIntype fallback이 이미 전체 코드로 커버함
       a.codes.add(code);
-      if(!a.kws['미확인']) a.kws['미확인'] = {kw:'미확인', cost:0, imp:0, clk:0, snd:0, codes:new Set()};
+      if(!a.kws['미확인']) a.kws['미확인'] = {kw:'미확인', cost:0, imp:0, clk:0, snd:0, codes:new Set(), monthCodes:new Set()};
       a.kws['미확인'].codes.add(code);
       if(!a.codeLabelCost[code]) a.codeLabelCost[code] = {'미확인':0};
+      // 이 코드로 들어온 DB가 선택된 월(상담등록일 기준)에 실제로 있을 때만 그 월의 인타입 표시에 포함
+      const inSelMonth = crmRows.some(r=>(r['인타입']||'').trim()===code && (!monSel || _normDS(r['상담등록일']||'').startsWith(monSel)));
+      if(inSelMonth){ a.monthCodes.add(code); a.kws['미확인'].monthCodes.add(code); }
     });
   }
 
@@ -4037,6 +4052,7 @@ function renderDisplayTab(){
     });
     kwEntries.forEach(([label,k])=>{
       k.codes = new Set([...k.codes].filter(c=>codeOwner[c]===label));
+      k.monthCodes = new Set([...k.monthCodes].filter(c=>codeOwner[c]===label));
     });
 
     // 소재별 — 행 단위 인타입이 있는 소재만 DB 매칭 (없으면 광고 지표만)
@@ -4047,7 +4063,11 @@ function renderDisplayTab(){
       return {...k, hasIntype:kHasIntype, db:kdb, contracts:kcon, perf:kperf, roas:kroas, cpd:kcpd, dbcvr:kdbcvr, cvr:kcvr};
     });
 
-    return {...a, ctr, db, contracts, perf, roas, cpd, dbcvr, cvr, hasIntype, kws, codes};
+    // 화면에 보여줄 인타입 코드는 선택된 월(monSel)에 실제로 쓰인 것만 (DB/계약 매칭 자체는 전체 기간 codes 기준 그대로 유지)
+    // 단, 광고비 데이터가 아예 없어 참조표 전체 코드로 대체 매칭된 영역은 그 대체 코드를 그대로 보여준다
+    const displayCodes = (a.codes.size===0 && hasIntype) ? codes : a.monthCodes;
+
+    return {...a, ctr, db, contracts, perf, roas, cpd, dbcvr, cvr, hasIntype, kws, codes, displayCodes};
   }).sort((a,b)=>b.cost-a.cost);
 
   const hasIntype = areaList.some(a=>a.hasIntype);
@@ -4115,7 +4135,7 @@ function renderDisplayAreaTable(areaList){
         <td class="num">${k.roas!==null?k.roas.toLocaleString()+'%':'-'}</td>
         <td class="num">${k.cpd!==null?k.cpd.toLocaleString()+'원':'-'}</td>`
         : `<td class="num" colspan="7" style="color:var(--faint);font-size:11px;text-align:left;padding-left:1rem">DB/계약 데이터는 영역 기준으로만 집계됩니다</td>`;
-      const kCodesTxt = [...k.codes].join(', ');
+      const kCodesTxt = [...k.monthCodes].join(', ');
       return `<tr class="${rowCls}" style="display:none;background:var(--bg)">
         <td></td>
         <td style="padding-left:1.5rem;color:var(--muted);max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(k.kw)}">${escHtml(k.kw)}</td>
@@ -4128,11 +4148,11 @@ function renderDisplayAreaTable(areaList){
         ${dbCells}
       </tr>`;
     }).join('');
-    const aCodesTxt = [...a.codes].join(', ');
+    const aCodesTxt = [...a.displayCodes].join(', ');
     return `<tr style="cursor:pointer" onclick="toggleDailyKwDetail('${rowCls}',this)">
       <td class="dk-caret" style="color:var(--faint);text-align:center">▸</td>
       <td>${escHtml(a.area)}</td>
-      <td style="color:var(--faint);font-size:12px" title="${escHtml(aCodesTxt)}">${a.codes.size ? a.codes.size+'개' : '-'}</td>
+      <td style="color:var(--faint);font-size:12px" title="${escHtml(aCodesTxt)}">${a.displayCodes.size ? a.displayCodes.size+'개' : '-'}</td>
       <td class="num">${a.cost.toLocaleString()}</td>
       <td class="num">${a.imp.toLocaleString()}</td>
       <td class="num">${a.clk.toLocaleString()}</td>
