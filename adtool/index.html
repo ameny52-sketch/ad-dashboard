@@ -49,6 +49,7 @@ button.run:disabled{opacity:.35;cursor:not-allowed}
 .metric-value.green{color:var(--green)}
 .metric-value.amber{color:var(--amber)}
 .metric-value.purple{color:#534AB7}
+.metric-value.brand-red{color:#ef3554}
 .metric-sub{font-size:11px;color:var(--faint);margin-top:2px}
 .table-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
 .table-header{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid var(--border)}
@@ -456,24 +457,51 @@ button.run,.dl{box-shadow:none}
       <div class="table-header">
         <h2>광고 키워드별 성과</h2>
       </div>
-      <div style="padding:.75rem 1.25rem .25rem;border-bottom:0px">
-        <div class="tab-bar" id="kw-device-tabs">
+      <div style="padding:.75rem 1.25rem 0;border-bottom:0px;display:flex;flex-direction:column;gap:8px">
+        <div class="tab-bar" id="kw-device-tabs" style="margin-bottom:0">
           <button class="tab-btn active" onclick="setKwFilter('device','all',this)">전체</button>
           <button class="tab-btn pc" onclick="setKwFilter('device','PC',this)">PC</button>
-          <button class="tab-btn mo" onclick="setKwFilter('device','모바일',this)">모바일</button>
+          <button class="tab-btn mobile" onclick="setKwFilter('device','모바일',this)">모바일</button>
         </div>
-      </div>
-      <div class="filter-row">
         <div class="tab-bar" id="kw-media-tabs" style="margin-bottom:0">
           <button class="tab-btn active" onclick="setKwFilter('media','all',this)">전체</button>
           <button class="tab-btn" onclick="setKwFilter('media','네이버',this)">네이버</button>
           <button class="tab-btn" onclick="setKwFilter('media','구글',this)">구글</button>
           <button class="tab-btn" onclick="setKwFilter('media','다음',this)">다음</button>
         </div>
-        <select id="kw-cat-sel" onchange="kwPage=1;renderKwTable()">
-          <option value="all">전체 보종</option>
-        </select>
+        <div class="tab-bar" id="kw-cat-tabs" style="margin-bottom:0">
+          <button class="tab-btn active" onclick="setKwFilter('cat','all',this)">전체</button>
+          <button class="tab-btn cat" onclick="setKwFilter('cat','보험',this)">보험</button>
+          <button class="tab-btn cat" onclick="setKwFilter('cat','실비',this)">실비보험</button>
+          <button class="tab-btn cat" onclick="setKwFilter('cat','암보험',this)">암보험</button>
+          <button class="tab-btn cat" onclick="setKwFilter('cat','어린이보험',this)">어린이보험</button>
+          <button class="tab-btn cat" onclick="setKwFilter('cat','치아보험',this)">치아보험</button>
+          <button class="tab-btn cat" onclick="setKwFilter('cat','치매/간병',this)">치매보험</button>
+          <button class="tab-btn cat" onclick="setKwFilter('cat','운전자보험',this)">운전자보험</button>
+          <button class="tab-btn cat" onclick="setKwFilter('cat','보장분석',this)">보장분석</button>
+          <button class="tab-btn cat" onclick="setKwFilter('cat','기타',this)">기타</button>
+        </div>
+      </div>
+      <div class="filter-row">
+        <label>검색</label>
         <input type="text" id="kw-search" placeholder="키워드/인타입 검색..." oninput="kwPage=1;renderKwTable()">
+        <label>ROAS</label>
+        <select id="kw-roas-filter" onchange="kwPage=1;renderKwTable()">
+          <option value="all">전체</option>
+          <option value="high">고효율 (300% 이하)</option>
+          <option value="mid">중간 (300~1000%)</option>
+          <option value="low">저효율 (1000% 초과)</option>
+          <option value="na">미매칭</option>
+        </select>
+        <label>DB단가</label>
+        <select id="kw-cpd-filter" onchange="kwPage=1;renderKwTable()">
+          <option value="all">전체</option>
+          <option value="high">고효율 (5만원 이하)</option>
+          <option value="mid">중간 (5~10만원)</option>
+          <option value="low">저효율 (10만원 초과)</option>
+          <option value="nodb">DB없음 제외</option>
+          <option value="na">광고비만 (DB 0)</option>
+        </select>
         <span class="row-count" id="kw-row-count"></span>
       </div>
       <div class="table-wrap">
@@ -749,13 +777,13 @@ button.run,.dl{box-shadow:none}
         </div>
       </div>
       <!-- PC/모바일 탭 -->
-      <div style="padding:.75rem 1.25rem .25rem;border-bottom:0px">
-        <div class="tab-bar" id="media-tabs">
+      <div style="padding:.75rem 1.25rem 0;border-bottom:0px;display:flex;flex-direction:column;gap:8px">
+        <div class="tab-bar" id="media-tabs" style="margin-bottom:0">
           <button class="tab-btn active" onclick="setMediaFilter('all',this)">전체</button>
           <button class="tab-btn pc" onclick="setMediaFilter('PC',this)">PC</button>
           <button class="tab-btn mobile" onclick="setMediaFilter('모바일',this)">모바일</button>
         </div>
-        <div class="tab-bar" id="cat-tabs">
+        <div class="tab-bar" id="cat-tabs" style="margin-bottom:0">
           <button class="tab-btn active" onclick="setCatFilter('all',this)">전체</button>
           <button class="tab-btn cat" onclick="setCatFilter('보험',this)">보험</button>
           <button class="tab-btn cat" onclick="setCatFilter('실비보험',this)">실비보험</button>
@@ -2880,7 +2908,7 @@ async function loadCrmData(month){
 
 // ===== 키워드 매체 =====
 let kwData = [];
-let kwFilters = { media: 'all', device: 'all' };
+let kwFilters = { media: 'all', device: 'all', cat: 'all' };
 let kwSortCol = 'db', kwSortAsc = false;
 let kwPage = 1;
 const KW_PAGE_SIZE = 100;
@@ -2900,19 +2928,13 @@ function initKwTab(){
   // 이미 렌더된 경우 재렌더 스킵
   if(kwRendered) return;
 
-  // 보종 필터 옵션 채우기
-  const catSel = document.getElementById('kw-cat-sel');
-  if(catSel.options.length <= 1){
-    const cats = [...new Set(kwData.map(r=>r.cat).filter(Boolean))].sort();
-    cats.forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; catSel.appendChild(o); });
-  }
   renderKwTable();
 }
 
 function setKwFilter(type, val, btn){
   kwFilters[type] = val;
   kwPage = 1;
-  const barId = type==='media' ? 'kw-media-tabs' : 'kw-device-tabs';
+  const barId = type==='media' ? 'kw-media-tabs' : type==='cat' ? 'kw-cat-tabs' : 'kw-device-tabs';
   document.querySelectorAll(`#${barId} .tab-btn`).forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   renderKwTable();
@@ -2920,13 +2942,25 @@ function setKwFilter(type, val, btn){
 
 function getKwFiltered(){
   const q = (document.getElementById('kw-search')?.value||'').toLowerCase();
-  const cat = document.getElementById('kw-cat-sel')?.value || 'all';
+  const rf = document.getElementById('kw-roas-filter')?.value || 'all';
+  const cf = document.getElementById('kw-cpd-filter')?.value || 'all';
   return kwData.filter(r=>{
     const mm = kwFilters.media==='all' || r.sub_media===kwFilters.media;
     const dm = kwFilters.device==='all' || r.device===kwFilters.device;
-    const cm = cat==='all' || r.cat===cat;
+    const cm = kwFilters.cat==='all' || r.cat===kwFilters.cat;
     const qm = !q || (r.keyword||'').toLowerCase().includes(q) || (r.intype||'').toLowerCase().includes(q) || (r.cat||'').toLowerCase().includes(q);
-    return mm&&dm&&cm&&qm;
+    let mr = true;
+    if(rf==='high') mr = r.roas!==null && r.roas<=300;
+    else if(rf==='mid') mr = r.roas!==null && r.roas>300 && r.roas<=1000;
+    else if(rf==='low') mr = r.roas!==null && r.roas>1000;
+    else if(rf==='na') mr = r.roas===null;
+    let mcp = true;
+    if(cf==='high') mcp = r.cpd!==null && r.cpd<=50000;
+    else if(cf==='mid') mcp = r.cpd!==null && r.cpd>50000 && r.cpd<=100000;
+    else if(cf==='low') mcp = r.cpd!==null && r.cpd>100000;
+    else if(cf==='nodb') mcp = r.db>0;
+    else if(cf==='na') mcp = (r.cost||0)>0 && r.db===0;
+    return mm&&dm&&cm&&qm&&mr&&mcp;
   });
 }
 
@@ -4090,25 +4124,23 @@ function renderDisplaySummary(areaList, hasIntype){
   const card = (label,colorCls,val,sub) => `<div class="metric"><div class="metric-label">${label}</div><div class="metric-value${colorCls?' '+colorCls:''}">${val}</div>${sub?`<div class="metric-sub">${sub}</div>`:''}</div>`;
   document.getElementById('display-summary').innerHTML = [
     card('광고비', '', totalCost.toLocaleString(), '원'),
-    card('노출수', '', totalImp.toLocaleString()),
-    card('클릭수', '', totalClk.toLocaleString()),
-    card('CTR', '', ctr!==null?ctr+'%':'-'),
+    card('CTR', 'brand-red', ctr!==null?ctr+'%':'-'),
+    card('DB전환율', 'brand-red', dbcvr!==null?dbcvr+'%':'-'),
     card('DB수', 'blue', hasIntype ? totalDb.toLocaleString() : '-', hasIntype?'건':''),
-    card('DB전환율', 'blue', dbcvr!==null?dbcvr+'%':'-'),
+    card('DB단가', 'purple', cpd!==null?cpd.toLocaleString():'-', cpd!==null?'원':''),
     card('계약수', 'green', hasIntype ? totalCon.toLocaleString() : '-', hasIntype?'계약':''),
     card('계약률', 'green', cvr!==null?cvr+'%':'-'),
     card('평가업적', 'amber', (hasIntype && totalPerf>0) ? Math.round(totalPerf).toLocaleString() : '-', (hasIntype && totalPerf>0)?'원':''),
     card('ROAS', 'amber', roas!==null?roas+'%':'-'),
-    card('DB단가', 'purple', cpd!==null?cpd.toLocaleString():'-', cpd!==null?'원':''),
   ].join('');
 }
 
 function renderDisplayAreaTable(areaList){
   document.getElementById('display-thead').innerHTML = `<tr>
-    <th></th><th>영역</th><th>인타입</th><th class="num">광고비</th><th class="num">노출수</th><th class="num">클릭수</th>
-    <th class="num">발송수</th><th class="num">CTR</th>
-    <th class="num">DB수</th><th class="num">DB전환율</th><th class="num">계약수</th><th class="num">계약률</th>
-    <th class="num">평가업적</th><th class="num">ROAS</th><th class="num">DB단가</th>
+    <th></th><th>영역</th><th>인타입</th><th class="num">광고비</th><th class="num">노출수</th><th class="num">발송수</th>
+    <th class="num">클릭수</th><th class="num">CTR</th><th class="num">DB전환율</th>
+    <th class="num">DB수</th><th class="num">DB단가</th><th class="num">계약수</th><th class="num">계약률</th>
+    <th class="num">평가업적</th><th class="num">ROAS</th>
   </tr>`;
   if(!areaList.length){
     document.getElementById('display-tbody').innerHTML = '<tr><td colspan="15" style="padding:1rem;color:var(--faint)">데이터 없음</td></tr>';
@@ -4127,13 +4159,13 @@ function renderDisplayAreaTable(areaList){
     }).map(k=>{
       const kctr = k.imp>0 ? Math.round(k.clk/k.imp*10000)/100 : null;
       const dbCells = k.hasIntype
-        ? `<td class="num">${k.db.toLocaleString()}</td>
-        <td class="num">${k.dbcvr!==null?k.dbcvr.toLocaleString()+'%':'-'}</td>
+        ? `<td class="num">${k.dbcvr!==null?k.dbcvr.toLocaleString()+'%':'-'}</td>
+        <td class="num">${k.db.toLocaleString()}</td>
+        <td class="num">${k.cpd!==null?k.cpd.toLocaleString()+'원':'-'}</td>
         <td class="num">${k.contracts.toLocaleString()}</td>
         <td class="num">${k.cvr!==null?k.cvr.toLocaleString()+'%':'-'}</td>
         <td class="num">${k.perf>0?Math.round(k.perf).toLocaleString()+'원':'-'}</td>
-        <td class="num">${k.roas!==null?k.roas.toLocaleString()+'%':'-'}</td>
-        <td class="num">${k.cpd!==null?k.cpd.toLocaleString()+'원':'-'}</td>`
+        <td class="num">${roasBadge(k.roas)}</td>`
         : `<td class="num" colspan="7" style="color:var(--faint);font-size:11px;text-align:left;padding-left:1rem">DB/계약 데이터는 영역 기준으로만 집계됩니다</td>`;
       const kCodesTxt = [...k.monthCodes].join(', ');
       return `<tr class="${rowCls}" style="display:none;background:var(--bg)">
@@ -4142,8 +4174,8 @@ function renderDisplayAreaTable(areaList){
         <td style="color:var(--faint);font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(kCodesTxt)}">${escHtml(kCodesTxt)||'-'}</td>
         <td class="num">${k.cost.toLocaleString()}</td>
         <td class="num">${k.imp.toLocaleString()}</td>
-        <td class="num">${k.clk.toLocaleString()}</td>
         <td class="num">${k.snd.toLocaleString()}</td>
+        <td class="num">${k.clk.toLocaleString()}</td>
         <td class="num">${kctr!==null?kctr+'%':'-'}</td>
         ${dbCells}
       </tr>`;
@@ -4155,16 +4187,16 @@ function renderDisplayAreaTable(areaList){
       <td style="color:var(--faint);font-size:12px" title="${escHtml(aCodesTxt)}">${a.displayCodes.size ? a.displayCodes.size+'개' : '-'}</td>
       <td class="num">${a.cost.toLocaleString()}</td>
       <td class="num">${a.imp.toLocaleString()}</td>
-      <td class="num">${a.clk.toLocaleString()}</td>
       <td class="num">${a.snd.toLocaleString()}</td>
+      <td class="num">${a.clk.toLocaleString()}</td>
       <td class="num">${a.ctr!==null?a.ctr+'%':'-'}</td>
-      <td class="num">${a.hasIntype?a.db.toLocaleString():'-'}</td>
       <td class="num">${a.dbcvr!==null?a.dbcvr.toLocaleString()+'%':'-'}</td>
+      <td class="num">${a.hasIntype?a.db.toLocaleString():'-'}</td>
+      <td class="num">${a.cpd!==null?a.cpd.toLocaleString()+'원':'-'}</td>
       <td class="num">${a.hasIntype?a.contracts.toLocaleString():'-'}</td>
       <td class="num">${a.cvr!==null?a.cvr.toLocaleString()+'%':'-'}</td>
       <td class="num">${a.perf>0?Math.round(a.perf).toLocaleString()+'원':'-'}</td>
-      <td class="num">${a.roas!==null?a.roas.toLocaleString()+'%':'-'}</td>
-      <td class="num">${a.cpd!==null?a.cpd.toLocaleString()+'원':'-'}</td>
+      <td class="num">${roasBadge(a.roas)}</td>
     </tr>${kwRows}`;
   }).join('');
 }
