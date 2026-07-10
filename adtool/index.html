@@ -1160,9 +1160,17 @@ async function _setCached(key,data){
   await _idbSet(key,{ts:Date.now(),date:_today(),data});
 }
 
+// 동시에 여러 곳(초기 부팅, 알림 체크 등)에서 호출돼도 실제 fetch는 한 번만 일어나도록
+// 진행 중인 로딩 Promise를 공유한다 (안 그러면 겹쳐 호출될 때 시트 전체를 중복으로 받아와서 느려짐)
+let _sheetsLoadingPromise = null;
 async function loadAllSheets(){
-  if(_sheetsParsed)return _sheetsParsed;
+  if(_sheetsParsed) return _sheetsParsed;
+  if(_sheetsLoadingPromise) return _sheetsLoadingPromise;
+  _sheetsLoadingPromise = _loadAllSheetsInner().finally(()=>{ _sheetsLoadingPromise = null; });
+  return _sheetsLoadingPromise;
+}
 
+async function _loadAllSheetsInner(){
   _setLoadOverlay(true,'캐시 확인 중...',0);
 
   // IndexedDB에서 각 시트 개별 확인
@@ -2918,12 +2926,24 @@ let KW_DAILY_COST = {};  // {date_key: {naver, google, daum}}
 
 // 애드온컴퍼니(디스플레이 전체 매체 합산) 일별 광고비 — Daily DB 현황의 애드온컴퍼니 광고비 컬럼 자동 채우기용
 let _displayDailyCost = null; // {date_key: 합산 광고비}
+// 초기 부팅 시 알림 체크(_checkDisplayAlerts)와 일별 광고비 채우기(_loadDisplayDailyCost)가
+// 거의 동시에 display_report를 각자 fetch하면 같은 큰 CSV를 두 번 받아와 느려지므로 하나로 공유한다
+// (디스플레이 탭 자체는 최신 데이터를 위해 방문 시마다 별도로 새로 받아오는 기존 방식 그대로 유지)
+let _displayReportBootstrapPromise = null;
+function _fetchDisplayReportOnce(){
+  if(!_displayReportBootstrapPromise){
+    _displayReportBootstrapPromise = !SHEETS_URLS.display_report ? Promise.resolve([]) :
+      fetch(SHEETS_URLS.display_report).then(r=>r.text()).then(text=>_pCSV(text)||[])
+        .catch(e=>{ console.warn('디스플레이 리포트 로드 실패:', e); return []; });
+  }
+  return _displayReportBootstrapPromise;
+}
+
 async function _loadDisplayDailyCost(){
   if(_displayDailyCost) return _displayDailyCost;
   if(!SHEETS_URLS.display_report) return {};
   try{
-    const text = await fetch(SHEETS_URLS.display_report).then(r=>r.text());
-    const rows = _pCSV(text) || [];
+    const rows = await _fetchDisplayReportOnce();
     const byDate = {};
     rows.forEach(r=>{
       const key = _normDK(r['날짜']||'');
@@ -4040,11 +4060,10 @@ async function _checkDisplayAlerts(){
   const alerts = [];
   if(!SHEETS_URLS.display_report) return alerts;
   try {
-    const [reportText, s] = await Promise.all([
-      fetch(SHEETS_URLS.display_report).then(r=>r.text()),
+    const [data, s] = await Promise.all([
+      _fetchDisplayReportOnce(),
       loadAllSheets()
     ]);
-    const data = _pCSV(reportText) || [];
     const crmRaw = (s.raw||[]).filter(r=>(r['광고매체세부']||'').trim()==='애드온컴퍼니');
 
     const datesByMedia = {};
