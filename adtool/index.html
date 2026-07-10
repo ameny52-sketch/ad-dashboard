@@ -955,6 +955,17 @@ button.run,.dl{box-shadow:none}
   </div>
 </div>
 
+<!-- 디스플레이 소재 크리에이티브 모달 -->
+<div class="modal-bg" id="creative-modal-bg" onclick="if(event.target===this)document.getElementById('creative-modal-bg').style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center">
+  <div class="modal" style="width:520px;max-width:95vw;max-height:85vh;overflow-y:auto">
+    <div class="modal-head">
+      <h3 id="creative-modal-title">소재 크리에이티브</h3>
+      <button class="close-btn" onclick="document.getElementById('creative-modal-bg').style.display='none'">✕</button>
+    </div>
+    <div class="modal-body" id="creative-modal-body" style="text-align:center"></div>
+  </div>
+</div>
+
 <!-- 성과 분석 상세 모달 -->
 <div id="insight-detail-modal" onclick="if(event.target===this)this.style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center">
   <div style="background:var(--surface);border-radius:12px;width:360px;max-width:90vw;box-shadow:0 8px 32px rgba(0,0,0,.2);overflow:hidden">
@@ -4151,6 +4162,7 @@ function renderDisplayAreaTable(areaList){
     const m = (label||'').match(/^소재\s*([A-Za-z])$/);
     return m ? m[1].toUpperCase().charCodeAt(0) : 999;
   };
+  window.__creativeLookup = [];
   document.getElementById('display-tbody').innerHTML = areaList.map((a,i)=>{
     const rowCls = `disp-kwdet-${i}`;
     const kwRows = [...a.kws].sort((x,y)=>{
@@ -4168,9 +4180,11 @@ function renderDisplayAreaTable(areaList){
         <td class="num">${roasBadge(k.roas)}</td>`
         : `<td class="num" colspan="7" style="color:var(--faint);font-size:11px;text-align:left;padding-left:1rem">DB/계약 데이터는 영역 기준으로만 집계됩니다</td>`;
       const kCodesTxt = [...k.monthCodes].join(', ');
+      const lookupIdx = window.__creativeLookup.length;
+      window.__creativeLookup.push({media:_displayMedia, area:a.area, kw:k.kw, codes:[...k.monthCodes]});
       return `<tr class="${rowCls}" style="display:none;background:var(--bg)">
         <td></td>
-        <td style="padding-left:1.5rem;color:var(--muted);max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(k.kw)}">${escHtml(k.kw)}</td>
+        <td style="padding-left:1.5rem;color:var(--muted);max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer" title="클릭하면 크리에이티브 이미지를 볼 수 있습니다" onclick="openCreativeModal(${lookupIdx})">🖼️ ${escHtml(k.kw)}</td>
         <td style="color:var(--faint);font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(kCodesTxt)}">${escHtml(kCodesTxt)||'-'}</td>
         <td class="num">${k.cost.toLocaleString()}</td>
         <td class="num">${k.imp.toLocaleString()}</td>
@@ -4199,6 +4213,44 @@ function renderDisplayAreaTable(areaList){
       <td class="num">${roasBadge(a.roas)}</td>
     </tr>${kwRows}`;
   }).join('');
+}
+
+// 소재 클릭 → 크리에이티브 이미지 팝업
+// 이미지는 배포 저장소 adtool/data/creatives/{매체명}/{인타입코드}_{년월}.jpg(또는 png) 로 올려두면 자동 매칭됨
+function openCreativeModal(idx){
+  const info = (window.__creativeLookup||[])[idx];
+  if(!info) return;
+  const monSel = document.getElementById('display-month-sel').value;
+  document.getElementById('creative-modal-title').textContent = `${info.area} · ${info.kw}`;
+  const body = document.getElementById('creative-modal-body');
+  document.getElementById('creative-modal-bg').style.display = 'flex';
+  if(!monSel){
+    body.innerHTML = `<div style="padding:2rem;color:var(--faint);font-size:13px">월을 선택하면 해당 월의 크리에이티브 이미지를 볼 수 있습니다.</div>`;
+    return;
+  }
+  if(!info.codes.length){
+    body.innerHTML = `<div style="padding:2rem;color:var(--faint);font-size:13px">이 소재에 연결된 인타입 코드가 없어 이미지를 찾을 수 없습니다.</div>`;
+    return;
+  }
+  const ym = monSel.replace('-','');
+  const exts = ['jpg','jpeg','png'];
+  const urls = [];
+  info.codes.forEach(code=>{
+    exts.forEach(ext=>urls.push(`data/creatives/${encodeURIComponent(info.media)}/${code}_${ym}.${ext}`));
+  });
+  body.innerHTML = `<div style="padding:2rem;color:var(--faint);font-size:13px">이미지를 불러오는 중...</div>`;
+  _tryLoadCreativeImage(urls, 0, body);
+}
+
+function _tryLoadCreativeImage(urls, i, body){
+  if(i>=urls.length){
+    body.innerHTML = `<div style="padding:2rem;color:var(--faint);font-size:13px">이 달에 등록된 크리에이티브 이미지가 없습니다.</div>`;
+    return;
+  }
+  const img = new Image();
+  img.onload = () => { body.innerHTML = `<img src="${urls[i]}" style="max-width:100%;border-radius:8px;border:1px solid var(--border)">`; };
+  img.onerror = () => { _tryLoadCreativeImage(urls, i+1, body); };
+  img.src = urls[i];
 }
 
 function escHtml(str){
