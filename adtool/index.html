@@ -1002,6 +1002,17 @@ button.run,.dl{box-shadow:none}
   </div>
 </div>
 
+<!-- 보종·기기별 변화 원인(기여 그룹) 모달 -->
+<div class="modal-bg" id="catmedia-detail-modal-bg" onclick="if(event.target===this)document.getElementById('catmedia-detail-modal-bg').style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1500;align-items:center;justify-content:center">
+  <div class="modal" style="width:640px;max-width:95vw;max-height:85vh;overflow-y:auto">
+    <div class="modal-head">
+      <h3 id="catmedia-detail-title">원인 분석</h3>
+      <button class="close-btn" onclick="document.getElementById('catmedia-detail-modal-bg').style.display='none'">✕</button>
+    </div>
+    <div class="modal-body" id="catmedia-detail-body"></div>
+  </div>
+</div>
+
 <!-- 성과 분석 상세 모달 -->
 <div id="insight-detail-modal" onclick="if(event.target===this)this.style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center">
   <div style="background:var(--surface);border-radius:12px;width:360px;max-width:90vw;box-shadow:0 8px 32px rgba(0,0,0,.2);overflow:hidden">
@@ -2552,6 +2563,17 @@ function renderInsight(){
   }
 }
 
+// 광고그룹 r의 daily_raw/daily_sales_map을 주어진 날짜 목록(ds) 기준으로 집계
+function _aggGroupDates(r, ds){
+  let cost=0,clicks=0,db=0;
+  (r.daily_raw||[]).forEach(d=>{ if(ds.includes(d.date)){cost+=d.cost||0;clicks+=d.clicks||0;} });
+  Object.entries(r.daily_sales_map||{}).forEach(([dt,v])=>{ if(ds.includes(dt)) db+=v.db||0; });
+  const cpd=db>0?Math.round(cost/db):0;
+  const cpc=clicks>0?Math.round(cost/clicks):0;
+  const dbcvr=clicks>0?db/clicks*100:0;
+  return {cost,clicks,db,cpd,cpc,dbcvr};
+}
+
 // ===== 성과 분석 상세 (보종·기기별 / 개선·악화 그룹) =====
 function renderInsightDetail(range, dates){
   const section = document.getElementById('insight-detail-section');
@@ -2572,15 +2594,7 @@ function renderInsightDetail(range, dates){
   section.style.display='block';
   document.getElementById('insight-catmedia-label').textContent = rangeLabel+' · DB단가 변화율 절대값 순';
 
-  function aggGroup(r, ds){
-    let cost=0,clicks=0,db=0;
-    (r.daily_raw||[]).forEach(d=>{ if(ds.includes(d.date)){cost+=d.cost||0;clicks+=d.clicks||0;} });
-    Object.entries(r.daily_sales_map||{}).forEach(([dt,v])=>{ if(ds.includes(dt)) db+=v.db||0; });
-    const cpd=db>0?Math.round(cost/db):0;
-    const cpc=clicks>0?Math.round(cost/clicks):0;
-    const dbcvr=clicks>0?db/clicks*100:0;
-    return {cost,clicks,db,cpd,cpc,dbcvr};
-  }
+  const aggGroup = _aggGroupDates;
 
   // ── 보종·기기 집계 ───────────────────────────────────────
   const cmMap={};
@@ -2598,6 +2612,9 @@ function renderInsightDetail(range, dates){
     });
   });
 
+  // 팝업(원인 기여 그룹)에서 같은 기간 기준으로 재계산할 수 있도록 보관
+  window.__insightCatMediaCtx = {curDates, prevDates};
+
   const cmRows=Object.entries(cmMap).map(([key,m])=>{
     const curCpd=m.curDb>0?Math.round(m.curCost/m.curDb):0;
     const prevCpd=m.prevDb>0?Math.round(m.prevCost/m.prevDb):0;
@@ -2609,7 +2626,8 @@ function renderInsightDetail(range, dates){
     const cpdPct=Math.round((curCpd-prevCpd)/prevCpd*100);
     const cpcPct=prevCpc>0?Math.round((curCpc-prevCpc)/prevCpc*100):null;
     const cvrDiff=Math.round((curCvr-prevCvr)*10)/10;
-    return {key,curCpd,prevCpd,cpdPct,curCpc,prevCpc,cpcPct,curCvr,prevCvr,cvrDiff,curDb:m.curDb,prevDb:m.prevDb,dbDiff:m.curDb-m.prevDb};
+    const [cat,media]=key.split('·');
+    return {key,cat,media,curCpd,prevCpd,cpdPct,curCpc,prevCpc,cpcPct,curCvr,prevCvr,cvrDiff,curDb:m.curDb,prevDb:m.prevDb,dbDiff:m.curDb-m.prevDb};
   }).filter(Boolean);
   cmRows.sort((a,b)=>Math.abs(b.cpdPct)-Math.abs(a.cpdPct));
 
@@ -2624,10 +2642,10 @@ function renderInsightDetail(range, dates){
   }
 
   const tbody1=document.getElementById('insight-catmedia-tbody');
-  tbody1.innerHTML=cmRows.length ? cmRows.map(r=>{
+  tbody1.innerHTML=cmRows.length ? cmRows.map((r,i)=>{
     const j=judgeRow(r);
     const cpdC=pctColor(r.cpdPct,true); const cpcC=pctColor(r.cpcPct,true); const cvrC=pctColor(r.cvrDiff,false); const dbC=r.dbDiff>=0?'#16a34a':'#dc2626';
-    return `<tr style="border-bottom:1px solid var(--border)">
+    return `<tr style="border-bottom:1px solid var(--border);cursor:pointer" onclick="showCatMediaDetail('${escHtml(r.cat)}','${escHtml(r.media)}')" title="클릭하면 원인 기여 그룹을 볼 수 있습니다">
       <td style="padding:9px 14px;font-weight:600;font-size:13px">${r.key}</td>
       <td style="padding:9px 14px;text-align:right"><span style="color:var(--muted);font-size:11px">${r.prevCpd.toLocaleString()} → </span><strong>${r.curCpd.toLocaleString()}원</strong> <span style="color:${cpdC};font-weight:600;font-size:11px">${pctIcon(r.cpdPct)}${Math.abs(r.cpdPct)}%</span></td>
       <td style="padding:9px 14px;text-align:right"><span style="color:var(--muted);font-size:11px">${r.prevCpc.toLocaleString()} → </span><strong>${r.curCpc.toLocaleString()}원</strong>${r.cpcPct!==null?` <span style="color:${cpcC};font-weight:600;font-size:11px">${pctIcon(r.cpcPct)}${Math.abs(r.cpcPct)}%</span>`:''}</td>
@@ -2664,6 +2682,59 @@ function renderInsightDetail(range, dates){
   const badRows =[...grpRows].sort((a,b)=>b.cpdPct-a.cpdPct).slice(0,5);
   document.getElementById('insight-good-tbody').innerHTML=goodRows.length?goodRows.map(r=>grpHtml(r,true)).join(''):empty;
   document.getElementById('insight-bad-tbody').innerHTML =badRows.length ?badRows.map(r=>grpHtml(r,false)).join(''):empty;
+}
+
+// "보종·기기별 변화 TOP" 행 클릭 → 그 보종×기기 안에서 광고비가 급증했거나 DB가 급감한 광고그룹 TOP5를 보여줘
+// 어떤 그룹 때문에 전체 DB단가가 오르내렸는지 바로 판단할 수 있게 한다
+function showCatMediaDetail(cat, media){
+  const ctx = window.__insightCatMediaCtx;
+  if(!ctx) return;
+  const {curDates, prevDates} = ctx;
+  const groups = resultData
+    .filter(r => (r.cat||'기타')===cat && (r.media||'기타')===media)
+    .map(r=>{
+      const cur = _aggGroupDates(r, curDates);
+      const prev = _aggGroupDates(r, prevDates);
+      return {
+        group:r.group, cur, prev,
+        costDiff: cur.cost-prev.cost,
+        dbDiff: cur.db-prev.db
+      };
+    })
+    .filter(g => g.cur.cost>0 || g.prev.cost>0 || g.cur.db>0 || g.prev.db>0);
+
+  const costUp = [...groups].filter(g=>g.costDiff>0).sort((a,b)=>b.costDiff-a.costDiff).slice(0,5);
+  const dbDown = [...groups].filter(g=>g.dbDiff<0).sort((a,b)=>a.dbDiff-b.dbDiff).slice(0,5);
+
+  document.getElementById('catmedia-detail-title').textContent = `${cat} · ${media} — 원인 분석`;
+  const body = document.getElementById('catmedia-detail-body');
+
+  function listHtml(rows, kind){
+    if(!rows.length) return `<div style="color:var(--faint);font-size:12px;padding:.5rem 0">해당 없음</div>`;
+    return `<div style="display:flex;flex-direction:column;gap:2px">
+      ${rows.map(g=>{
+        const valTxt = kind==='cost'
+          ? `${g.prev.cost.toLocaleString()}원 → ${g.cur.cost.toLocaleString()}원 <strong style="color:#dc2626">(+${g.costDiff.toLocaleString()}원)</strong>`
+          : `${g.prev.db}건 → ${g.cur.db}건 <strong style="color:#dc2626">(${g.dbDiff}건)</strong>`;
+        return `<div style="display:flex;align-items:center;gap:10px;padding:.5rem 0;border-bottom:1px solid var(--border)">
+          <div style="flex:1;font-size:13px;font-weight:500;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(g.group)}">${escHtml(g.group)}</div>
+          <div style="font-size:12px;color:var(--muted)">${valTxt}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }
+
+  body.innerHTML = `
+    <div style="margin-bottom:1.25rem">
+      <div style="font-size:13px;font-weight:700;color:#dc2626;margin-bottom:.5rem">📈 광고비 급증 그룹 TOP5</div>
+      ${listHtml(costUp, 'cost')}
+    </div>
+    <div>
+      <div style="font-size:13px;font-weight:700;color:#dc2626;margin-bottom:.5rem">📉 DB 급감 그룹 TOP5</div>
+      ${listHtml(dbDown, 'db')}
+    </div>
+  `;
+  document.getElementById('catmedia-detail-modal-bg').style.display = 'flex';
 }
 
 function showInsightDetail(key){
