@@ -788,6 +788,18 @@ button.run,.dl{box-shadow:none}
   <div class="results" id="results">
     <div class="metrics-grid" id="metrics"></div>
     <div id="sales-compare-data" style="display:none;margin-bottom:1rem"></div>
+    <div class="cpc-chart-card" style="margin-bottom:1rem">
+      <div class="cpc-chart-title"><span id="data-chart-title-text">일별 광고비 추이</span></div>
+      <div class="tab-bar" id="data-chart-tabs" style="margin:0 0 .75rem">
+        <button class="tab-btn active" onclick="switchDataChartMetric('cost',this)">광고비</button>
+        <button class="tab-btn" onclick="switchDataChartMetric('db',this)">DB수</button>
+        <button class="tab-btn" onclick="switchDataChartMetric('cpd',this)">DB단가</button>
+        <button class="tab-btn" onclick="switchDataChartMetric('ctr',this)">CTR</button>
+        <button class="tab-btn" onclick="switchDataChartMetric('dbcvr',this)">DB전환율</button>
+      </div>
+      <div style="position:relative;height:260px"><canvas id="data-chart-single"></canvas></div>
+      <div style="font-size:11px;color:var(--faint);margin-top:6px">그래프의 날짜를 클릭하면 그 날의 광고그룹별 데이터를 볼 수 있습니다</div>
+    </div>
     <div class="table-card">
       <div class="table-header">
         <h2>광고 그룹별 성과 <span style="font-size:11px;font-weight:400;color:var(--faint)">(행 클릭 → 일별 상세)</span></h2>
@@ -1010,6 +1022,17 @@ button.run,.dl{box-shadow:none}
       <button class="close-btn" onclick="document.getElementById('catmedia-detail-modal-bg').style.display='none'">✕</button>
     </div>
     <div class="modal-body" id="catmedia-detail-body"></div>
+  </div>
+</div>
+
+<!-- 데이터현황 일별 차트 → 날짜 클릭 시 광고그룹별 상세 모달 -->
+<div class="modal-bg" id="daily-group-modal-bg" onclick="if(event.target===this)document.getElementById('daily-group-modal-bg').style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1500;align-items:center;justify-content:center">
+  <div class="modal" style="width:760px;max-width:95vw;max-height:85vh;overflow-y:auto">
+    <div class="modal-head">
+      <h3 id="daily-group-modal-title">일별 광고그룹 상세</h3>
+      <button class="close-btn" onclick="document.getElementById('daily-group-modal-bg').style.display='none'">✕</button>
+    </div>
+    <div class="modal-body" id="daily-group-modal-body"></div>
   </div>
 </div>
 
@@ -1757,6 +1780,7 @@ function renderTable(){
 
   document.getElementById('row-count').textContent=`${sorted.length}개 항목`;
   renderMetrics(filteredData);
+  renderDataChart(filteredData);
 }
 
 function sortBy(col){
@@ -2695,16 +2719,23 @@ function showCatMediaDetail(cat, media){
     .map(r=>{
       const cur = _aggGroupDates(r, curDates);
       const prev = _aggGroupDates(r, prevDates);
+      const cpdPct = (prev.cpd>0 && cur.cpd>0) ? Math.round((cur.cpd-prev.cpd)/prev.cpd*100) : null;
       return {
-        group:r.group, cur, prev,
+        group:r.group, cur, prev, cpdPct,
         costDiff: cur.cost-prev.cost,
         dbDiff: cur.db-prev.db
       };
     })
     .filter(g => g.cur.cost>0 || g.prev.cost>0 || g.cur.db>0 || g.prev.db>0);
 
-  const costUp = [...groups].filter(g=>g.costDiff>0).sort((a,b)=>b.costDiff-a.costDiff).slice(0,5);
-  const dbDown = [...groups].filter(g=>g.dbDiff<0).sort((a,b)=>a.dbDiff-b.dbDiff).slice(0,5);
+  // 전체(=이 보종×기기 안 모든 그룹) 순변화량 대비, 각 그룹이 차지하는 비중을 기여도(%)로 표시
+  const totalCostDiff = groups.reduce((s,g)=>s+g.costDiff, 0);
+  const totalDbDiff   = groups.reduce((s,g)=>s+g.dbDiff, 0);
+
+  const costUp = [...groups].filter(g=>g.costDiff>0).sort((a,b)=>b.costDiff-a.costDiff).slice(0,5)
+    .map(g=>({...g, contribPct: totalCostDiff!==0 ? Math.round(g.costDiff/totalCostDiff*100) : null}));
+  const dbDown = [...groups].filter(g=>g.dbDiff<0).sort((a,b)=>a.dbDiff-b.dbDiff).slice(0,5)
+    .map(g=>({...g, contribPct: totalDbDiff!==0 ? Math.round(g.dbDiff/totalDbDiff*100) : null}));
 
   document.getElementById('catmedia-detail-title').textContent = `${cat} · ${media} — 원인 분석`;
   const body = document.getElementById('catmedia-detail-body');
@@ -2714,11 +2745,18 @@ function showCatMediaDetail(cat, media){
     return `<div style="display:flex;flex-direction:column;gap:2px">
       ${rows.map(g=>{
         const valTxt = kind==='cost'
-          ? `${g.prev.cost.toLocaleString()}원 → ${g.cur.cost.toLocaleString()}원 <strong style="color:#dc2626">(+${g.costDiff.toLocaleString()}원)</strong>`
-          : `${g.prev.db}건 → ${g.cur.db}건 <strong style="color:#dc2626">(${g.dbDiff}건)</strong>`;
-        return `<div style="display:flex;align-items:center;gap:10px;padding:.5rem 0;border-bottom:1px solid var(--border)">
-          <div style="flex:1;font-size:13px;font-weight:500;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(g.group)}">${escHtml(g.group)}</div>
+          ? `광고비 ${g.prev.cost.toLocaleString()}원 → ${g.cur.cost.toLocaleString()}원 <strong style="color:#dc2626">(+${g.costDiff.toLocaleString()}원)</strong>`
+          : `DB수 ${g.prev.db}건 → ${g.cur.db}건 <strong style="color:#dc2626">(${g.dbDiff}건)</strong>`;
+        const cpdTxt = g.cpdPct!==null
+          ? `이 그룹 DB단가 ${g.prev.cpd.toLocaleString()}원 → ${g.cur.cpd.toLocaleString()}원 (${g.cpdPct>0?'+':''}${g.cpdPct}%)`
+          : `이 그룹 DB단가 ${g.cur.cpd?g.cur.cpd.toLocaleString()+'원':'-'} (비교 데이터 부족)`;
+        return `<div style="padding:.6rem 0;border-bottom:1px solid var(--border)">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:2px">
+            <div style="font-size:13px;font-weight:600;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(g.group)}">${escHtml(g.group)}</div>
+            ${g.contribPct!==null?`<div style="font-size:12px;font-weight:700;color:#dc2626;white-space:nowrap">기여도 ${g.contribPct}%</div>`:''}
+          </div>
           <div style="font-size:12px;color:var(--muted)">${valTxt}</div>
+          <div style="font-size:11px;color:var(--faint);margin-top:1px">${cpdTxt}</div>
         </div>`;
       }).join('')}
     </div>`;
@@ -2735,6 +2773,171 @@ function showCatMediaDetail(cat, media){
     </div>
   `;
   document.getElementById('catmedia-detail-modal-bg').style.display = 'flex';
+}
+
+// ===== 데이터현황 탭: 일별 추이 차트 (필터된 광고그룹 전체 합계) + 날짜 클릭 → 광고그룹별 상세 =====
+let _dataChartJsLoading = false;
+let _dataChartSingle = null;
+let _dataChartMetric = 'cost';
+let _dataChartLastRows = null; // 토글 버튼 클릭 시 재사용
+const _DATA_CHART_METRICS = {
+  cost:  {label:'광고비',   type:'bar',  unit:'원'},
+  db:    {label:'DB수',     type:'bar',  unit:'건'},
+  cpd:   {label:'DB단가',   type:'line', unit:'원'},
+  ctr:   {label:'CTR',      type:'line', unit:'%'},
+  dbcvr: {label:'DB전환율', type:'line', unit:'%'}
+};
+
+function _parseYmd(s){
+  const [y,m,d] = s.split('-').map(Number);
+  return new Date(y, m-1, d);
+}
+
+// 광고그룹이 너무 많아 그룹별로 나누면 알아보기 어려우므로, 필터된 그룹 전체를 날짜별로 합산한 단일 시리즈로 표시
+// 데이터가 없는 날짜도 0으로 채워서 기간 전체를 빈틈없이 보여준다
+function _buildDataDailySeries(rows){
+  const byDate = {};
+  rows.forEach(r=>{
+    (r.daily_raw||[]).forEach(d=>{
+      if(!d.date) return;
+      if(!byDate[d.date]) byDate[d.date] = {cost:0, imp:0, clk:0, db:0};
+      byDate[d.date].cost += d.cost||0;
+      byDate[d.date].imp  += d.impressions||0;
+      byDate[d.date].clk  += d.clicks||0;
+    });
+    Object.entries(r.daily_sales_map||{}).forEach(([dt,v])=>{
+      if(!byDate[dt]) byDate[dt] = {cost:0, imp:0, clk:0, db:0};
+      byDate[dt].db += v.db||0;
+    });
+  });
+  const known = Object.keys(byDate).sort();
+  if(!known.length) return {dates:[], byDate};
+
+  const dates = [];
+  const cur = _parseYmd(known[0]);
+  const end = _parseYmd(known[known.length-1]);
+  while(cur <= end){
+    const ds = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}-${String(cur.getDate()).padStart(2,'0')}`;
+    dates.push(ds);
+    if(!byDate[ds]) byDate[ds] = {cost:0, imp:0, clk:0, db:0};
+    cur.setDate(cur.getDate()+1);
+  }
+  return {dates, byDate};
+}
+
+function renderDataChart(rows){
+  _dataChartLastRows = rows;
+  if(!window.Chart){
+    if(!_dataChartJsLoading){
+      _dataChartJsLoading = true;
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js';
+      s.onload = () => { renderDataChart(rows); };
+      document.head.appendChild(s);
+    }
+    return;
+  }
+
+  const {dates, byDate} = _buildDataDailySeries(rows);
+  const metric = _DATA_CHART_METRICS[_dataChartMetric] || _DATA_CHART_METRICS.cost;
+  const titleEl = document.getElementById('data-chart-title-text');
+  if(titleEl) titleEl.textContent = `일별 ${metric.label} 추이`;
+
+  const ctx = document.getElementById('data-chart-single')?.getContext('2d');
+  if(!ctx) return;
+  if(_dataChartSingle) _dataChartSingle.destroy();
+  if(!dates.length) return;
+
+  const valueOf = (b) => {
+    if(_dataChartMetric==='cost')   return b.cost;
+    if(_dataChartMetric==='db')     return b.db;
+    if(_dataChartMetric==='cpd')    return b.db>0 ? Math.round(b.cost/b.db) : null;
+    if(_dataChartMetric==='ctr')    return b.imp>0 ? Math.round(b.clk/b.imp*10000)/100 : null;
+    if(_dataChartMetric==='dbcvr')  return b.clk>0 ? Math.round(b.db/b.clk*1000)/10 : null;
+    return null;
+  };
+
+  const values = dates.map(d=>valueOf(byDate[d]));
+  const dataset = metric.type==='bar'
+    ? {type:'bar', label:metric.label, data:values, backgroundColor:'#ff9b00'}
+    : {type:'line', label:metric.label, data:values, borderColor:'#ff9b00', backgroundColor:'#ff9b00', tension:0.3};
+
+  const fmtVal = v => v===null||v===undefined ? '-' : (metric.unit==='%' ? v+'%' : v.toLocaleString()+(metric.unit==='원'?'원':''));
+  _dataChartSingle = new Chart(ctx, {
+    type: metric.type,
+    data: {labels: dates, datasets:[dataset]},
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      interaction: {mode:'index', intersect:false},
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:c=>`${fmtVal(c.parsed.y)}`}}
+      },
+      scales:{
+        x:{grid:{display:false},ticks:{font:{size:10},color:'#888',maxRotation:0,autoSkip:true}},
+        y:{ticks:{callback:v=>metric.unit==='%'?v+'%':v.toLocaleString(),font:{size:10},color:'#888'},grid:{color:'rgba(0,0,0,0.05)'}}
+      },
+      onClick: (evt, elements) => {
+        if(!elements.length) return;
+        const idx = elements[0].index;
+        showDailyGroupBreakdown(dates[idx], rows);
+      }
+    }
+  });
+}
+
+function switchDataChartMetric(metric, btn){
+  document.querySelectorAll('#data-chart-tabs .tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  _dataChartMetric = metric;
+  if(_dataChartLastRows) renderDataChart(_dataChartLastRows);
+}
+
+// 차트에서 날짜 클릭 시, 그 날짜의 광고그룹별 데이터(광고비/노출/클릭/DB/DB단가/ROAS)를 팝업으로 표시
+function showDailyGroupBreakdown(date, rows){
+  const list = (rows||_dataChartLastRows||[]).map(r=>{
+    const d  = (r.daily_raw||[]).find(x=>x.date===date);
+    const sv = (r.daily_sales_map||{})[date];
+    const cost = d?.cost||0, clicks = d?.clicks||0, imp = d?.impressions||0;
+    const db = sv?.db||0, perf = sv?.performance||0;
+    const ctr = imp>0 ? Math.round(clicks/imp*10000)/100 : null;
+    const cpd = db>0 ? Math.round(cost/db) : null;
+    const roas = (perf>0 && cost>0) ? Math.round(cost/perf*100) : null;
+    return {group:r.group, cost, clicks, imp, db, cpd, ctr, roas};
+  }).filter(g=>g.cost>0 || g.db>0 || g.clicks>0 || g.imp>0)
+    .sort((a,b)=>b.cost-a.cost);
+
+  document.getElementById('daily-group-modal-title').textContent = `${date} — 광고그룹별 상세`;
+  const body = document.getElementById('daily-group-modal-body');
+  body.innerHTML = list.length ? `
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr>
+          <th style="text-align:left;padding:8px 10px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border)">광고그룹</th>
+          <th style="text-align:right;padding:8px 10px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border)">광고비</th>
+          <th style="text-align:right;padding:8px 10px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border)">노출수</th>
+          <th style="text-align:right;padding:8px 10px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border)">클릭수</th>
+          <th style="text-align:right;padding:8px 10px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border)">CTR</th>
+          <th style="text-align:right;padding:8px 10px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border)">DB수</th>
+          <th style="text-align:right;padding:8px 10px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border)">DB단가</th>
+          <th style="text-align:right;padding:8px 10px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border)">ROAS</th>
+        </tr></thead>
+        <tbody>
+          ${list.map(g=>`<tr>
+            <td style="padding:8px 10px;font-size:12px;border-bottom:1px solid var(--border);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(g.group)}">${escHtml(g.group)}</td>
+            <td style="text-align:right;padding:8px 10px;font-size:12px;border-bottom:1px solid var(--border)">${g.cost.toLocaleString()}원</td>
+            <td style="text-align:right;padding:8px 10px;font-size:12px;border-bottom:1px solid var(--border)">${g.imp.toLocaleString()}</td>
+            <td style="text-align:right;padding:8px 10px;font-size:12px;border-bottom:1px solid var(--border)">${g.clicks.toLocaleString()}</td>
+            <td style="text-align:right;padding:8px 10px;font-size:12px;border-bottom:1px solid var(--border)">${g.ctr!==null?g.ctr+'%':'-'}</td>
+            <td style="text-align:right;padding:8px 10px;font-size:12px;border-bottom:1px solid var(--border)">${g.db.toLocaleString()}건</td>
+            <td style="text-align:right;padding:8px 10px;font-size:12px;border-bottom:1px solid var(--border)">${g.cpd!==null?g.cpd.toLocaleString()+'원':'-'}</td>
+            <td style="text-align:right;padding:8px 10px;font-size:12px;border-bottom:1px solid var(--border)">${roasBadge(g.roas)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  ` : `<div style="padding:2rem;text-align:center;color:var(--faint);font-size:12px">해당 날짜에 데이터가 없습니다.</div>`;
+  document.getElementById('daily-group-modal-bg').style.display = 'flex';
 }
 
 function showInsightDetail(key){
