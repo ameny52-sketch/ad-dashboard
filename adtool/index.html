@@ -2081,7 +2081,7 @@ function showPcPanel(tab){
   if(tab==='alert')   { document.getElementById('panel-alert').classList.add('show');   renderAlertBoard(); }
   if(tab==='insight') { document.getElementById('panel-insight').classList.add('show'); renderInsight(); }
   if(tab==='cpc')     { document.getElementById('panel-cpc').classList.add('show');     initCpcTab(); }
-  if(tab==='data')    { document.getElementById('panel-data').classList.add('show'); }
+  if(tab==='data')    { document.getElementById('panel-data').classList.add('show'); renderDataChart(filteredData); }
   if(tab==='adinfo')  { document.getElementById('panel-adinfo').classList.add('show');  loadAdInfo(); }
 }
 
