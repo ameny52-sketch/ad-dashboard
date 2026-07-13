@@ -2896,6 +2896,68 @@ function switchDataChartMetric(metric, btn){
 }
 
 // 차트에서 날짜 클릭 시, 그 날짜의 광고그룹별 데이터(광고비/노출/클릭/DB/DB단가/ROAS)를 팝업으로 표시
+const DAILY_GROUP_MODAL_COLS = [
+  {key:'group', label:'광고그룹'},
+  {key:'cost', label:'광고비', num:true, fmt:v=>v.toLocaleString()+'원'},
+  {key:'imp', label:'노출수', num:true, fmt:v=>v.toLocaleString()},
+  {key:'clicks', label:'클릭수', num:true, fmt:v=>v.toLocaleString()},
+  {key:'cpc', label:'CPC', num:true, fmt:v=>v!==null?v.toLocaleString()+'원':'-'},
+  {key:'ctr', label:'CTR', num:true, fmt:v=>v!==null?v+'%':'-'},
+  {key:'db', label:'DB수', num:true, fmt:v=>v.toLocaleString()+'건'},
+  {key:'cpd', label:'DB단가', num:true, fmt:v=>v!==null?v.toLocaleString()+'원':'-'},
+  {key:'dbcvr', label:'DB전환율', num:true, fmt:v=>v!==null?v+'%':'-'},
+  {key:'roas', label:'ROAS', num:true, special:'roas'},
+];
+let _dailyGroupModalRows = [];
+let _dailyGroupModalDate = '';
+let _dailyGroupModalSortCol = 'cost';
+let _dailyGroupModalSortAsc = false;
+
+function sortDailyGroupModal(col){
+  if(_dailyGroupModalSortCol===col) _dailyGroupModalSortAsc=!_dailyGroupModalSortAsc;
+  else{ _dailyGroupModalSortCol=col; _dailyGroupModalSortAsc=false; }
+  _renderDailyGroupModalTable();
+}
+
+function _renderDailyGroupModalTable(){
+  const col = _dailyGroupModalSortCol, asc = _dailyGroupModalSortAsc;
+  const list = _dailyGroupModalRows;
+  document.getElementById('daily-group-modal-title').textContent = `${_dailyGroupModalDate} — 광고그룹별 상세`;
+  const body = document.getElementById('daily-group-modal-body');
+  if(!list.length){
+    body.innerHTML = `<div style="padding:2rem;text-align:center;color:var(--faint);font-size:12px">해당 날짜에 데이터가 없습니다.</div>`;
+    return;
+  }
+  const sorted = [...list].sort((a,b)=>{
+    let av=a[col], bv=b[col];
+    if(av===null) av = asc?Infinity:-Infinity;
+    if(bv===null) bv = asc?Infinity:-Infinity;
+    if(typeof av==='string') return asc?av.localeCompare(bv):bv.localeCompare(av);
+    return asc?av-bv:bv-av;
+  });
+  body.innerHTML = `
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr>
+          ${DAILY_GROUP_MODAL_COLS.map(c=>{
+            const arrow = c.key===col ? (asc?' ↑':' ↓') : '';
+            return `<th style="text-align:${c.num?'right':'left'};padding:8px 10px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border);cursor:pointer;white-space:nowrap" onclick="sortDailyGroupModal('${c.key}')">${c.label}${arrow}</th>`;
+          }).join('')}
+        </tr></thead>
+        <tbody>
+          ${sorted.map(g=>`<tr>
+            ${DAILY_GROUP_MODAL_COLS.map(c=>{
+              if(c.key==='group') return `<td style="padding:8px 10px;font-size:12px;border-bottom:1px solid var(--border);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(g.group)}">${escHtml(g.group)}</td>`;
+              if(c.special==='roas') return `<td style="text-align:right;padding:8px 10px;font-size:12px;border-bottom:1px solid var(--border)">${roasBadge(g.roas)}</td>`;
+              return `<td style="text-align:right;padding:8px 10px;font-size:12px;border-bottom:1px solid var(--border)">${c.fmt(g[c.key])}</td>`;
+            }).join('')}
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
 function showDailyGroupBreakdown(date, rows){
   const list = (rows||_dataChartLastRows||[]).map(r=>{
     let cost=0, clicks=0, imp=0;
@@ -2909,42 +2971,16 @@ function showDailyGroupBreakdown(date, rows){
       db += v.db||0; perf += v.performance||0;
     });
     const ctr = imp>0 ? Math.round(clicks/imp*10000)/100 : null;
+    const cpc = clicks>0 ? Math.round(cost/clicks) : null;
+    const dbcvr = clicks>0 ? Math.round(db/clicks*1000)/10 : null;
     const cpd = db>0 ? Math.round(cost/db) : null;
     const roas = (perf>0 && cost>0) ? Math.round(cost/perf*100) : null;
-    return {group:r.group, cost, clicks, imp, db, cpd, ctr, roas};
-  }).filter(g=>g.cost>0 || g.db>0 || g.clicks>0 || g.imp>0)
-    .sort((a,b)=>b.cost-a.cost);
+    return {group:r.group, cost, clicks, imp, db, cpc, cpd, ctr, dbcvr, roas};
+  }).filter(g=>g.cost>0 || g.db>0 || g.clicks>0 || g.imp>0);
 
-  document.getElementById('daily-group-modal-title').textContent = `${date} — 광고그룹별 상세`;
-  const body = document.getElementById('daily-group-modal-body');
-  body.innerHTML = list.length ? `
-    <div style="overflow-x:auto">
-      <table style="width:100%;border-collapse:collapse">
-        <thead><tr>
-          <th style="text-align:left;padding:8px 10px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border)">광고그룹</th>
-          <th style="text-align:right;padding:8px 10px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border)">광고비</th>
-          <th style="text-align:right;padding:8px 10px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border)">노출수</th>
-          <th style="text-align:right;padding:8px 10px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border)">클릭수</th>
-          <th style="text-align:right;padding:8px 10px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border)">CTR</th>
-          <th style="text-align:right;padding:8px 10px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border)">DB수</th>
-          <th style="text-align:right;padding:8px 10px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border)">DB단가</th>
-          <th style="text-align:right;padding:8px 10px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border)">ROAS</th>
-        </tr></thead>
-        <tbody>
-          ${list.map(g=>`<tr>
-            <td style="padding:8px 10px;font-size:12px;border-bottom:1px solid var(--border);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(g.group)}">${escHtml(g.group)}</td>
-            <td style="text-align:right;padding:8px 10px;font-size:12px;border-bottom:1px solid var(--border)">${g.cost.toLocaleString()}원</td>
-            <td style="text-align:right;padding:8px 10px;font-size:12px;border-bottom:1px solid var(--border)">${g.imp.toLocaleString()}</td>
-            <td style="text-align:right;padding:8px 10px;font-size:12px;border-bottom:1px solid var(--border)">${g.clicks.toLocaleString()}</td>
-            <td style="text-align:right;padding:8px 10px;font-size:12px;border-bottom:1px solid var(--border)">${g.ctr!==null?g.ctr+'%':'-'}</td>
-            <td style="text-align:right;padding:8px 10px;font-size:12px;border-bottom:1px solid var(--border)">${g.db.toLocaleString()}건</td>
-            <td style="text-align:right;padding:8px 10px;font-size:12px;border-bottom:1px solid var(--border)">${g.cpd!==null?g.cpd.toLocaleString()+'원':'-'}</td>
-            <td style="text-align:right;padding:8px 10px;font-size:12px;border-bottom:1px solid var(--border)">${roasBadge(g.roas)}</td>
-          </tr>`).join('')}
-        </tbody>
-      </table>
-    </div>
-  ` : `<div style="padding:2rem;text-align:center;color:var(--faint);font-size:12px">해당 날짜에 데이터가 없습니다.</div>`;
+  _dailyGroupModalRows = list;
+  _dailyGroupModalDate = date;
+  _renderDailyGroupModalTable();
   document.getElementById('daily-group-modal-bg').style.display = 'flex';
 }
 
