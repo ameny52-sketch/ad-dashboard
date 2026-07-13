@@ -503,6 +503,10 @@ button.run,.dl{box-shadow:none}
           <option value="nodb">DB없음 제외</option>
           <option value="na">광고비만 (DB 0)</option>
         </select>
+        <div class="tab-bar" id="kw-table-cum-toggle">
+          <button class="tab-btn active" onclick="setKwTableCumMode(false,this)">당월</button>
+          <button class="tab-btn" onclick="setKwTableCumMode(true,this)">누적</button>
+        </div>
         <span class="row-count" id="kw-row-count"></span>
       </div>
       <div class="table-wrap">
@@ -556,6 +560,10 @@ button.run,.dl{box-shadow:none}
       <div class="table-card">
         <div class="table-header">
           <h2>영역별 성과 <span style="font-size:11px;font-weight:400;color:var(--faint)">(행 클릭 → 소재별 상세)</span></h2>
+          <div class="tab-bar" id="display-area-cum-toggle">
+            <button class="tab-btn active" onclick="setDisplayAreaCumMode(false,this)">당월</button>
+            <button class="tab-btn" onclick="setDisplayAreaCumMode(true,this)">누적</button>
+          </div>
         </div>
         <div class="table-wrap">
           <table>
@@ -804,6 +812,10 @@ button.run,.dl{box-shadow:none}
       <div class="table-header">
         <h2>광고 그룹별 성과 <span style="font-size:11px;font-weight:400;color:var(--faint)">(행 클릭 → 일별 상세)</span></h2>
         <div class="table-actions">
+          <div class="tab-bar" id="pc-table-cum-toggle" style="margin-right:8px">
+            <button class="tab-btn active" onclick="setPcTableCumMode(false,this)">당월</button>
+            <button class="tab-btn" onclick="setPcTableCumMode(true,this)">누적</button>
+          </div>
           <span style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px;margin-right:4px">⭐ 메인키워드 중요그룹</span>
         </div>
       </div>
@@ -864,6 +876,10 @@ button.run,.dl{box-shadow:none}
     <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px">
       <div id="daily-month-summary"></div>
       <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+        <div class="tab-bar" id="daily-table-cum-toggle">
+          <button class="tab-btn active" onclick="setDailyTableCumMode(false,this)">당월</button>
+          <button class="tab-btn" onclick="setDailyTableCumMode(true,this)">누적</button>
+        </div>
         <select id="daily-month-sel" onchange="renderDaily()" style="border:1px solid var(--border-strong);border-radius:var(--rs);padding:5px 10px;font-size:12px;font-family:inherit;color:var(--text);background:var(--surface);outline:none">
           <option value="">전체 월</option>
         </select>
@@ -1332,8 +1348,8 @@ function _apiAnalyze(month,s){
     const dt=_normDK(r['상담등록일']||'');
     if(!sIT[it])sIT[it]={db:0,contracts:0,performance:0,contracts_cum:0,performance_cum:0};
     sIT[it].db++;sIT[it].contracts+=cnt;sIT[it].performance+=perf;sIT[it].contracts_cum+=cC;sIT[it].performance_cum+=pC;
-    if(!sITD[it])sITD[it]={};if(!sITD[it][dt])sITD[it][dt]={db:0,contracts:0,performance:0};
-    sITD[it][dt].db++;sITD[it][dt].contracts+=cnt;sITD[it][dt].performance+=perf;
+    if(!sITD[it])sITD[it]={};if(!sITD[it][dt])sITD[it][dt]={db:0,contracts:0,performance:0,contracts_cum:0,performance_cum:0};
+    sITD[it][dt].db++;sITD[it][dt].contracts+=cnt;sITD[it][dt].performance+=perf;sITD[it][dt].contracts_cum+=cC;sITD[it][dt].performance_cum+=pC;
   });
   const res=[];
   for(const[g,ad]of Object.entries(adG)){
@@ -1487,12 +1503,6 @@ async function loadMonths(){
 
 function onMonthChange(){
   document.getElementById('file-info').textContent = '';
-  const topMonth = document.getElementById('month-select-all')?.value || '';
-  const dailySel = document.getElementById('daily-month-sel');
-  if(dailySel && topMonth && [...dailySel.options].some(o=>o.value===topMonth)){
-    dailySel.value = topMonth;
-    renderDaily();
-  }
   runAnalysis();
 }
 
@@ -1746,9 +1756,32 @@ function setCatFilter(val, btn){
   applyFilter();
 }
 
+// 계약수/계약률/평가업적/ROAS는 당월/누적 토글에 따라 다른 값을 보여준다 (KPI카드의 당월/누적 개념과 동일)
+const PC_CUM_COLS = ['contracts','cvr','performance','roas'];
+let _pcTableCumMode = false;
+
+function setPcTableCumMode(cum, btn){
+  _pcTableCumMode = cum;
+  document.querySelectorAll('#pc-table-cum-toggle .tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTable();
+}
+
+function _pcCumVal(r, key){
+  if(!_pcTableCumMode) return r[key];
+  const contracts = r.contracts_cum ?? r.contracts ?? 0;
+  const performance = r.performance_cum ?? r.performance ?? 0;
+  if(key==='contracts') return contracts;
+  if(key==='performance') return performance;
+  if(key==='cvr') return r.db>0 ? Math.round(contracts/r.db*1000)/10 : null;
+  if(key==='roas') return (r.cost>0 && performance>0) ? Math.round(r.cost/performance*100) : null;
+  return r[key];
+}
+
 function renderTable(){
   const sorted=[...filteredData].sort((a,b)=>{
-    let av=a[sortCol],bv=b[sortCol];
+    let av=PC_CUM_COLS.includes(sortCol)?_pcCumVal(a,sortCol):a[sortCol];
+    let bv=PC_CUM_COLS.includes(sortCol)?_pcCumVal(b,sortCol):b[sortCol];
     if(av===null) av=sortAsc?Infinity:-Infinity;
     if(bv===null) bv=sortAsc?Infinity:-Infinity;
     if(typeof av==='string') return sortAsc?av.localeCompare(bv):bv.localeCompare(av);
@@ -1757,7 +1790,8 @@ function renderTable(){
 
   document.getElementById('thead').innerHTML='<tr>'+COLS.map(c=>{
     const arr=c.key===sortCol?(sortAsc?' ↑':' ↓'):'';
-    return`<th class="${c.cls||''}" onclick="sortBy('${c.key}')">${c.label}${arr}</th>`;
+    const label = (_pcTableCumMode && PC_CUM_COLS.includes(c.key)) ? c.label+' ·누적' : c.label;
+    return`<th class="${c.cls||''}" onclick="sortBy('${c.key}')">${label}${arr}</th>`;
   }).join('')+'</tr>';
 
   document.getElementById('tbody').innerHTML=sorted.map((r,i)=>{
@@ -1768,8 +1802,8 @@ function renderTable(){
       : isKey ? 'background:#fffbeb;' : '';
     return`<tr class="clickable" style="${rowStyle}" onclick="openDetail(${realIdx})">`+
       COLS.map(c=>{
-        if(c.special==='roas') return`<td class="num">${roasBadge(r.roas)}</td>`;
-        const v=r[c.key];
+        if(c.special==='roas') return`<td class="num">${roasBadge(_pcCumVal(r,'roas'))}</td>`;
+        const v=PC_CUM_COLS.includes(c.key)?_pcCumVal(r,c.key):r[c.key];
         if(c.key==='group' && (r.is_unmapped ?? r.isUnmapped ?? false))
           return`<td class="${c.cls||''}"><span style="font-size:11px;background:#fee2e2;color:#991b1b;padding:2px 6px;border-radius:4px;font-weight:600">미매핑</span></td>`;
         if(c.key==='group' && isKey)
@@ -3312,6 +3346,18 @@ if(!localStorage.getItem('daily_hidden_medias_v2')){
   localStorage.setItem('daily_hidden_medias', JSON.stringify([..._dailyHiddenMedias]));
 }
 function _dailySaveHidden(){ localStorage.setItem('daily_hidden_medias', JSON.stringify([..._dailyHiddenMedias])); }
+
+// daily-month-sel이 "전체 월"(빈 문자열)로 이미 초기화됐는지 추적 (빈 문자열도 유효한 선택이라 값만으로는 최초 진입 여부를 구분할 수 없음)
+let _dailyMonthSelInitialized = false;
+
+// 계약수/계약율/환산료/ROAS는 당월/누적 토글에 따라 다른 값을 보여준다 (KPI카드의 당월/누적 개념과 동일)
+let _dailyTableCumMode = false;
+function setDailyTableCumMode(cum, btn){
+  _dailyTableCumMode = cum;
+  document.querySelectorAll('#daily-table-cum-toggle .tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderDaily();
+}
 function toggleDailyMedia(m){
   if(_dailyHiddenMedias.has(m)) _dailyHiddenMedias.delete(m); else _dailyHiddenMedias.add(m);
   _dailySaveHidden(); renderDailyMediaToggle(); renderDaily();
@@ -3402,6 +3448,28 @@ function getKwFiltered(){
   });
 }
 
+// 계약수/계약률/평가업적/ROAS는 당월/누적 토글에 따라 다른 값을 보여준다 (KPI카드의 당월/누적 개념과 동일)
+const KW_CUM_COLS = ['contracts','cvr','perf','roas'];
+let _kwTableCumMode = false;
+
+function setKwTableCumMode(cum, btn){
+  _kwTableCumMode = cum;
+  document.querySelectorAll('#kw-table-cum-toggle .tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderKwTable();
+}
+
+function _kwCumVal(r, key){
+  if(!_kwTableCumMode) return r[key];
+  const contracts = r.contracts_cum ?? r.contracts ?? 0;
+  const perf = r.perf_cum ?? r.perf ?? 0;
+  if(key==='contracts') return contracts;
+  if(key==='perf') return perf;
+  if(key==='cvr') return r.db>0 ? Math.round(contracts/r.db*1000)/10 : null;
+  if(key==='roas') return (r.cost>0 && perf>0) ? Math.round(r.cost/perf*100) : null;
+  return r[key];
+}
+
 function renderKwTable(){
   const rows = getKwFiltered();
   rows.forEach(r=>{
@@ -3409,7 +3477,8 @@ function renderKwTable(){
     r.dbcvr = r.clicks>0 ? Math.round(r.db/r.clicks*1000)/10 : null;
   });
   const sorted = [...rows].sort((a,b)=>{
-    let va=a[kwSortCol], vb=b[kwSortCol];
+    let va=KW_CUM_COLS.includes(kwSortCol)?_kwCumVal(a,kwSortCol):a[kwSortCol];
+    let vb=KW_CUM_COLS.includes(kwSortCol)?_kwCumVal(b,kwSortCol):b[kwSortCol];
     // ROAS / DB단가 / 평균CPC / DB전환율은 값이 없거나 0이면 정렬에서 제외 (항상 맨 뒤)
     if(kwSortCol==='roas' || kwSortCol==='cpd' || kwSortCol==='cpc' || kwSortCol==='dbcvr'){
       const ea = va==null||va===0, eb = vb==null||vb===0;
@@ -3453,6 +3522,7 @@ function renderKwTable(){
   renderSalesCompare('sales-compare-kw', rows.map(r=>({
     ...r,
     performance: r.performance ?? r.perf ?? 0,
+    performance_cum: r.performance_cum ?? r.perf_cum ?? 0,
     cost: r.cost || 0
   })));
 
@@ -3475,7 +3545,8 @@ function renderKwTable(){
   ];
   document.getElementById('kw-thead').innerHTML = '<tr>'+cols.map(c=>{
     const arr = c.key===kwSortCol?(kwSortAsc?' ↑':' ↓'):'';
-    return `<th style="padding:7px 10px;background:#fafaf8;border-bottom:1px solid var(--border);font-size:11px;font-weight:600;color:var(--muted);white-space:nowrap;cursor:pointer;text-align:${c.r?'right':'left'}" onclick="kwSort('${c.key}')">${c.label}${arr}</th>`;
+    const label = (_kwTableCumMode && KW_CUM_COLS.includes(c.key)) ? c.label+' ·누적' : c.label;
+    return `<th style="padding:7px 10px;background:#fafaf8;border-bottom:1px solid var(--border);font-size:11px;font-weight:600;color:var(--muted);white-space:nowrap;cursor:pointer;text-align:${c.r?'right':'left'}" onclick="kwSort('${c.key}')">${label}${arr}</th>`;
   }).join('')+'</tr>';
 
   // 페이징
@@ -3496,7 +3567,8 @@ function renderKwTable(){
     const devPill = r.device==='PC'
       ? '<span style="font-size:11px;padding:2px 7px;border-radius:4px;background:#E6F1FB;color:#0C447C;font-weight:600">PC</span>'
       : '<span style="font-size:11px;padding:2px 7px;border-radius:4px;background:#EAF3DE;color:#27500A;font-weight:600">모바일</span>';
-    const cvrStyle = r.cvr!=null&&r.cvr>=10?'color:#dc2626;font-weight:600':'';
+    const dContracts = _kwCumVal(r,'contracts'), dCvr = _kwCumVal(r,'cvr'), dPerf = _kwCumVal(r,'perf'), dRoas = _kwCumVal(r,'roas');
+    const cvrStyle = dCvr!=null&&dCvr>=10?'color:#dc2626;font-weight:600':'';
     return `<tr ${clickable} style="border-bottom:1px solid var(--border)">
       <td style="padding:7px 10px;font-weight:500;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.keyword||'-'}</td>
       <td style="padding:7px 10px">${mediaPill}</td>
@@ -3508,10 +3580,10 @@ function renderKwTable(){
       <td style="padding:7px 10px;text-align:right;font-weight:600">${r.db.toLocaleString()}</td>
       <td style="padding:7px 10px;text-align:right">${r.cpd!=null?r.cpd.toLocaleString():'-'}</td>
       <td style="padding:7px 10px;text-align:right">${r.dbcvr!=null?r.dbcvr.toFixed(1)+'%':'-'}</td>
-      <td style="padding:7px 10px;text-align:right">${r.contracts.toLocaleString()}</td>
-      <td style="padding:7px 10px;text-align:right;${cvrStyle}">${r.cvr!=null?r.cvr.toFixed(1)+'%':'-'}</td>
-      <td style="padding:7px 10px;text-align:right">${r.perf?Math.round(r.perf).toLocaleString():'-'}</td>
-      <td style="padding:7px 10px;text-align:right">${roasBadge(r.roas)}</td>
+      <td style="padding:7px 10px;text-align:right">${dContracts.toLocaleString()}</td>
+      <td style="padding:7px 10px;text-align:right;${cvrStyle}">${dCvr!=null?dCvr.toFixed(1)+'%':'-'}</td>
+      <td style="padding:7px 10px;text-align:right">${dPerf?Math.round(dPerf).toLocaleString():'-'}</td>
+      <td style="padding:7px 10px;text-align:right">${roasBadge(dRoas)}</td>
     </tr>`;
   }).join('') || '<tr><td colspan="14" style="padding:2rem;text-align:center;color:var(--faint)">데이터 없음</td></tr>';
 
@@ -3639,7 +3711,11 @@ function _initDailyTabCore(){
 
   // 월 선택 옵션 항상 새로 채우기 (데이터 재로드 대응)
   const monthSel = document.getElementById('daily-month-sel');
-  // 상단 월선택과 동기화 — 새로고침 시 상단에서 고른 월을 그대로 반영
+  // 사용자가 이미 골라둔 월이 있으면 그대로 유지 (다른 탭의 월 선택과는 무관하게 독립적으로 동작)
+  // "전체 월"(빈 문자열)도 유효한 선택이므로, 값의 존재 여부가 아니라 "한 번이라도 초기화됐는지" 플래그로 최초 진입을 판단한다
+  const prevValue = monthSel.value;
+  const wasInitialized = _dailyMonthSelInitialized;
+  _dailyMonthSelInitialized = true;
   const topMonth = document.getElementById('month-select-all')?.value || '';
   // 기존 옵션 제거 후 재생성
   while(monthSel.options.length > 1) monthSel.remove(1);
@@ -3647,8 +3723,10 @@ function _initDailyTabCore(){
   months.forEach(m=>{
     const o=document.createElement('option'); o.value=m; o.textContent=m; monthSel.appendChild(o);
   });
-  // 상단 월선택 값 우선, 없으면 가장 최근 월
-  if(topMonth && [...monthSel.options].some(o=>o.value===topMonth)){
+  // 기존 선택값 우선 유지, 없으면(최초 진입) 상단 월선택 값, 그것도 없으면 최신 월
+  if(wasInitialized && [...monthSel.options].some(o=>o.value===prevValue)){
+    monthSel.value = prevValue;
+  } else if(topMonth && [...monthSel.options].some(o=>o.value===topMonth)){
     monthSel.value = topMonth;
   } else if(months.length){
     monthSel.value = months[0];
@@ -3723,24 +3801,26 @@ function renderDaily(){
       const pd = parseDailyDate(d.date);
       if(!pd) return;
       if(selMonth && pd.monthLabel !== selMonth) return;
-      if(!dayMap[pd.key]) dayMap[pd.key] = {pd, pc_cost:0, pc_db:0, pc_con:0, pc_perf:0};
+      if(!dayMap[pd.key]) dayMap[pd.key] = {pd, pc_cost:0, pc_db:0, pc_con:0, pc_perf:0, pc_con_cum:0, pc_perf_cum:0};
       dayMap[pd.key].pc_cost += (d.cost||0);
     });
     Object.entries(r.daily_sales_map||{}).forEach(([dateStr,sv])=>{
       const pd = parseDailyDate(dateStr);
       if(!pd) return;
       if(selMonth && pd.monthLabel !== selMonth) return;
-      if(!dayMap[pd.key]) dayMap[pd.key] = {pd, pc_cost:0, pc_db:0, pc_con:0, pc_perf:0};
+      if(!dayMap[pd.key]) dayMap[pd.key] = {pd, pc_cost:0, pc_db:0, pc_con:0, pc_perf:0, pc_con_cum:0, pc_perf_cum:0};
       dayMap[pd.key].pc_db   += (sv.db||0);
       dayMap[pd.key].pc_con  += (sv.contracts||0);
       dayMap[pd.key].pc_perf += (sv.performance||0);
+      dayMap[pd.key].pc_con_cum  += (sv.contracts_cum||0);
+      dayMap[pd.key].pc_perf_cum += (sv.performance_cum||0);
     });
   });
   [...Object.keys(CRM_DATA), ...Object.keys(KW_DAILY_COST)].forEach(key=>{
     const pd = parseDailyDate(key);
     if(!pd) return;
     if(selMonth && pd.monthLabel !== selMonth) return;
-    if(!dayMap[key]) dayMap[key] = {pd, pc_cost:0, pc_db:0, pc_con:0, pc_perf:0};
+    if(!dayMap[key]) dayMap[key] = {pd, pc_cost:0, pc_db:0, pc_con:0, pc_perf:0, pc_con_cum:0, pc_perf_cum:0};
   });
 
   const days = Object.values(dayMap).sort((a,b)=>
@@ -3748,8 +3828,9 @@ function renderDaily(){
   const allDays = buildFullMonthDays(selMonth, days);
 
   const COL = 7;
-  function subCols(){ return '<th class="dth">DB수</th><th class="dth">계약수</th><th class="dth">계약율</th><th class="dth">환산료</th><th class="dth">광고비</th><th class="dth">DB단가</th><th class="dth" style="border-right:1px solid var(--border)">ROAS</th>'; }
-  function totalSubCols(){ return '<th class="dth" style="background:#fff8ec">DB수</th><th class="dth" style="background:#fff8ec">계약수</th><th class="dth" style="background:#fff8ec">계약율</th><th class="dth" style="background:#fff8ec">환산료</th><th class="dth" style="background:#fff8ec">광고비</th><th class="dth" style="background:#fff8ec">DB단가</th><th class="dth" style="border-right:1px solid var(--border);background:#fff8ec">ROAS</th>'; }
+  const cumSuffix = _dailyTableCumMode ? ' ·누적' : '';
+  function subCols(){ return `<th class="dth">DB수</th><th class="dth">계약수${cumSuffix}</th><th class="dth">계약율${cumSuffix}</th><th class="dth">환산료${cumSuffix}</th><th class="dth">광고비</th><th class="dth">DB단가</th><th class="dth" style="border-right:1px solid var(--border)">ROAS${cumSuffix}</th>`; }
+  function totalSubCols(){ return `<th class="dth" style="background:#fff8ec">DB수</th><th class="dth" style="background:#fff8ec">계약수${cumSuffix}</th><th class="dth" style="background:#fff8ec">계약율${cumSuffix}</th><th class="dth" style="background:#fff8ec">환산료${cumSuffix}</th><th class="dth" style="background:#fff8ec">광고비</th><th class="dth" style="background:#fff8ec">DB단가</th><th class="dth" style="border-right:1px solid var(--border);background:#fff8ec">ROAS${cumSuffix}</th>`; }
 
   let theadHtml = '<tr style="background:#fafaf8"><th rowspan="2" style="padding:7px 10px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);font-size:11px;font-weight:600;color:var(--muted);text-align:center;min-width:80px;position:sticky;left:0;z-index:4;background:#fafaf8">구분</th>';
   theadHtml += '<th colspan="' + COL + '" style="padding:6px 10px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);font-size:11px;font-weight:600;color:#854F0B;text-align:center;background:#fff8ec">전체합계</th>';
@@ -3782,25 +3863,29 @@ function renderDaily(){
   }
 
   function makeRow(item, isMonthTotal){
+    const cum = _dailyTableCumMode;
     const key = item.type==='day' ? item.pd.key : null;
-    const pc_cost=item.pc_cost||0, pc_db=item.pc_db||0, pc_con=item.pc_con||0, pc_perf=item.pc_perf||0;
+    const pc_cost=item.pc_cost||0, pc_db=item.pc_db||0;
+    const pc_con  = cum ? (item.pc_con_cum||0)  : (item.pc_con||0);
+    const pc_perf = cum ? (item.pc_perf_cum||0) : (item.pc_perf||0);
     const kwC = key?(KW_DAILY_COST[key]||{}):(item.kwCost||{});
     const naverCost=kwC.naver||0, googleCost=kwC.google||0, daumCost=kwC.daum||0;
     const crmDay = isMonthTotal?(item.crmTotals||{}):(key?(CRM_DATA[key]||{}):{});
+    const conKey = cum?'contracts_cum':'contracts', perfKey = cum?'perf_cum':'perf';
     const naverDb  = isMonthTotal?(item.kwDb?.naver||0) :(crmDay['네이버']||{}).db||0;
-    const naverCon = isMonthTotal?(item.kwCon?.naver||0) :(crmDay['네이버']||{}).contracts||0;
-    const naverPerf= isMonthTotal?(item.kwPerf?.naver||0):(crmDay['네이버']||{}).perf||0;
+    const naverCon = isMonthTotal?((cum?item.kwCon_cum?.naver:item.kwCon?.naver)||0) :(crmDay['네이버']||{})[conKey]||0;
+    const naverPerf= isMonthTotal?((cum?item.kwPerf_cum?.naver:item.kwPerf?.naver)||0):(crmDay['네이버']||{})[perfKey]||0;
     const googleDb = isMonthTotal?(item.kwDb?.google||0) :(crmDay['구글']||{}).db||0;
-    const googleCon= isMonthTotal?(item.kwCon?.google||0):(crmDay['구글']||{}).contracts||0;
-    const googlePerf=isMonthTotal?(item.kwPerf?.google||0):(crmDay['구글']||{}).perf||0;
+    const googleCon= isMonthTotal?((cum?item.kwCon_cum?.google:item.kwCon?.google)||0):(crmDay['구글']||{})[conKey]||0;
+    const googlePerf=isMonthTotal?((cum?item.kwPerf_cum?.google:item.kwPerf?.google)||0):(crmDay['구글']||{})[perfKey]||0;
     const daumDb   = isMonthTotal?(item.kwDb?.daum||0)  :(crmDay['다음']||{}).db||0;
-    const daumCon  = isMonthTotal?(item.kwCon?.daum||0) :(crmDay['다음']||{}).contracts||0;
-    const daumPerf = isMonthTotal?(item.kwPerf?.daum||0):(crmDay['다음']||{}).perf||0;
+    const daumCon  = isMonthTotal?((cum?item.kwCon_cum?.daum:item.kwCon?.daum)||0) :(crmDay['다음']||{})[conKey]||0;
+    const daumPerf = isMonthTotal?((cum?item.kwPerf_cum?.daum:item.kwPerf?.daum)||0):(crmDay['다음']||{})[perfKey]||0;
     // 애드온컴퍼니 = 디스플레이 전체 매체 합산 광고비 (일별 리포트에서 자동 집계)
     const dispCost = isMonthTotal ? (item.crmCost?.['애드온컴퍼니']||0) : (key ? (_displayDailyCost?.[key]||0) : 0);
     const totalDb=isMonthTotal?(item.totalDb||0):(pc_db+Object.values(crmDay).reduce((s,c)=>s+(c.db||0),0));
-    const totalCon=isMonthTotal?(item.totalCon||0):(pc_con+Object.values(crmDay).reduce((s,c)=>s+(c.contracts||0),0));
-    const totalPerf=isMonthTotal?(item.totalPerf||0):(pc_perf+Object.values(crmDay).reduce((s,c)=>s+(c.perf||0),0));
+    const totalCon=isMonthTotal?((cum?item.totalCon_cum:item.totalCon)||0):(pc_con+Object.values(crmDay).reduce((s,c)=>s+(c[conKey]||0),0));
+    const totalPerf=isMonthTotal?((cum?item.totalPerf_cum:item.totalPerf)||0):(pc_perf+Object.values(crmDay).reduce((s,c)=>s+(c[perfKey]||0),0));
     const bg = isMonthTotal?'background:#eff4ff;font-weight:700':'';
     const bgSticky = isMonthTotal?'#eff4ff':'var(--surface)';
     const dateColor= isMonthTotal?'color:#ff9b00':
@@ -3810,7 +3895,7 @@ function renderDaily(){
       const c=crmDay[m]||{};
       const cost = _crmMediaCost(m, c, dispCost);
       crmCostSum += cost;
-      crmCells+=makeMediaCells(c.db||0,c.contracts||0,c.perf||0,cost);
+      crmCells+=makeMediaCells(c.db||0,c[conKey]||0,c[perfKey]||0,cost);
     });
     const totalCost=isMonthTotal?(item.totalCost||0):(pc_cost+naverCost+googleCost+daumCost+crmCostSum);
     const pcCells = showPc ? makeMediaCells(pc_db,pc_con,pc_perf,pc_cost) : '';
@@ -3854,7 +3939,7 @@ function buildFullMonthDays(selMonth, days){
     const key=`${y}.${String(m).padStart(2,'0')}.${String(day).padStart(2,'0')}.`;
     const pd={year:y,month:m,day,key,monthLabel:selMonth};
     const found=dataMap[key];
-    monthRows.push(found||{pd,pc_cost:0,pc_db:0,pc_con:0,pc_perf:0});
+    monthRows.push(found||{pd,pc_cost:0,pc_db:0,pc_con:0,pc_perf:0,pc_con_cum:0,pc_perf_cum:0});
   }
   monthRows.forEach(d=>result.push(makeDayRow(d)));
   result.push(makeMonthTotal(selMonth, monthRows)); // 월합계 아래
@@ -3865,25 +3950,30 @@ function makeDayRow(d){
   const pd=d.pd;
   const dateStr=`${pd.year}${String(pd.month).padStart(2,'0')}${String(pd.day).padStart(2,'0')}`;
   return {type:'day',pd,label:dateStr,
-    pc_cost:d.pc_cost||0, pc_db:d.pc_db||0, pc_con:d.pc_con||0, pc_perf:d.pc_perf||0};
+    pc_cost:d.pc_cost||0, pc_db:d.pc_db||0, pc_con:d.pc_con||0, pc_perf:d.pc_perf||0,
+    pc_con_cum:d.pc_con_cum||0, pc_perf_cum:d.pc_perf_cum||0};
 }
 
 function makeMonthTotal(label, rows){
-  let pc_db=0,pc_con=0,pc_perf=0,pc_cost=0;
+  let pc_db=0,pc_con=0,pc_perf=0,pc_cost=0,pc_con_cum=0,pc_perf_cum=0;
   const kwCost = {naver:0,google:0,daum:0};
   const kwDb   = {naver:0,google:0,daum:0};
   const kwCon  = {naver:0,google:0,daum:0};
   const kwPerf = {naver:0,google:0,daum:0};
+  const kwCon_cum  = {naver:0,google:0,daum:0};
+  const kwPerf_cum = {naver:0,google:0,daum:0};
   const crmMedias = CRM_MEDIA_LIST.filter(m=>m!=='파워컨텐츠'&&m!=='네이버'&&m!=='구글'&&m!=='다음');
   const crmTotals = {};
   const crmCost = {};
-  crmMedias.forEach(m=>{ crmTotals[m]={db:0,contracts:0,perf:0}; crmCost[m]=0; });
+  crmMedias.forEach(m=>{ crmTotals[m]={db:0,contracts:0,perf:0,contracts_cum:0,perf_cum:0}; crmCost[m]=0; });
 
   rows.forEach(d=>{
     pc_db   +=(d.pc_db||0);
     pc_con  +=(d.pc_con||0);
     pc_perf +=(d.pc_perf||0);
     pc_cost +=(d.pc_cost||0);
+    pc_con_cum  +=(d.pc_con_cum||0);
+    pc_perf_cum +=(d.pc_perf_cum||0);
     const key = d.pd ? d.pd.key : null;
     if(key && KW_DAILY_COST[key]){
       kwCost.naver  += KW_DAILY_COST[key].naver||0;
@@ -3896,25 +3986,37 @@ function makeMonthTotal(label, rows){
     kwDb.naver   += (crmDay['네이버']||{}).db||0;
     kwCon.naver  += (crmDay['네이버']||{}).contracts||0;
     kwPerf.naver += (crmDay['네이버']||{}).perf||0;
+    kwCon_cum.naver  += (crmDay['네이버']||{}).contracts_cum||0;
+    kwPerf_cum.naver += (crmDay['네이버']||{}).perf_cum||0;
     kwDb.google  += (crmDay['구글']||{}).db||0;
     kwCon.google += (crmDay['구글']||{}).contracts||0;
     kwPerf.google+= (crmDay['구글']||{}).perf||0;
+    kwCon_cum.google  += (crmDay['구글']||{}).contracts_cum||0;
+    kwPerf_cum.google += (crmDay['구글']||{}).perf_cum||0;
     kwDb.daum    += (crmDay['다음']||{}).db||0;
     kwCon.daum   += (crmDay['다음']||{}).contracts||0;
     kwPerf.daum  += (crmDay['다음']||{}).perf||0;
+    kwCon_cum.daum  += (crmDay['다음']||{}).contracts_cum||0;
+    kwPerf_cum.daum += (crmDay['다음']||{}).perf_cum||0;
     crmMedias.forEach(m=>{
       const c=crmDay[m]||{};
       crmTotals[m].db       += (c.db||0);
       crmTotals[m].contracts+= (c.contracts||0);
       crmTotals[m].perf     += (c.perf||0);
+      crmTotals[m].contracts_cum += (c.contracts_cum||0);
+      crmTotals[m].perf_cum      += (c.perf_cum||0);
     });
   });
   const allDb  = pc_db + kwDb.naver + kwDb.google + kwDb.daum + crmMedias.reduce((s,m)=>s+(crmTotals[m]?.db||0),0);
   const allCon = pc_con+ kwCon.naver+ kwCon.google+ kwCon.daum+ crmMedias.reduce((s,m)=>s+(crmTotals[m]?.contracts||0),0);
   const allPerf= pc_perf+kwPerf.naver+kwPerf.google+kwPerf.daum+crmMedias.reduce((s,m)=>s+(crmTotals[m]?.perf||0),0);
+  const allCon_cum = pc_con_cum+ kwCon_cum.naver+ kwCon_cum.google+ kwCon_cum.daum+ crmMedias.reduce((s,m)=>s+(crmTotals[m]?.contracts_cum||0),0);
+  const allPerf_cum= pc_perf_cum+kwPerf_cum.naver+kwPerf_cum.google+kwPerf_cum.daum+crmMedias.reduce((s,m)=>s+(crmTotals[m]?.perf_cum||0),0);
   const crmCostTotal = crmMedias.reduce((s,m)=>s+_crmMediaCost(m, crmTotals[m], crmCost['애드온컴퍼니']||0), 0);
   const allCost= pc_cost+(kwCost.naver||0)+(kwCost.google||0)+(kwCost.daum||0)+crmCostTotal;
-  return {type:'month-total',label,pc_db,pc_con,pc_perf,pc_cost,kwCost,kwDb,kwCon,kwPerf,crmTotals,crmCost,totalDb:allDb,totalCon:allCon,totalPerf:allPerf,totalCost:allCost};
+  return {type:'month-total',label,pc_db,pc_con,pc_perf,pc_cost,pc_con_cum,pc_perf_cum,
+    kwCost,kwDb,kwCon,kwPerf,kwCon_cum,kwPerf_cum,crmTotals,crmCost,
+    totalDb:allDb,totalCon:allCon,totalPerf:allPerf,totalCon_cum:allCon_cum,totalPerf_cum:allPerf_cum,totalCost:allCost};
 }
 
 function buildMonthlySummary(allDays){
@@ -4662,8 +4764,8 @@ function renderDisplayInsight(){
   });
   const codeToGroup = {};
   Object.values(groupMap).forEach(g=>{ g.codes.forEach(c=>{ codeToGroup[c]=g; }); });
-  const dbAgg = {}; // key -> {db,contracts,perf}
-  Object.keys(groupMap).forEach(k=>{ dbAgg[k] = {db:0, contracts:0, perf:0}; });
+  const dbAgg = {}; // key -> {db,contracts,perf,contracts_cum,perf_cum}
+  Object.keys(groupMap).forEach(k=>{ dbAgg[k] = {db:0, contracts:0, perf:0, contracts_cum:0, perf_cum:0}; });
   (_displayCrmRaw||[]).forEach(r=>{
     const code = (r['인타입']||'').trim();
     if(!code) return;
@@ -4673,6 +4775,8 @@ function renderDisplayInsight(){
     dbAgg[key].db++;
     dbAgg[key].contracts += Math.round(_cN(r['계약수']));
     dbAgg[key].perf += _cN(r['평가업적']);
+    dbAgg[key].contracts_cum += Math.round(_cN(r['계약수(누적)']));
+    dbAgg[key].perf_cum += _cN(r['평가업적(누적)']);
   });
   const tableRows = Object.entries(groupMap).map(([key,g])=>{
     const d = dbAgg[key];
@@ -4680,7 +4784,8 @@ function renderDisplayInsight(){
     const dbcvr = g.clk>0 ? Math.round(d.db/g.clk*1000)/10 : null;
     const cpd = d.db>0 ? Math.round(g.cost/d.db) : null;
     const roas = (d.perf>0 && g.cost>0) ? Math.round(g.cost/d.perf*100) : null;
-    return {...g, db:d.db, contracts:d.contracts, perf:d.perf, ctr, dbcvr, cpd, roas};
+    const roas_cum = (d.perf_cum>0 && g.cost>0) ? Math.round(g.cost/d.perf_cum*100) : null;
+    return {...g, db:d.db, contracts:d.contracts, perf:d.perf, contracts_cum:d.contracts_cum, perf_cum:d.perf_cum, ctr, dbcvr, cpd, roas, roas_cum};
   });
   _displayInsightRows = tableRows;
 
@@ -4700,6 +4805,10 @@ function renderDisplayInsight(){
     <div class="table-card">
       <div class="table-header">
         <h2>광고 매체별 성과 <span style="font-size:11px;font-weight:400;color:var(--faint)">(전체 기간)</span></h2>
+        <div class="tab-bar" id="display-insight-cum-toggle">
+          <button class="tab-btn active" onclick="setDisplayInsightCumMode(false,this)">당월</button>
+          <button class="tab-btn" onclick="setDisplayInsightCumMode(true,this)">누적</button>
+        </div>
       </div>
       <div class="table-wrap">
         <table style="width:100%;border-collapse:collapse">
@@ -4730,6 +4839,23 @@ const DISPLAY_INSIGHT_COLS = [
 let _displayInsightRows = [];
 let _displayInsightSortCol = 'cost';
 let _displayInsightSortAsc = false;
+const DISPLAY_INSIGHT_CUM_COLS = ['contracts','perf','roas'];
+let _displayInsightCumMode = false;
+
+function setDisplayInsightCumMode(cum, btn){
+  _displayInsightCumMode = cum;
+  document.querySelectorAll('#display-insight-cum-toggle .tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  _renderDisplayInsightTable();
+}
+
+function _displayInsightCumVal(r, key){
+  if(!_displayInsightCumMode) return r[key];
+  if(key==='contracts') return r.contracts_cum ?? r.contracts ?? 0;
+  if(key==='perf') return r.perf_cum ?? r.perf ?? 0;
+  if(key==='roas') return r.roas_cum ?? null;
+  return r[key];
+}
 
 function sortDisplayInsightTable(col){
   if(_displayInsightSortCol===col) _displayInsightSortAsc=!_displayInsightSortAsc;
@@ -4740,7 +4866,8 @@ function sortDisplayInsightTable(col){
 function _renderDisplayInsightTable(){
   const col = _displayInsightSortCol, asc = _displayInsightSortAsc;
   const sorted = [..._displayInsightRows].sort((a,b)=>{
-    let av=a[col], bv=b[col];
+    let av=DISPLAY_INSIGHT_CUM_COLS.includes(col)?_displayInsightCumVal(a,col):a[col];
+    let bv=DISPLAY_INSIGHT_CUM_COLS.includes(col)?_displayInsightCumVal(b,col):b[col];
     if(av===null) av = asc?Infinity:-Infinity;
     if(bv===null) bv = asc?Infinity:-Infinity;
     if(typeof av==='string') return asc?av.localeCompare(bv):bv.localeCompare(av);
@@ -4749,13 +4876,14 @@ function _renderDisplayInsightTable(){
 
   document.getElementById('display-insight-thead').innerHTML = '<tr>'+DISPLAY_INSIGHT_COLS.map(c=>{
     const arrow = c.key===col ? (asc?' ↑':' ↓') : '';
-    return `<th class="${c.num?'num':''}" style="cursor:pointer" onclick="sortDisplayInsightTable('${c.key}')">${c.label}${arrow}</th>`;
+    const label = (_displayInsightCumMode && DISPLAY_INSIGHT_CUM_COLS.includes(c.key)) ? c.label+' ·누적' : c.label;
+    return `<th class="${c.num?'num':''}" style="cursor:pointer" onclick="sortDisplayInsightTable('${c.key}')">${label}${arrow}</th>`;
   }).join('')+'</tr>';
 
   document.getElementById('display-insight-tbody').innerHTML = sorted.map(r=>`<tr>
     ${DISPLAY_INSIGHT_COLS.map(c=>{
-      if(c.special==='roas') return `<td class="num">${roasBadge(r.roas)}</td>`;
-      const v = r[c.key];
+      if(c.special==='roas') return `<td class="num">${roasBadge(_displayInsightCumVal(r,'roas'))}</td>`;
+      const v = DISPLAY_INSIGHT_CUM_COLS.includes(c.key) ? _displayInsightCumVal(r,c.key) : r[c.key];
       return c.key==='media'||c.key==='area' ? `<td>${escHtml(v)}</td>` : `<td class="num">${c.fmt(v)}</td>`;
     }).join('')}
   </tr>`).join('') || `<tr><td colspan="${DISPLAY_INSIGHT_COLS.length}" style="padding:1rem;color:var(--faint)">데이터 없음</td></tr>`;
@@ -4984,23 +5112,26 @@ function renderDisplayTab(){
   const hasIntypeRef = !!(_displayIntypeRef && _displayIntypeRef.length);
   const crmRows = _displayCrmRaw || [];
   function matchDb(codes){
-    let db=0, contracts=0, perf=0;
+    let db=0, contracts=0, perf=0, contracts_cum=0, perf_cum=0;
     if(codes && codes.size){
       crmRows.forEach(r=>{
         if(!codes.has((r['인타입']||'').trim())) return;
         // 월 필터가 걸려있으면 그 코드가 다른 달에도 쓰인 경우까지 잡히지 않도록 상담일도 같이 맞춘다
         if(monSel && !_normDS(r['상담등록일']||'').startsWith(monSel)) return;
         db++; contracts+=Math.round(_cN(r['계약수'])); perf+=_cN(r['평가업적']);
+        contracts_cum+=Math.round(_cN(r['계약수(누적)'])); perf_cum+=_cN(r['평가업적(누적)']);
       });
     }
-    return {db, contracts, perf};
+    return {db, contracts, perf, contracts_cum, perf_cum};
   }
-  function calcMetrics(cost, clk, db, perf, contracts){
+  function calcMetrics(cost, clk, db, perf, contracts, perf_cum, contracts_cum){
     const roas = (db>0 && perf>0 && cost>0) ? Math.round(cost/perf*100) : null;
     const cpd  = (db>0 && cost>0) ? Math.round(cost/db) : null;
     const dbcvr = (clk>0 && db>0) ? Math.round(db/clk*1000)/10 : null;
     const cvr = (db>0 && contracts>0) ? Math.round(contracts/db*1000)/10 : null;
-    return {roas, cpd, dbcvr, cvr};
+    const roas_cum = (db>0 && perf_cum>0 && cost>0) ? Math.round(cost/perf_cum*100) : null;
+    const cvr_cum = (db>0 && contracts_cum>0) ? Math.round(contracts_cum/db*1000)/10 : null;
+    return {roas, cpd, dbcvr, cvr, roas_cum, cvr_cum};
   }
 
   // DB에는 들어왔지만 광고비 시트에는 없는(과거) 인타입 코드 처리:
@@ -5043,9 +5174,9 @@ function renderDisplayTab(){
       codes = new Set(_displayIntypeCodes(_displayMedia, a.area));
       hasIntype = codes.size>0;
     }
-    const {db, contracts, perf} = matchDb(codes);
+    const {db, contracts, perf, contracts_cum, perf_cum} = matchDb(codes);
     const ctr = a.imp>0 ? Math.round(a.clk/a.imp*10000)/100 : null;
-    const {roas, cpd, dbcvr, cvr} = calcMetrics(a.cost, a.clk, db, perf, contracts);
+    const {roas, cpd, dbcvr, cvr, roas_cum, cvr_cum} = calcMetrics(a.cost, a.clk, db, perf, contracts, perf_cum, contracts_cum);
 
     // 같은 인타입 코드가 소재명별로 여러 번 찍힌 경우(예: 원래 "소재 B"로 광고비가 나갔는데,
     // 그 코드로 들어온 DB 중 일부가 "미확인"이라는 0원짜리 placeholder 행으로도 남은 경우) —
@@ -5072,16 +5203,17 @@ function renderDisplayTab(){
     // 소재별 — 행 단위 인타입이 있는 소재만 DB 매칭 (없으면 광고 지표만)
     const kws = Object.values(a.kws).map(k=>{
       const kHasIntype = k.codes.size>0;
-      const {db:kdb, contracts:kcon, perf:kperf} = matchDb(k.codes);
-      const {roas:kroas, cpd:kcpd, dbcvr:kdbcvr, cvr:kcvr} = calcMetrics(k.cost, k.clk, kdb, kperf, kcon);
-      return {...k, hasIntype:kHasIntype, db:kdb, contracts:kcon, perf:kperf, roas:kroas, cpd:kcpd, dbcvr:kdbcvr, cvr:kcvr};
+      const {db:kdb, contracts:kcon, perf:kperf, contracts_cum:kcon_cum, perf_cum:kperf_cum} = matchDb(k.codes);
+      const {roas:kroas, cpd:kcpd, dbcvr:kdbcvr, cvr:kcvr, roas_cum:kroas_cum, cvr_cum:kcvr_cum} = calcMetrics(k.cost, k.clk, kdb, kperf, kcon, kperf_cum, kcon_cum);
+      return {...k, hasIntype:kHasIntype, db:kdb, contracts:kcon, perf:kperf, contracts_cum:kcon_cum, perf_cum:kperf_cum,
+        roas:kroas, cpd:kcpd, dbcvr:kdbcvr, cvr:kcvr, roas_cum:kroas_cum, cvr_cum:kcvr_cum};
     });
 
     // 화면에 보여줄 인타입 코드는 선택된 월(monSel)에 실제로 쓰인 것만 (DB/계약 매칭 자체는 전체 기간 codes 기준 그대로 유지)
     // 단, 광고비 데이터가 아예 없어 참조표 전체 코드로 대체 매칭된 영역은 그 대체 코드를 그대로 보여준다
     const displayCodes = (a.codes.size===0 && hasIntype) ? codes : a.monthCodes;
 
-    return {...a, ctr, db, contracts, perf, roas, cpd, dbcvr, cvr, hasIntype, kws, codes, displayCodes};
+    return {...a, ctr, db, contracts, perf, contracts_cum, perf_cum, roas, cpd, dbcvr, cvr, roas_cum, cvr_cum, hasIntype, kws, codes, displayCodes};
   }).sort((a,b)=>b.cost-a.cost);
 
   const hasIntype = areaList.some(a=>a.hasIntype);
@@ -5116,12 +5248,24 @@ function renderDisplaySummary(areaList, hasIntype){
   ].join('');
 }
 
+let _displayLastAreaList = null;
+let _displayAreaCumMode = false;
+function setDisplayAreaCumMode(cum, btn){
+  _displayAreaCumMode = cum;
+  document.querySelectorAll('#display-area-cum-toggle .tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  if(_displayLastAreaList) renderDisplayAreaTable(_displayLastAreaList);
+}
+
 function renderDisplayAreaTable(areaList){
+  _displayLastAreaList = areaList;
+  const cum = _displayAreaCumMode;
+  const s = cum ? ' ·누적' : '';
   document.getElementById('display-thead').innerHTML = `<tr>
     <th></th><th>영역</th><th>인타입</th><th class="num">광고비</th><th class="num">노출수</th><th class="num">발송수</th>
     <th class="num">클릭수</th><th class="num">CTR</th><th class="num">DB전환율</th>
-    <th class="num">DB수</th><th class="num">DB단가</th><th class="num">계약수</th><th class="num">계약률</th>
-    <th class="num">평가업적</th><th class="num">ROAS</th>
+    <th class="num">DB수</th><th class="num">DB단가</th><th class="num">계약수${s}</th><th class="num">계약률${s}</th>
+    <th class="num">평가업적${s}</th><th class="num">ROAS${s}</th>
   </tr>`;
   if(!areaList.length){
     document.getElementById('display-tbody').innerHTML = '<tr><td colspan="15" style="padding:1rem;color:var(--faint)">데이터 없음</td></tr>';
@@ -5140,14 +5284,18 @@ function renderDisplayAreaTable(areaList){
       return kx!==ky ? kx-ky : x.kw.localeCompare(y.kw,'ko');
     }).map(k=>{
       const kctr = k.imp>0 ? Math.round(k.clk/k.imp*10000)/100 : null;
+      const kContracts = cum ? (k.contracts_cum||0) : k.contracts;
+      const kCvr = cum ? k.cvr_cum : k.cvr;
+      const kPerf = cum ? (k.perf_cum||0) : k.perf;
+      const kRoas = cum ? k.roas_cum : k.roas;
       const dbCells = k.hasIntype
         ? `<td class="num">${k.dbcvr!==null?k.dbcvr.toLocaleString()+'%':'-'}</td>
         <td class="num">${k.db.toLocaleString()}</td>
         <td class="num">${k.cpd!==null?k.cpd.toLocaleString()+'원':'-'}</td>
-        <td class="num">${k.contracts.toLocaleString()}</td>
-        <td class="num">${k.cvr!==null?k.cvr.toLocaleString()+'%':'-'}</td>
-        <td class="num">${k.perf>0?Math.round(k.perf).toLocaleString()+'원':'-'}</td>
-        <td class="num">${roasBadge(k.roas)}</td>`
+        <td class="num">${kContracts.toLocaleString()}</td>
+        <td class="num">${kCvr!==null?kCvr.toLocaleString()+'%':'-'}</td>
+        <td class="num">${kPerf>0?Math.round(kPerf).toLocaleString()+'원':'-'}</td>
+        <td class="num">${roasBadge(kRoas)}</td>`
         : `<td class="num" colspan="7" style="color:var(--faint);font-size:11px;text-align:left;padding-left:1rem">DB/계약 데이터는 영역 기준으로만 집계됩니다</td>`;
       const kCodesTxt = [...k.monthCodes].join(', ');
       const lookupIdx = window.__creativeLookup.length;
@@ -5165,6 +5313,10 @@ function renderDisplayAreaTable(areaList){
       </tr>`;
     }).join('');
     const aCodesTxt = [...a.displayCodes].join(', ');
+    const aContracts = cum ? (a.contracts_cum||0) : a.contracts;
+    const aCvr = cum ? a.cvr_cum : a.cvr;
+    const aPerf = cum ? (a.perf_cum||0) : a.perf;
+    const aRoas = cum ? a.roas_cum : a.roas;
     return `<tr style="cursor:pointer" onclick="toggleDailyKwDetail('${rowCls}',this)">
       <td class="dk-caret" style="color:var(--faint);text-align:center">▸</td>
       <td>${escHtml(a.area)}</td>
@@ -5177,10 +5329,10 @@ function renderDisplayAreaTable(areaList){
       <td class="num">${a.dbcvr!==null?a.dbcvr.toLocaleString()+'%':'-'}</td>
       <td class="num">${a.hasIntype?a.db.toLocaleString():'-'}</td>
       <td class="num">${a.cpd!==null?a.cpd.toLocaleString()+'원':'-'}</td>
-      <td class="num">${a.hasIntype?a.contracts.toLocaleString():'-'}</td>
-      <td class="num">${a.cvr!==null?a.cvr.toLocaleString()+'%':'-'}</td>
-      <td class="num">${a.perf>0?Math.round(a.perf).toLocaleString()+'원':'-'}</td>
-      <td class="num">${roasBadge(a.roas)}</td>
+      <td class="num">${a.hasIntype?aContracts.toLocaleString():'-'}</td>
+      <td class="num">${aCvr!==null?aCvr.toLocaleString()+'%':'-'}</td>
+      <td class="num">${aPerf>0?Math.round(aPerf).toLocaleString()+'원':'-'}</td>
+      <td class="num">${roasBadge(aRoas)}</td>
     </tr>${kwRows}`;
   }).join('');
 }
