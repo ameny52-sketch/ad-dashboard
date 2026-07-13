@@ -2800,14 +2800,16 @@ function _buildDataDailySeries(rows){
   rows.forEach(r=>{
     (r.daily_raw||[]).forEach(d=>{
       if(!d.date) return;
-      if(!byDate[d.date]) byDate[d.date] = {cost:0, imp:0, clk:0, db:0};
-      byDate[d.date].cost += d.cost||0;
-      byDate[d.date].imp  += d.impressions||0;
-      byDate[d.date].clk  += d.clicks||0;
+      const k = _normDS(d.date);
+      if(!byDate[k]) byDate[k] = {cost:0, imp:0, clk:0, db:0};
+      byDate[k].cost += d.cost||0;
+      byDate[k].imp  += d.impressions||0;
+      byDate[k].clk  += d.clicks||0;
     });
     Object.entries(r.daily_sales_map||{}).forEach(([dt,v])=>{
-      if(!byDate[dt]) byDate[dt] = {cost:0, imp:0, clk:0, db:0};
-      byDate[dt].db += v.db||0;
+      const k = _normDS(dt);
+      if(!byDate[k]) byDate[k] = {cost:0, imp:0, clk:0, db:0};
+      byDate[k].db += v.db||0;
     });
   });
   const known = Object.keys(byDate).sort();
@@ -2896,10 +2898,16 @@ function switchDataChartMetric(metric, btn){
 // 차트에서 날짜 클릭 시, 그 날짜의 광고그룹별 데이터(광고비/노출/클릭/DB/DB단가/ROAS)를 팝업으로 표시
 function showDailyGroupBreakdown(date, rows){
   const list = (rows||_dataChartLastRows||[]).map(r=>{
-    const d  = (r.daily_raw||[]).find(x=>x.date===date);
-    const sv = (r.daily_sales_map||{})[date];
-    const cost = d?.cost||0, clicks = d?.clicks||0, imp = d?.impressions||0;
-    const db = sv?.db||0, perf = sv?.performance||0;
+    let cost=0, clicks=0, imp=0;
+    (r.daily_raw||[]).forEach(x=>{
+      if(_normDS(x.date)!==date) return;
+      cost += x.cost||0; clicks += x.clicks||0; imp += x.impressions||0;
+    });
+    let db=0, perf=0;
+    Object.entries(r.daily_sales_map||{}).forEach(([dt,v])=>{
+      if(_normDS(dt)!==date) return;
+      db += v.db||0; perf += v.performance||0;
+    });
     const ctr = imp>0 ? Math.round(clicks/imp*10000)/100 : null;
     const cpd = db>0 ? Math.round(cost/db) : null;
     const roas = (perf>0 && cost>0) ? Math.round(cost/perf*100) : null;
@@ -3717,7 +3725,11 @@ function renderDaily(){
   theadHtml += '</tr><tr style="background:#fafaf8">' + totalSubCols() + (showPc?subCols():'');
   allMedias.forEach(()=>{ theadHtml += subCols(); });
   theadHtml += '</tr>';
-  document.getElementById('daily-thead').innerHTML = theadHtml;
+  const theadEl = document.getElementById('daily-thead');
+  theadEl.innerHTML = theadHtml;
+  // 헤더가 2줄이라 둘째 줄(구분별 소계 컬럼)은 첫째 줄(매체명) 높이만큼 top을 내려줘야 스크롤 시 겹치지 않고 둘 다 고정된다
+  const firstRowH = theadEl.rows[0] ? theadEl.rows[0].getBoundingClientRect().height : 0;
+  if(theadEl.rows[1]) [...theadEl.rows[1].cells].forEach(c=>{ c.style.top = firstRowH + 'px'; });
 
   function makeMediaCells(db, con, perf, cost){
     const cvr  = db>0?(con/db*100).toFixed(1)+'%':'';
@@ -4633,7 +4645,8 @@ function renderDisplayInsight(){
     const cpd = d.db>0 ? Math.round(g.cost/d.db) : null;
     const roas = (d.perf>0 && g.cost>0) ? Math.round(g.cost/d.perf*100) : null;
     return {...g, db:d.db, contracts:d.contracts, perf:d.perf, ctr, dbcvr, cpd, roas};
-  }).sort((a,b)=>b.cost-a.cost);
+  });
+  _displayInsightRows = tableRows;
 
   body.innerHTML = `
     <div style="background:linear-gradient(135deg,#2e2e2e 0%,#4a4a4a 100%);border-radius:12px;padding:1.5rem 2rem;margin-bottom:1.25rem">
@@ -4654,32 +4667,62 @@ function renderDisplayInsight(){
       </div>
       <div class="table-wrap">
         <table style="width:100%;border-collapse:collapse">
-          <thead><tr>
-            <th>매체</th><th>영역</th><th class="num">광고비</th><th class="num">노출수</th><th class="num">발송수</th><th class="num">클릭수</th>
-            <th class="num">CTR</th><th class="num">DB전환율</th><th class="num">DB수</th><th class="num">DB단가</th>
-            <th class="num">계약수</th><th class="num">평가업적</th><th class="num">ROAS</th>
-          </tr></thead>
-          <tbody>
-            ${tableRows.map(r=>`<tr>
-              <td>${escHtml(r.media)}</td>
-              <td>${escHtml(r.area)}</td>
-              <td class="num">${r.cost.toLocaleString()}</td>
-              <td class="num">${r.imp.toLocaleString()}</td>
-              <td class="num">${r.snd.toLocaleString()}</td>
-              <td class="num">${r.clk.toLocaleString()}</td>
-              <td class="num">${r.ctr!==null?r.ctr+'%':'-'}</td>
-              <td class="num">${r.dbcvr!==null?r.dbcvr+'%':'-'}</td>
-              <td class="num">${r.db.toLocaleString()}</td>
-              <td class="num">${r.cpd!==null?r.cpd.toLocaleString()+'원':'-'}</td>
-              <td class="num">${r.contracts.toLocaleString()}</td>
-              <td class="num">${r.perf>0?Math.round(r.perf).toLocaleString()+'원':'-'}</td>
-              <td class="num">${roasBadge(r.roas)}</td>
-            </tr>`).join('') || '<tr><td colspan="13" style="padding:1rem;color:var(--faint)">데이터 없음</td></tr>'}
-          </tbody>
+          <thead id="display-insight-thead"></thead>
+          <tbody id="display-insight-tbody"></tbody>
         </table>
       </div>
     </div>
   `;
+  _renderDisplayInsightTable();
+}
+
+const DISPLAY_INSIGHT_COLS = [
+  {key:'media', label:'매체'},
+  {key:'area', label:'영역'},
+  {key:'cost', label:'광고비', num:true, fmt:v=>v.toLocaleString()},
+  {key:'imp', label:'노출수', num:true, fmt:v=>v.toLocaleString()},
+  {key:'snd', label:'발송수', num:true, fmt:v=>v.toLocaleString()},
+  {key:'clk', label:'클릭수', num:true, fmt:v=>v.toLocaleString()},
+  {key:'ctr', label:'CTR', num:true, fmt:v=>v!==null?v+'%':'-'},
+  {key:'dbcvr', label:'DB전환율', num:true, fmt:v=>v!==null?v+'%':'-'},
+  {key:'db', label:'DB수', num:true, fmt:v=>v.toLocaleString()},
+  {key:'cpd', label:'DB단가', num:true, fmt:v=>v!==null?v.toLocaleString()+'원':'-'},
+  {key:'contracts', label:'계약수', num:true, fmt:v=>v.toLocaleString()},
+  {key:'perf', label:'평가업적', num:true, fmt:v=>v>0?Math.round(v).toLocaleString()+'원':'-'},
+  {key:'roas', label:'ROAS', num:true, special:'roas'},
+];
+let _displayInsightRows = [];
+let _displayInsightSortCol = 'cost';
+let _displayInsightSortAsc = false;
+
+function sortDisplayInsightTable(col){
+  if(_displayInsightSortCol===col) _displayInsightSortAsc=!_displayInsightSortAsc;
+  else{ _displayInsightSortCol=col; _displayInsightSortAsc=false; }
+  _renderDisplayInsightTable();
+}
+
+function _renderDisplayInsightTable(){
+  const col = _displayInsightSortCol, asc = _displayInsightSortAsc;
+  const sorted = [..._displayInsightRows].sort((a,b)=>{
+    let av=a[col], bv=b[col];
+    if(av===null) av = asc?Infinity:-Infinity;
+    if(bv===null) bv = asc?Infinity:-Infinity;
+    if(typeof av==='string') return asc?av.localeCompare(bv):bv.localeCompare(av);
+    return asc?av-bv:bv-av;
+  });
+
+  document.getElementById('display-insight-thead').innerHTML = '<tr>'+DISPLAY_INSIGHT_COLS.map(c=>{
+    const arrow = c.key===col ? (asc?' ↑':' ↓') : '';
+    return `<th class="${c.num?'num':''}" style="cursor:pointer" onclick="sortDisplayInsightTable('${c.key}')">${c.label}${arrow}</th>`;
+  }).join('')+'</tr>';
+
+  document.getElementById('display-insight-tbody').innerHTML = sorted.map(r=>`<tr>
+    ${DISPLAY_INSIGHT_COLS.map(c=>{
+      if(c.special==='roas') return `<td class="num">${roasBadge(r.roas)}</td>`;
+      const v = r[c.key];
+      return c.key==='media'||c.key==='area' ? `<td>${escHtml(v)}</td>` : `<td class="num">${c.fmt(v)}</td>`;
+    }).join('')}
+  </tr>`).join('') || `<tr><td colspan="${DISPLAY_INSIGHT_COLS.length}" style="padding:1rem;color:var(--faint)">데이터 없음</td></tr>`;
 }
 
 // 영역별 추이 데이터 준비: 특정 월 선택 시 일별, 전체 월 선택 시 월별로 집계
