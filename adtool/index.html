@@ -260,7 +260,6 @@ tbody tr:hover td{background:#eef6ff}
 .cpc-dtab{border-color:var(--border-strong)}
 button.run,.dl{box-shadow:none}
 .status{margin-left:auto}
-#daily-month-summary{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 #daily-table-card{overflow:visible !important}
 #daily-table-card>div[style*="overflow-x"]{overflow-x:auto;overflow-y:visible}
 #daily-table th:first-child,#daily-table td:first-child{position:sticky;left:0;z-index:2;background:#f8fafc}
@@ -561,7 +560,7 @@ button.run,.dl{box-shadow:none}
         <div class="table-header">
           <h2>영역별 성과 <span style="font-size:11px;font-weight:400;color:var(--faint)">(행 클릭 → 소재별 상세)</span></h2>
         </div>
-        <div style="padding:.75rem 1.25rem 0;border-bottom:0px">
+        <div style="padding:.75rem 1.25rem">
           <div class="tab-bar" id="display-area-cum-toggle" style="margin-bottom:0">
             <button class="tab-btn active" onclick="setDisplayAreaCumMode(false,this)">당월</button>
             <button class="tab-btn" onclick="setDisplayAreaCumMode(true,this)">누적</button>
@@ -874,14 +873,13 @@ button.run,.dl{box-shadow:none}
 <!-- ===== Daily DB 현황 패널 ===== -->
 <div class="tab-panel" id="panel-daily">
   <div class="table-card" id="daily-table-card" style="overflow:visible">
-    <!-- 카드 헤더: 월요약(왼쪽) + 월선택·CSV(오른쪽) -->
+    <!-- 카드 헤더: 당월/누적(왼쪽) + 월선택·CSV(오른쪽) -->
     <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px">
-      <div id="daily-month-summary"></div>
+      <div class="tab-bar" id="daily-table-cum-toggle" style="margin-bottom:0">
+        <button class="tab-btn active" onclick="setDailyTableCumMode(false,this)">당월</button>
+        <button class="tab-btn" onclick="setDailyTableCumMode(true,this)">누적</button>
+      </div>
       <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
-        <div class="tab-bar" id="daily-table-cum-toggle">
-          <button class="tab-btn active" onclick="setDailyTableCumMode(false,this)">당월</button>
-          <button class="tab-btn" onclick="setDailyTableCumMode(true,this)">누적</button>
-        </div>
         <select id="daily-month-sel" onchange="renderDaily()" style="border:1px solid var(--border-strong);border-radius:var(--rs);padding:5px 10px;font-size:12px;font-family:inherit;color:var(--text);background:var(--surface);outline:none">
           <option value="">전체 월</option>
         </select>
@@ -3705,7 +3703,6 @@ function _initDailyTabCore(){
   if(!Object.keys(CRM_DATA).length && !resultData.length){
     document.getElementById('daily-no-data').style.display='block';
     document.getElementById('daily-table-card').style.display='none';
-    document.getElementById('daily-month-summary').innerHTML='';
     return;
   }
   document.getElementById('daily-no-data').style.display='none';
@@ -3906,7 +3903,6 @@ function renderDaily(){
   }
 
   document.getElementById('daily-tbody').innerHTML = allDays.map(item=>makeRow(item, item.type==='month-total')).join('');
-  buildMonthlySummary(allDays);
 }
 
 function buildFullMonthDays(selMonth, days){
@@ -4019,20 +4015,6 @@ function makeMonthTotal(label, rows){
   return {type:'month-total',label,pc_db,pc_con,pc_perf,pc_cost,pc_con_cum,pc_perf_cum,
     kwCost,kwDb,kwCon,kwPerf,kwCon_cum,kwPerf_cum,crmTotals,crmCost,
     totalDb:allDb,totalCon:allCon,totalPerf:allPerf,totalCon_cum:allCon_cum,totalPerf_cum:allPerf_cum,totalCost:allCost};
-}
-
-function buildMonthlySummary(allDays){
-  const totals = allDays.filter(r=>r.type==='month-total');
-  document.getElementById('daily-month-summary').innerHTML = totals.map(t=>`
-    <div style="display:inline-flex;gap:16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:.75rem 1.25rem;margin-right:8px;margin-bottom:8px;flex-wrap:wrap">
-      <span style="font-size:12px;font-weight:700;color:var(--accent)">${t.label}</span>
-      <span style="font-size:12px;color:var(--muted)">DB <strong style="color:var(--text)">${fmtN(t.db)}</strong></span>
-      <span style="font-size:12px;color:var(--muted)">계약 <strong style="color:var(--text)">${fmtN(t.contracts)}</strong></span>
-      <span style="font-size:12px;color:var(--muted)">계약율 <strong style="color:var(--text)">${t.cvr!=null?t.cvr.toFixed(1)+'%':'-'}</strong></span>
-      <span style="font-size:12px;color:var(--muted)">광고비 <strong style="color:var(--text)">${fmtN(t.cost)}</strong></span>
-      <span style="font-size:12px;color:var(--muted)">DB단가 <strong style="color:var(--text)">${t.cpd!=null?fmtN(t.cpd):'-'}</strong></span>
-      <span style="font-size:12px;color:var(--muted)">환산비광고비 <strong style="color:${t.roas>1000?'#dc2626':t.roas<=300?'#166534':'var(--text)'}">${t.roas!=null?t.roas.toLocaleString()+'%':'-'}</strong></span>
-    </div>`).join('');
 }
 
 function fmtN(v){ return v!=null?Math.round(v).toLocaleString():'-'; }
@@ -4817,7 +4799,7 @@ function renderDisplayInsight(){
           <option value="">전체 월</option>
         </select>
       </div>
-      <div style="padding:.75rem 1.25rem 0;border-bottom:0px">
+      <div style="padding:.75rem 1.25rem">
         <div class="tab-bar" id="display-insight-cum-toggle" style="margin-bottom:0">
           <button class="tab-btn active" onclick="setDisplayInsightCumMode(false,this)">당월</button>
           <button class="tab-btn" onclick="setDisplayInsightCumMode(true,this)">누적</button>
