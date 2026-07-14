@@ -459,6 +459,10 @@ button.run,.dl{box-shadow:none}
         <h2>광고 키워드별 성과</h2>
       </div>
       <div style="padding:.75rem 1.25rem 0;border-bottom:0px;display:flex;flex-direction:column;gap:8px">
+        <div class="tab-bar" id="kw-table-cum-toggle" style="margin-bottom:0">
+          <button class="tab-btn active" onclick="setKwTableCumMode(false,this)">당월</button>
+          <button class="tab-btn" onclick="setKwTableCumMode(true,this)">누적</button>
+        </div>
         <div class="tab-bar" id="kw-device-tabs" style="margin-bottom:0">
           <button class="tab-btn active" onclick="setKwFilter('device','all',this)">전체</button>
           <button class="tab-btn pc" onclick="setKwFilter('device','PC',this)">PC</button>
@@ -503,10 +507,6 @@ button.run,.dl{box-shadow:none}
           <option value="nodb">DB없음 제외</option>
           <option value="na">광고비만 (DB 0)</option>
         </select>
-        <div class="tab-bar" id="kw-table-cum-toggle">
-          <button class="tab-btn active" onclick="setKwTableCumMode(false,this)">당월</button>
-          <button class="tab-btn" onclick="setKwTableCumMode(true,this)">누적</button>
-        </div>
         <span class="row-count" id="kw-row-count"></span>
       </div>
       <div class="table-wrap">
@@ -526,7 +526,7 @@ button.run,.dl{box-shadow:none}
   <!-- 디스플레이(뉴미디어) 패널 -->
   <div class="tab-panel" id="panel-display">
     <div class="main-tabs" id="display-media-tabs" style="display:flex">
-      <button class="main-tab active" onclick="switchDisplayInsight(this)">성과진단</button>
+      <button class="main-tab active" onclick="switchDisplayInsight(this)">성과 진단</button>
       <button class="main-tab" onclick="switchDisplayMedia('카카오페이',this)">카카오페이</button>
       <button class="main-tab" onclick="switchDisplayMedia('T멤버십',this)">T멤버십</button>
       <button class="main-tab" onclick="switchDisplayMedia('가스락',this)">가스락</button>
@@ -560,7 +560,9 @@ button.run,.dl{box-shadow:none}
       <div class="table-card">
         <div class="table-header">
           <h2>영역별 성과 <span style="font-size:11px;font-weight:400;color:var(--faint)">(행 클릭 → 소재별 상세)</span></h2>
-          <div class="tab-bar" id="display-area-cum-toggle">
+        </div>
+        <div style="padding:.75rem 1.25rem 0;border-bottom:0px">
+          <div class="tab-bar" id="display-area-cum-toggle" style="margin-bottom:0">
             <button class="tab-btn active" onclick="setDisplayAreaCumMode(false,this)">당월</button>
             <button class="tab-btn" onclick="setDisplayAreaCumMode(true,this)">누적</button>
           </div>
@@ -812,15 +814,15 @@ button.run,.dl{box-shadow:none}
       <div class="table-header">
         <h2>광고 그룹별 성과 <span style="font-size:11px;font-weight:400;color:var(--faint)">(행 클릭 → 일별 상세)</span></h2>
         <div class="table-actions">
-          <div class="tab-bar" id="pc-table-cum-toggle" style="margin-right:8px">
-            <button class="tab-btn active" onclick="setPcTableCumMode(false,this)">당월</button>
-            <button class="tab-btn" onclick="setPcTableCumMode(true,this)">누적</button>
-          </div>
           <span style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px;margin-right:4px">⭐ 메인키워드 중요그룹</span>
         </div>
       </div>
       <!-- PC/모바일 탭 -->
       <div style="padding:.75rem 1.25rem 0;border-bottom:0px;display:flex;flex-direction:column;gap:8px">
+        <div class="tab-bar" id="pc-table-cum-toggle" style="margin-bottom:0">
+          <button class="tab-btn active" onclick="setPcTableCumMode(false,this)">당월</button>
+          <button class="tab-btn" onclick="setPcTableCumMode(true,this)">누적</button>
+        </div>
         <div class="tab-bar" id="media-tabs" style="margin-bottom:0">
           <button class="tab-btn active" onclick="setMediaFilter('all',this)">전체</button>
           <button class="tab-btn pc" onclick="setMediaFilter('PC',this)">PC</button>
@@ -4625,7 +4627,7 @@ function initDisplayTab(){
 
 function _isDisplayInsightActive(){
   const activeBtn = document.querySelector('#display-media-tabs .main-tab.active');
-  return !!activeBtn && activeBtn.textContent.trim()==='성과진단';
+  return !!activeBtn && activeBtn.textContent.trim()==='성과 진단';
 }
 
 function switchDisplayMedia(media, btn){
@@ -4747,7 +4749,10 @@ function renderDisplayInsight(){
     return {media, sentence, badges};
   });
 
-  // ── 광고 매체별 성과 표 (전체 기간 · 매체×영역 단위) ──
+  // ── 광고 매체별 성과 표 (매체×영역 단위, 표 우측 월선택으로 기간 지정 가능 · 기본값 전체 기간) ──
+  // 인타입 코드는 월 상관없이 전체 기간 기준으로 모으고(DB는 상담등록일로 월을 판단하므로),
+  // 광고비/노출/클릭 등 광고 지표만 선택된 월에 맞는 행으로 한정한다 (renderDisplayTab과 동일한 방식)
+  const insightMonSel = document.getElementById('display-insight-month-sel')?.value || '';
   const groupMap = {};
   rows.forEach(r=>{
     const media = (r['매체명']||'').trim();
@@ -4755,12 +4760,14 @@ function renderDisplayInsight(){
     const key = `${media}||${area}`;
     if(!groupMap[key]) groupMap[key] = {media, area, cost:0, imp:0, clk:0, snd:0, codes:new Set()};
     const g = groupMap[key];
-    g.cost += _cN(r['비용']);
-    g.imp  += _cN(r['노출수(열람수)']);
-    g.clk  += _cN(r['클릭수']);
-    g.snd  += _cN(r['발송수']);
     const code = (r['인타입']||'').trim();
     if(code) g.codes.add(code);
+    if(!insightMonSel || (r['날짜']||'').startsWith(insightMonSel)){
+      g.cost += _cN(r['비용']);
+      g.imp  += _cN(r['노출수(열람수)']);
+      g.clk  += _cN(r['클릭수']);
+      g.snd  += _cN(r['발송수']);
+    }
   });
   const codeToGroup = {};
   Object.values(groupMap).forEach(g=>{ g.codes.forEach(c=>{ codeToGroup[c]=g; }); });
@@ -4771,6 +4778,7 @@ function renderDisplayInsight(){
     if(!code) return;
     const g = codeToGroup[code];
     if(!g) return;
+    if(insightMonSel && !_normDS(r['상담등록일']||'').startsWith(insightMonSel)) return;
     const key = `${g.media}||${g.area}`;
     dbAgg[key].db++;
     dbAgg[key].contracts += Math.round(_cN(r['계약수']));
@@ -4804,8 +4812,13 @@ function renderDisplayInsight(){
     </div>
     <div class="table-card">
       <div class="table-header">
-        <h2>광고 매체별 성과 <span style="font-size:11px;font-weight:400;color:var(--faint)">(전체 기간)</span></h2>
-        <div class="tab-bar" id="display-insight-cum-toggle">
+        <h2>광고 매체별 성과</h2>
+        <select id="display-insight-month-sel" onchange="renderDisplayInsight()" style="border:1px solid var(--border-strong);border-radius:var(--rs);padding:5px 10px;font-size:12px;font-family:inherit;color:var(--text);background:var(--surface);outline:none">
+          <option value="">전체 월</option>
+        </select>
+      </div>
+      <div style="padding:.75rem 1.25rem 0;border-bottom:0px">
+        <div class="tab-bar" id="display-insight-cum-toggle" style="margin-bottom:0">
           <button class="tab-btn active" onclick="setDisplayInsightCumMode(false,this)">당월</button>
           <button class="tab-btn" onclick="setDisplayInsightCumMode(true,this)">누적</button>
         </div>
@@ -4818,6 +4831,11 @@ function renderDisplayInsight(){
       </div>
     </div>
   `;
+  // 방금 새로 만든 select에 월 옵션을 채우고, 위에서 읽어둔 선택값(insightMonSel)을 그대로 복원한다
+  // (innerHTML로 select 자체가 매번 새로 생성되므로 값이 초기화되는 것을 막기 위함)
+  _fillDisplayInsightMonSel();
+  const insightMonSelEl = document.getElementById('display-insight-month-sel');
+  if(insightMonSelEl) insightMonSelEl.value = insightMonSel;
   _renderDisplayInsightTable();
 }
 
@@ -5060,6 +5078,19 @@ function _fillDisplayMonSel(){
   }).join('');
   if(months.includes(cur)) sel.value = cur;
   else if(months.length) sel.value = months[0]; // 최신 월을 기본값으로 (전체 월 대신)
+}
+
+function _fillDisplayInsightMonSel(){
+  const sel = document.getElementById('display-insight-month-sel');
+  if(!sel) return;
+  const reportMonths = (_displayData||[]).map(r=>(r['날짜']||'').slice(0,7));
+  const crmMonths = (_displayCrmRaw||[]).map(r=>_normDS(r['상담등록일']||'').slice(0,7));
+  const months = [...new Set([...reportMonths, ...crmMonths])].filter(m=>/^\d{4}-\d{2}$/.test(m)).sort().reverse();
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">전체 월</option>' + months.map(m=>{
+    const [y,mo]=m.split('-'); return `<option value="${m}">${y}년 ${parseInt(mo)}월</option>`;
+  }).join('');
+  if(months.includes(cur)) sel.value = cur; // 기본값은 "전체 월" 유지
 }
 
 // {매체,영역} 기준으로 인타입 참조표에서 해당하는 모든 소재의 인타입 코드를 찾는다 (월 무관, 전체 기간)
