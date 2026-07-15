@@ -1395,21 +1395,27 @@ function _apiAnalyze(month,s){
       daily_raw:adRaw[g]||[],daily_sales_map:sITD[it]||{},is_unmapped:false
     });
   }
-  // CRM에 DB는 있는데 어떤 광고그룹의 인타입에도 연결되지 않은 코드 — 미매핑 그룹으로 표에 노출해
-  // (구글시트 매핑 누락/오타 등을 직접 찾아 연결할 수 있게 함)
-  const claimedCodes = new Set(Object.values(INTYPE_MAP));
+  // CRM에 DB는 있는데 이번 달 광고그룹 표에 안 잡힌 인타입 코드 — 그냥 두면 DB가 소리없이 누락된다.
+  // (1) 그룹은 매핑돼 있지만 이번 달 광고비 집행이 없어 adG에 없는 경우 → 그 그룹 이름으로, 광고비 0으로 노출
+  // (2) 아예 어떤 그룹에도 매핑 안 된 코드 → "(미매핑) 코드" 그룹으로 노출 (구글시트에 누락/오타 찾아 넣을 수 있게)
+  const codeToGroup = {};
+  Object.entries(INTYPE_MAP).forEach(([g,it])=>{ if(it) codeToGroup[it]=g; });
   Object.keys(sIT).forEach(it=>{
-    if(claimedCodes.has(it)) return;
+    const owningGroup = codeToGroup[it];
+    if(owningGroup && adG[owningGroup]) return; // 이미 광고비 데이터와 함께 위에서 처리됨
     const sv = sIT[it];
+    const group = owningGroup || `(미매핑) ${it}`;
+    const camp = owningGroup ? (GROUP_TO_CAMP[owningGroup]||'') : '';
+    const meta = owningGroup ? (CAMP_META[camp]||{cat:'기타',media:owningGroup.endsWith('_PC')?'PC':'모바일'}) : {cat:'기타',media:'모바일'};
     res.push({
-      group:`(미매핑) ${it}`,intype:it,cost:0,clicks:0,impressions:0,
+      group,intype:it,cost:0,clicks:0,impressions:0,
       db:sv.db,contracts:sv.contracts,performance:Math.round(sv.performance),
       contracts_cum:sv.contracts_cum||0,performance_cum:Math.round(sv.performance_cum||0),
       roas:null,cpc:null,cpd:null,
       cvr:sv.db>0?Math.round(sv.contracts/sv.db*1000)/10:null,
       dbcvr:null,avg_rank:null,rank_sum:0,rank_imp_sum:0,
-      camp:'',cat:'기타',media:'모바일',
-      daily_raw:[],daily_sales_map:sITD[it]||{},is_unmapped:true
+      camp,cat:meta.cat,media:meta.media,
+      daily_raw:[],daily_sales_map:sITD[it]||{},is_unmapped:!owningGroup
     });
   });
   res.sort((a,b)=>(a.db===0?1:-1)-(b.db===0?1:-1)||b.db-a.db);
