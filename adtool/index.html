@@ -4800,9 +4800,16 @@ function renderDisplayInsight(){
   }
   function chg(c,p){ return p>0 ? Math.round((c-p)/p*1000)/10 : null; }
 
-  // 파워컨텐츠/키워드 성과 진단과 동일한 형식: 한 줄 요약 문장 + 클릭 가능한 뱃지(이전값 → 현재값)
-  const blocks = mediaList.map(media=>{
-    const y = agg[media].yesterday, t = agg[media].today;
+  // 파워컨텐츠/키워드 성과 진단과 동일한 형식: 매체별이 아닌 전체 매체 합산 한 줄 요약
+  // (매체마다 "오늘"의 실제 날짜는 다를 수 있으나, 매체별 최신 데이터를 그대로 합산한다)
+  const totalY = {cost:0,imp:0,clk:0,db:0}, totalT = {cost:0,imp:0,clk:0,db:0};
+  mediaList.forEach(m=>{
+    const y = agg[m].yesterday, t = agg[m].today;
+    totalY.cost+=y.cost; totalY.imp+=y.imp; totalY.clk+=y.clk; totalY.db+=y.db;
+    totalT.cost+=t.cost; totalT.imp+=t.imp; totalT.clk+=t.clk; totalT.db+=t.db;
+  });
+  const blocks = (()=>{
+    const y = totalY, t = totalT;
     const yc = calc(y), tc = calc(t);
     const costChg = chg(t.cost, y.cost);
     const dbChg   = chg(t.db, y.db);
@@ -4826,8 +4833,8 @@ function renderDisplayInsight(){
     if(yc.ctr!=null || tc.ctr!=null) badges.push(`CTR ${(yc.ctr||0).toFixed(2)}% → ${(tc.ctr||0).toFixed(2)}%`);
     if(yc.dbcvr!=null || tc.dbcvr!=null) badges.push(`DB전환율 ${(yc.dbcvr||0).toFixed(1)}% → ${(tc.dbcvr||0).toFixed(1)}%`);
 
-    return {media, sentence, badges};
-  });
+    return [{sentence, badges}];
+  })();
 
   // ── 광고 매체별 성과 표 (매체×영역 단위, 표 우측 월선택으로 기간 지정 가능 · 기본값 전체 기간) ──
   // 인타입 코드는 월 상관없이 전체 기간 기준으로 모으고(DB는 상담등록일로 월을 판단하므로),
@@ -4879,15 +4886,58 @@ function renderDisplayInsight(){
 
   body.innerHTML = `
     <div style="background:linear-gradient(135deg,#2e2e2e 0%,#4a4a4a 100%);border-radius:12px;padding:1.5rem 2rem;margin-bottom:1.25rem">
-      <div style="font-size:11px;color:rgba(255,255,255,.6);margin-bottom:14px;letter-spacing:.03em">📋 오늘의 요약 · 매체별 최신 이틀 비교</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.6);margin-bottom:14px;letter-spacing:.03em">📋 오늘의 요약 · 전체 매체 합산 최신 이틀 비교</div>
       <div style="display:flex;flex-direction:column;gap:18px">
         ${blocks.map(b=>`
           <div>
-            <div style="font-size:15px;color:#fff;margin-bottom:8px"><strong>${escHtml(b.media)}</strong>: ${b.sentence}</div>
+            <div style="font-size:15px;color:#fff;margin-bottom:8px">${b.sentence}</div>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
               ${b.badges.map(t=>`<span style="padding:6px 14px;border-radius:20px;background:rgba(255,255,255,0.12);color:#fff;font-size:12px;font-weight:500">${t}</span>`).join('')}
             </div>
           </div>`).join('')}
+      </div>
+    </div>
+    <div class="table-card" style="margin-bottom:1.25rem">
+      <div class="table-header">
+        <h2>영역·소재 순위 <span style="font-size:11px;font-weight:400;color:var(--faint)">(이번 달 기준, 클릭 → 소재 상세)</span></h2>
+      </div>
+      <div style="padding:.75rem 1.25rem 0;border-bottom:0px">
+        <div class="tab-bar" id="creative-ranking-toggle" style="margin-bottom:0">
+          <button class="tab-btn" onclick="setCreativeRankingMetric('cpd',this)">DB단가</button>
+          <button class="tab-btn" onclick="setCreativeRankingMetric('ctr',this)">CTR</button>
+          <button class="tab-btn" onclick="setCreativeRankingMetric('dbcvr',this)">DB전환율</button>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;padding:1rem 1.25rem">
+        <div>
+          <div style="font-size:12px;font-weight:700;color:#166534;margin-bottom:.5rem">👍 좋은 소재 TOP5</div>
+          <div id="creative-ranking-good"></div>
+        </div>
+        <div>
+          <div style="font-size:12px;font-weight:700;color:#dc2626;margin-bottom:.5rem">👎 안좋은 소재 TOP5</div>
+          <div id="creative-ranking-bad"></div>
+        </div>
+      </div>
+    </div>
+    <div class="table-card" style="margin-bottom:1.25rem">
+      <div class="table-header">
+        <h2>영역별 소재 월간 히스토리 <span style="font-size:11px;font-weight:400;color:var(--faint)">(어느 달에 어떤 소재가 좋았는지 비교)</span></h2>
+        <select id="creative-history-area-sel" onchange="renderCreativeHistoryMatrix()" style="border:1px solid var(--border-strong);border-radius:var(--rs);padding:5px 10px;font-size:12px;font-family:inherit;color:var(--text);background:var(--surface);outline:none">
+          <option value="">영역 선택...</option>
+        </select>
+      </div>
+      <div style="padding:.75rem 1.25rem 0;border-bottom:0px">
+        <div class="tab-bar" id="creative-history-metric-toggle" style="margin-bottom:0">
+          <button class="tab-btn active" onclick="setCreativeHistoryMetric('cpd',this)">DB단가</button>
+          <button class="tab-btn" onclick="setCreativeHistoryMetric('ctr',this)">CTR</button>
+          <button class="tab-btn" onclick="setCreativeHistoryMetric('dbcvr',this)">DB전환율</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table style="width:100%;border-collapse:collapse">
+          <thead id="creative-history-thead"></thead>
+          <tbody id="creative-history-tbody"></tbody>
+        </table>
       </div>
     </div>
     <div class="table-card">
@@ -4917,6 +4967,282 @@ function renderDisplayInsight(){
   const insightMonSelEl = document.getElementById('display-insight-month-sel');
   if(insightMonSelEl) insightMonSelEl.value = insightMonSel;
   _renderDisplayInsightTable();
+  _creativeRankingList = _buildCreativeRankingThisMonth();
+  _renderCreativeRanking();
+  renderCreativeHistoryMatrix();
+}
+
+// 이번 달(당월) 기준 매체×영역×소재별 성과 집계 (renderDisplayTab의 코드소유권 로직과 동일한 방식으로,
+// 전체 매체를 한번에 묶어서 계산한다 — 어떤 소재가 좋고 나쁜지 매체 구분 없이 한눈에 보기 위함)
+function _buildCreativeRankingThisMonth(){
+  const curMonth = _today().slice(0,7);
+  const rows = _displayData || [];
+  const crmRows = _displayCrmRaw || [];
+  const isPlaceholderLabel = l => l==='(소재 미기재)' || l==='미확인';
+
+  const areas = {}; // key: media||area
+  rows.forEach(r=>{
+    const media = (r['매체명']||'').trim();
+    const area = (r['상품명']||'').trim() || '(미지정)';
+    const key = `${media}||${area}`;
+    if(!areas[key]) areas[key] = {media, area, kws:{}, codeLabelCost:{}};
+    const a = areas[key];
+    const code = (r['인타입']||'').trim();
+    const kw = (r['소재명']||'').trim() || '(소재 미기재)';
+    if(!a.kws[kw]) a.kws[kw] = {kw, cost:0, imp:0, clk:0, db:0, contracts:0, perf:0, codes:new Set()};
+    if(code) a.kws[kw].codes.add(code);
+
+    const rowCost = _cN(r['비용']);
+    if(code){
+      if(!a.codeLabelCost[code]) a.codeLabelCost[code] = {};
+      a.codeLabelCost[code][kw] = (a.codeLabelCost[code][kw]||0) + rowCost;
+    }
+    if((r['날짜']||'').startsWith(curMonth)){
+      a.kws[kw].cost += rowCost;
+      a.kws[kw].imp  += _cN(r['노출수(열람수)']);
+      a.kws[kw].clk  += _cN(r['클릭수']);
+    }
+  });
+
+  // 코드 하나는 소재 하나에만 귀속 (실제 광고비가 찍힌 소재 우선 — renderDisplayTab과 동일 로직)
+  const codeToKw = {}; // code -> {areaKey, kw}
+  Object.entries(areas).forEach(([areaKey,a])=>{
+    const codeOwner = {};
+    Object.entries(a.codeLabelCost).forEach(([code, labelCosts])=>{
+      const realLabels = Object.entries(labelCosts).filter(([l,c])=>c>0 && !isPlaceholderLabel(l));
+      if(realLabels.length){
+        realLabels.sort((x,y)=>y[1]-x[1]);
+        codeOwner[code] = realLabels[0][0];
+      } else {
+        const labels = Object.keys(labelCosts);
+        codeOwner[code] = labels.find(isPlaceholderLabel) || labels[0];
+      }
+    });
+    Object.entries(a.kws).forEach(([label,k])=>{
+      k.codes = new Set([...k.codes].filter(c=>codeOwner[c]===label));
+      k.codes.forEach(c=>{ codeToKw[c] = {areaKey, kw:label}; });
+    });
+  });
+
+  crmRows.forEach(r=>{
+    const code = (r['인타입']||'').trim();
+    if(!code) return;
+    const target = codeToKw[code];
+    if(!target) return;
+    if(!_normDS(r['상담등록일']||'').startsWith(curMonth)) return;
+    const k = areas[target.areaKey].kws[target.kw];
+    k.db++;
+    k.contracts += Math.round(_cN(r['계약수']));
+    k.perf += _cN(r['평가업적']);
+  });
+
+  const list = [];
+  Object.values(areas).forEach(a=>{
+    Object.values(a.kws).forEach(k=>{
+      if(k.cost<=0 && k.db<=0) return; // 이번 달 활동 없는 소재는 랭킹에서 제외
+      const ctr = k.imp>0 ? Math.round(k.clk/k.imp*10000)/100 : null;
+      const dbcvr = k.clk>0 ? Math.round(k.db/k.clk*1000)/10 : null;
+      const cpd = k.db>0 ? Math.round(k.cost/k.db) : null;
+      list.push({media:a.media, area:a.area, kw:k.kw, cost:k.cost, imp:k.imp, clk:k.clk, db:k.db, ctr, dbcvr, cpd, codes:[...k.codes]});
+    });
+  });
+  return list;
+}
+
+let _creativeRankingList = [];
+let _creativeRankingMetric = 'cpd';
+function setCreativeRankingMetric(metric, btn){
+  _creativeRankingMetric = metric;
+  document.querySelectorAll('#creative-ranking-toggle .tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  _renderCreativeRanking();
+}
+
+function _renderCreativeRanking(){
+  const metric = _creativeRankingMetric;
+  const lowerIsBetter = metric === 'cpd';
+  const valid = _creativeRankingList.filter(x=>x[metric]!==null);
+  const sorted = [...valid].sort((a,b)=> lowerIsBetter ? a[metric]-b[metric] : b[metric]-a[metric]);
+  const good = sorted.slice(0,5);
+  const bad = sorted.length>5 ? [...sorted].reverse().slice(0,5) : [];
+
+  window.__creativeRankingLookup = [];
+  const fmtVal = v => v===null ? '-' : (metric==='cpd' ? v.toLocaleString()+'원' : v+'%');
+  function rowHtml(item){
+    const idx = window.__creativeRankingLookup.length;
+    window.__creativeRankingLookup.push({media:item.media, area:item.area, kw:item.kw, codes:item.codes});
+    return `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:.5rem 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="openCreativeRankingModal(${idx})">
+      <div style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><strong>${escHtml(item.area)}</strong> · ${escHtml(item.kw)} <span style="color:var(--faint);font-size:11px">(${escHtml(item.media)})</span></div>
+      <div style="font-size:13px;font-weight:700;white-space:nowrap">${fmtVal(item[metric])}</div>
+    </div>`;
+  }
+  const empty = `<div style="color:var(--faint);font-size:12px;padding:.5rem 0">데이터 없음</div>`;
+  document.getElementById('creative-ranking-good').innerHTML = good.length ? good.map(rowHtml).join('') : empty;
+  document.getElementById('creative-ranking-bad').innerHTML = bad.length ? bad.map(rowHtml).join('') : empty;
+}
+
+function openCreativeRankingModal(idx){
+  const info = (window.__creativeRankingLookup||[])[idx];
+  if(!info) return;
+  window.__creativeLookup = window.__creativeLookup || [];
+  const globalIdx = window.__creativeLookup.length;
+  window.__creativeLookup.push(info);
+  openCreativeModal(globalIdx, _today().slice(0,7));
+}
+
+function _fillCreativeHistoryAreaSel(){
+  const sel = document.getElementById('creative-history-area-sel');
+  if(!sel) return;
+  const rows = _displayData || [];
+  const seen = new Set();
+  const areas = [];
+  rows.forEach(r=>{
+    const media = (r['매체명']||'').trim();
+    const area = (r['상품명']||'').trim() || '(미지정)';
+    const key = `${media}||${area}`;
+    if(!seen.has(key)){ seen.add(key); areas.push({key, media, area}); }
+  });
+  areas.sort((a,b)=> a.media.localeCompare(b.media,'ko') || a.area.localeCompare(b.area,'ko'));
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">영역 선택...</option>' + areas.map(a=>`<option value="${escHtml(a.key)}">${escHtml(a.media)} · ${escHtml(a.area)}</option>`).join('');
+  if(areas.some(a=>a.key===cur)) sel.value = cur;
+}
+
+let _creativeHistoryMetric = 'cpd';
+function setCreativeHistoryMetric(metric, btn){
+  _creativeHistoryMetric = metric;
+  document.querySelectorAll('#creative-history-metric-toggle .tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderCreativeHistoryMatrix();
+}
+
+// 특정 영역(media||area)의 소재별 월별 성과 매트릭스 (전체 기간, _buildCreativeRankingThisMonth와 동일한 코드소유권 로직)
+function _buildCreativeHistoryMatrix(areaKey){
+  const [media, area] = areaKey.split('||');
+  const rows = (_displayData||[]).filter(r=>(r['매체명']||'').trim()===media && ((r['상품명']||'').trim()||'(미지정)')===area);
+  const crmRows = _displayCrmRaw || [];
+  const isPlaceholderLabel = l => l==='(소재 미기재)' || l==='미확인';
+
+  const kws = {}; // kw -> {kw, codes:Set, months:{ym:{cost,imp,clk,db,contracts,perf}}}
+  const codeLabelCost = {};
+  rows.forEach(r=>{
+    const code = (r['인타입']||'').trim();
+    const kw = (r['소재명']||'').trim() || '(소재 미기재)';
+    const ym = (r['날짜']||'').slice(0,7);
+    if(!kws[kw]) kws[kw] = {kw, codes:new Set(), months:{}};
+    if(code) kws[kw].codes.add(code);
+    if(!kws[kw].months[ym]) kws[kw].months[ym] = {cost:0,imp:0,clk:0,db:0,contracts:0,perf:0};
+    const rowCost = _cN(r['비용']);
+    kws[kw].months[ym].cost += rowCost;
+    kws[kw].months[ym].imp  += _cN(r['노출수(열람수)']);
+    kws[kw].months[ym].clk  += _cN(r['클릭수']);
+    if(code){
+      if(!codeLabelCost[code]) codeLabelCost[code] = {};
+      codeLabelCost[code][kw] = (codeLabelCost[code][kw]||0) + rowCost;
+    }
+  });
+
+  const codeOwner = {};
+  Object.entries(codeLabelCost).forEach(([code, labelCosts])=>{
+    const realLabels = Object.entries(labelCosts).filter(([l,c])=>c>0 && !isPlaceholderLabel(l));
+    if(realLabels.length){
+      realLabels.sort((x,y)=>y[1]-x[1]);
+      codeOwner[code] = realLabels[0][0];
+    } else {
+      const labels = Object.keys(labelCosts);
+      codeOwner[code] = labels.find(isPlaceholderLabel) || labels[0];
+    }
+  });
+  const codeToKw = {};
+  Object.entries(kws).forEach(([label,k])=>{
+    k.codes = new Set([...k.codes].filter(c=>codeOwner[c]===label));
+    k.codes.forEach(c=>{ codeToKw[c] = label; });
+  });
+
+  crmRows.forEach(r=>{
+    const code = (r['인타입']||'').trim();
+    if(!code) return;
+    const label = codeToKw[code];
+    if(!label) return;
+    const ym = _normDS(r['상담등록일']||'').slice(0,7);
+    if(!ym) return;
+    const k = kws[label];
+    if(!k.months[ym]) k.months[ym] = {cost:0,imp:0,clk:0,db:0,contracts:0,perf:0};
+    k.months[ym].db++;
+    k.months[ym].contracts += Math.round(_cN(r['계약수']));
+    k.months[ym].perf += _cN(r['평가업적']);
+  });
+
+  const allMonths = new Set();
+  Object.values(kws).forEach(k=>Object.keys(k.months).forEach(ym=>allMonths.add(ym)));
+  const months = [...allMonths].sort();
+
+  const kwList = Object.values(kws).map(k=>{
+    const cellsByMonth = {};
+    months.forEach(ym=>{
+      const m = k.months[ym];
+      if(!m){ cellsByMonth[ym] = null; return; }
+      const ctr = m.imp>0 ? Math.round(m.clk/m.imp*10000)/100 : null;
+      const dbcvr = m.clk>0 ? Math.round(m.db/m.clk*1000)/10 : null;
+      const cpd = m.db>0 ? Math.round(m.cost/m.db) : null;
+      cellsByMonth[ym] = {cost:m.cost, imp:m.imp, clk:m.clk, db:m.db, ctr, dbcvr, cpd};
+    });
+    return {kw:k.kw, cellsByMonth};
+  }).filter(k=>Object.values(k.cellsByMonth).some(c=>c && (c.cost>0||c.db>0)));
+
+  return {months, kwList};
+}
+
+function renderCreativeHistoryMatrix(){
+  _fillCreativeHistoryAreaSel();
+  const areaKey = document.getElementById('creative-history-area-sel')?.value || '';
+  const thead = document.getElementById('creative-history-thead');
+  const tbody = document.getElementById('creative-history-tbody');
+  if(!thead || !tbody) return;
+  if(!areaKey){
+    thead.innerHTML = '';
+    tbody.innerHTML = `<tr><td style="padding:1.5rem;color:var(--faint);font-size:12px;text-align:center">영역을 선택하면 소재별 월별 추이를 볼 수 있습니다.</td></tr>`;
+    return;
+  }
+  const {months, kwList} = _buildCreativeHistoryMatrix(areaKey);
+  const metric = _creativeHistoryMetric;
+  const lowerIsBetter = metric === 'cpd';
+  const fmtVal = v => v===null||v===undefined ? '-' : (metric==='cpd' ? v.toLocaleString()+'원' : v+'%');
+
+  if(!months.length){
+    thead.innerHTML = '';
+    tbody.innerHTML = `<tr><td style="padding:1.5rem;color:var(--faint);font-size:12px;text-align:center">데이터가 없습니다.</td></tr>`;
+    return;
+  }
+
+  thead.innerHTML = `<tr>
+    <th style="text-align:left;padding:8px 10px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border)">소재</th>
+    ${months.map(ym=>{
+      const [y,mo] = ym.split('-');
+      return `<th class="num" style="padding:8px 10px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border)">${parseInt(mo)}월</th>`;
+    }).join('')}
+  </tr>`;
+
+  tbody.innerHTML = kwList.map(k=>{
+    // 이 소재 행에서 가장 좋은 값 찾기 (강조 표시용)
+    let bestYm = null, bestVal = null;
+    months.forEach(ym=>{
+      const c = k.cellsByMonth[ym];
+      const v = c ? c[metric] : null;
+      if(v===null || v===undefined) return;
+      if(bestVal===null || (lowerIsBetter ? v<bestVal : v>bestVal)){ bestVal = v; bestYm = ym; }
+    });
+    return `<tr>
+      <td style="padding:8px 10px;font-size:12px;border-bottom:1px solid var(--border);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(k.kw)}">${escHtml(k.kw)}</td>
+      ${months.map(ym=>{
+        const c = k.cellsByMonth[ym];
+        const v = c ? c[metric] : null;
+        const isBest = ym===bestYm && v!==null;
+        const style = isBest ? 'font-weight:700;color:#166534;background:#EAF3DE' : '';
+        return `<td class="num" style="padding:8px 10px;font-size:12px;border-bottom:1px solid var(--border);${style}">${fmtVal(v)}</td>`;
+      }).join('')}
+    </tr>`;
+  }).join('') || `<tr><td colspan="${months.length+1}" style="padding:1.5rem;color:var(--faint);font-size:12px;text-align:center">이 영역에 소재 데이터가 없습니다.</td></tr>`;
 }
 
 const DISPLAY_INSIGHT_COLS = [
@@ -5450,10 +5776,10 @@ function renderDisplayAreaTable(areaList){
 
 // 소재 클릭 → 크리에이티브 이미지 팝업
 // 이미지는 배포 저장소 adtool/data/creatives/{매체명}/{인타입코드}_{년월}.jpg(또는 png) 로 올려두면 자동 매칭됨
-function openCreativeModal(idx){
+function openCreativeModal(idx, monSelOverride){
   const info = (window.__creativeLookup||[])[idx];
   if(!info) return;
-  const monSel = document.getElementById('display-month-sel').value;
+  const monSel = monSelOverride || document.getElementById('display-month-sel').value;
   document.getElementById('creative-modal-title').textContent = `${info.area} · ${info.kw}`;
   const body = document.getElementById('creative-modal-body');
   document.getElementById('creative-modal-bg').style.display = 'flex';
