@@ -307,7 +307,6 @@ button.run,.dl{box-shadow:none}
     <button class="main-tab alert" onclick="switchTab('alert',this)">효율 순위</button>
     <button class="main-tab" onclick="switchTab('cpc',this)">CPC 분석</button>
     <button class="main-tab" onclick="switchTab('data',this)">데이터 현황</button>
-    <button class="main-tab" onclick="switchTab('adinfo',this)">광고 설정</button>
     <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
       <div id="pc-month-sel-wrap" style="display:none;align-items:center;gap:8px">
         <select id="month-select" style="border:1px solid var(--border-strong);border-radius:var(--rs);padding:5px 10px;font-size:13px;font-family:inherit;color:var(--text);background:var(--surface);outline:none;cursor:pointer" onchange="onMonthChange()">
@@ -691,43 +690,6 @@ button.run,.dl{box-shadow:none}
   </div>
 
   <!-- 광고정보 패널 -->
-  <div class="tab-panel" id="panel-adinfo">
-    <div style="display:flex;gap:8px;margin-bottom:1rem">
-      <button class="tab-btn active" id="adinfo-tab-intype" onclick="switchAdInfo('intype',this)">그룹별 인타입</button>
-      <button class="tab-btn" id="adinfo-tab-kw" onclick="switchAdInfo('kw',this)">그룹별 키워드</button>
-      <div style="margin-left:auto;display:flex;gap:8px">
-      </div>
-    </div>
-    <div class="table-card">
-      <div class="filter-row">
-        <label>검색</label>
-        <input type="text" id="adinfo-search" placeholder="그룹명 / 인타입 / 키워드..." oninput="renderAdInfoTable()" style="width:220px">
-        <label>매체</label>
-        <select id="adinfo-media" onchange="renderAdInfoTable()">
-          <option value="all">전체</option>
-          <option value="PC">PC</option>
-          <option value="모바일">모바일</option>
-        </select>
-        <label>보종</label>
-        <select id="adinfo-cat" onchange="renderAdInfoTable()">
-          <option value="all">전체</option>
-          <option value="보험">보험</option>
-          <option value="실비보험">실비보험</option>
-          <option value="암보험">암보험</option>
-          <option value="어린이보험">어린이보험</option>
-          <option value="치아보험">치아보험</option>
-          <option value="치매보험">치매보험</option>
-          <option value="운전자보험">운전자보험</option>
-          <option value="보장분석">보장분석</option>
-        </select>
-        <span class="row-count" id="adinfo-count"></span>
-      </div>
-      <div class="table-wrap">
-        <table><thead id="adinfo-thead"></thead><tbody id="adinfo-tbody"></tbody></table>
-      </div>
-    </div>
-  </div>
-
   <!-- 성과 알림판 패널 -->
   <div class="tab-panel" id="panel-alert">
     <!-- 보종 필터 -->
@@ -1086,7 +1048,7 @@ button.run,.dl{box-shadow:none}
 
 <script>
 // ===== 인타입 매핑 내장 데이터 =====
-const INTYPE_MAP = {"1세대실손보험_PC": "NPOTKS17", "20대실비보험_PC": "NPORS8", "30대실비보험_PC": "NPORS81", "40대실비보험_PC": "NPORS82", "4세대실손보험전환_PC": "NPOTKS9", "60대실비보험_PC": "NPORS73", "65세실비보험_PC": "NPORS73", "노인실비보험_PC": "NPORS27", "노인실손보험_PC": "NPORS26", "노후실손보험_PC": "NPORS25", "노후실손의료보험_PC": "NPORS25", "단독실비_PC": "NPORS55", "도수치료실비_PC": "NPORS78", "비갱신실비보험_PC": "NPORS12", "비갱신형실비보험_PC": "NPORS38", "비갱신형실손보험_PC": "NPC52", "수술비보험_PC": "NPORS31", "실비_PC": "NPORS11", "실비가입_PC": "NPORS39", "실비보험4세대_PC": "NPORS142", "실비보험_PC": "NPORS1", "실비보험가격비교_PC": "NPORS114", "실비보험가입조건_PC": "NPORS23", "실비보험료_PC": "NPORS37", "실비보험비갱신_PC": "NPORS92", "실비보험비교사이트_PC": "NPORS119", "실비보험상담_PC": "NPORS113", "실비보험순위_PC": "NPORS93", "실비보험청구_PC": "NPOTKS3", "실비보험추천_PC": "NPORS4", "실비보험특약_PC": "NPORS94", "실비비갱신_PC": "NPORS138", "실비비교_PC": "NPORS95", "실비신규1_PC": "NPORS128", "실비신규2_PC": "NPORS129", "실비신규3_PC": "NPORS130", "실비신규4_PC": "NPORS131", "실비신규5_PC": "NPORS132", "실비추천_PC": "NPORS42", "실손보험_PC": "NPORS2", "실손보험가격_PC": "NPORS51", "실손보험가입_PC": "NPORS45", "실손보험료_PC": "NPORS30", "실손보험비교_PC": "NPORS15", "실손보험비교사이트_PC": "NPORS120", "실손보험추천_PC": "NPORS19", "실손의료보험_PC": "NPORS3", "실손의료보험비교_PC": "NPORS41", "실손의료비_PC": "NPORS43", "실손의료비보험_PC": "NPORS20", "유병자실비보험비교_PC": "NPORS141", "유병자실손보험_PC": "NPORS6", "의료실비_PC": "NPORS10", "의료실비보험_PC": "NPORS7", "의료실비보험가입순위_PC": "NPORS100", "입원비보험_PC": "NPORS79", "착한실비_PC": "NPORS134", "착한실비보험_PC": "NPORS135", "착한실손_PC": "NPORS136", "착한실손보험_PC": "NPORS133", "청소년실비보험_PC": "NPORS103", "01_1세대실손보험": "MNPOTKS17", "01_20대실비보험": "MNPORS23", "01_30대실비보험": "MNPORS81", "01_40대실비보험": "MNPORS82", "01_4세대실손보험전환": "MNPOTKS9", "01_60대실비보험": "MNPORS37", "01_MRI실비보험": "MNPORS105", "01_노인실비보험": "MNPORS66", "01_노후실손보험": "MNPORS67", "01_도수치료실비보험": "MNPORS104", "01_수술비보험": "MNPORS16", "01_실비": "MNPORS12", "01_실비가입": "MNPORS65", "01_실비보장": "MNPORS127", "01_실비보험": "MNPORS1", "01_실비보험4세대": "MNPORS142", "01_실비보험가격비교": "MNPORS114", "01_실비보험가입조건": "MNPORS7", "01_실비보험갈아타기": "MNPORS123", "01_실비보험갱신": "MNPORS108", "01_실비보험료": "MNPORS22", "01_실비보험비갱신": "MNPORS92", "01_실비보험비교사이트": "MNPORS119", "01_실비보험상담": "MNPORS113", "01_실비보험순위": "MNPORS93", "01_실비보험청구": "MNPOTKS3", "01_실비보험추천": "MNPORS6", "01_실비비갱신": "MNPORS138", "01_실비비교": "MNPORS95", "01_실비신규1": "MNPORS128", "01_실비신규2": "MNPORS129", "01_실비신규3": "MNPORS130", "01_실비신규4": "MNPORS131", "01_실비신규5": "MNPORS132", "01_실비신규6": "MNPORS6T", "01_실비추천": "MNPORS69", "01_실손보험": "MNPORS2", "01_실손보험가입": "MNPORS44", "01_실손보험료": "MNPORS70", "01_실손보험비교": "MNPORS8", "01_실손보험비교사이트": "MNPORS120", "01_실손보험추천": "MNPORS15", "01_실손의료보험": "MNPORS5", "01_유병자실비보험비교": "MNPORS141", "01_유병자실손보험": "MNPORS13", "01_의료실비보험": "MNPORS4", "01_의료실비보험가입순위": "MNPORS100", "01_입원비보험": "MNPORI2", "01_착한보험": "MNPORS137", "01_착한실비": "MNPORS134", "01_착한실비보험": "MNPORS135", "01_착한실손": "MNPORS136", "01_첫날부터입원비보험": "MNPORS139", "01_청소년실비보험": "MNPORS103", "100세만기암보험_PC": "NPORC85", "100세보장암보험_PC": "NPORC86", "100세암보험_PC": "NPORC50", "20대남성암보험_PC": "NPORC140", "20대암보험_PC": "NPORC18", "20대암보험추천_PC": "NPORC95", "20대여성암보험_PC": "NPORC96", "30대남자암보험_PC": "NPORC141", "30대암보험_PC": "NPORC30", "30대여성암보험_PC": "NPORC42", "40대남성암보험_PC": "NPORC142", "40대암보험_PC": "NPORC22", "40대암보험추천_PC": "NPORC87", "50대암보험_PC": "NPORC19", "50대암보험추천_PC": "NPORC256", "50대여성암보험_PC": "NPORC100", "60세암보험_PC": "NPORC88", "60세이상암보험_PC": "NPORC51", "65세암보험_PC": "NPORC101", "70대암보험_PC": "NPORC143", "간암보험_PC": "NPORC144", "간편심사암보험_PC": "NPORC103", "간편암보험_PC": "NPORC145", "갑상선암보험_PC": "NPORC52", "갱신없는암보험_PC": "NPORC44", "갱신형암보험_PC": "NPORC53", "계속받는암보험_PC": "NPORC54", "고액암_PC": "NPORC77", "고액암보험_PC": "NPORC55", "고혈압암보험_PC": "NPORC105", "난소암보험_PC": "NPORC106", "남성암보험_PC": "NPORC90", "노인암보험_PC": "NPORC27", "대장암보험_PC": "NPORC107", "만기환급암보험_PC": "NPORC108", "만기환급형암보험_PC": "NPORC32", "무갱신암보험_PC": "NPORC149", "무배당암보험_PC": "NPORC150", "무해지환급형암보험_PC": "NPORC151", "미니암보험_PC": "NPORC109", "보장성암보험_PC": "NPORC152", "부모님암보험_PC": "NPORC110", "비갱신100세암보험_PC": "NPORC111", "비갱신순수보장형암보험_PC": "NPORC91", "비갱신암보험_PC": "NPORC8", "비갱신암보험가격_PC": "NPORC57", "비갱신암보험가입순위_PC": "NPORC16", "비갱신암보험비교_PC": "NPORC37", "비갱신암보험추천_PC": "NPORC11", "비갱신형암보험_PC": "NPORC4", "비갱신형암보험가입순위_PC": "NPORC23", "비갱신형암보험비교_PC": "NPORC17", "비갱신형암보험순위_PC": "NPORC28", "비갱신형암보험추천_PC": "NPORC6", "생명보험암보험_PC": "NPORC154", "생활비주는암보험_PC": "NPORC58", "소멸성암보험_PC": "NPORC59", "소액암_PC": "NPORC156", "소액암종류_PC": "NPORC76", "손해보험암보험_PC": "NPORC93", "순수보장형암보험_PC": "NPORC41", "순수암보험_PC": "NPORC46", "실버암보험_PC": "NPORC143", "실비암보험_PC": "NPORC14", "아이암보험_PC": "NPORC158", "암보험_PC": "NPORC1", "암보험가격_PC": "NPORC7", "암보험가입_PC": "NPORC20", "암보험가입순위_PC": "NPORC39", "암보험가입연령_PC": "NPORC114", "암보험가입조건_PC": "NPORC115", "암보험가입추천_PC": "NPORC116", "암보험가입한도_PC": "NPORC159", "암보험갱신_PC": "NPORC117", "암보험갱신형_PC": "NPORC94", "암보험갱신형비갱신형_PC": "NPORC13", "암보험견적_PC": "NPORC60", "암보험계산_PC": "NPORC61", "암보험나이_PC": "NPORC160", "암보험만기환급형_PC": "NPORC119", "암보험면책기간_PC": "NPORC161", "암보험보장_PC": "NPORC40", "암보험비갱신_PC": "NPORC35", "암보험비갱신형_PC": "NPORC2", "암보험비갱신형가입_PC": "NPORC162", "암보험비갱신형추천_PC": "NPORC62", "암보험비교_PC": "NPORC5", "암보험비교가입_PC": "NPORC120", "암보험비교견적_PC": "NPORC63", "암보험비교사이트_PC": "NPORC248", "암보험상품_PC": "NPORC49", "암보험상품비교_PC": "NPORC64", "암보험상품추천_PC": "NPORC45", "암보험설계_PC": "NPORC121", "암보험순수보장형_PC": "NPORC122", "암보험순위_PC": "NPORC36", "암보험인터넷가입_PC": "NPORC163", "암보험종류_PC": "NPORC21", "암보험종합견적_PC": "NPORC165", "암보험좋은곳_PC": "NPORC164", "암보험중복가입_PC": "NPORC123", "암보험중복보장_PC": "NPORC29", "암보험진단금_PC": "NPORC38", "암보험진단비_PC": "NPORC84", "암보험추천_PC": "NPORC3", "암보험추천상품_PC": "NPORC25", "암보험특약_PC": "NPORC124", "암보험혜택_PC": "NPORC125", "암보험환급형_PC": "NPORC126", "암보험회사_PC": "NPORC127", "암수술비_PC": "NPORC43", "암실비보험_PC": "NPORC128", "암의료보험_PC": "NPORC129", "암입원비_PC": "NPORC130", "암진단금_PC": "NPORC65", "암진단금보험_PC": "NPORC47", "암진단보험_PC": "NPORC66", "암진단비높은보험_PC": "NPORC131", "암진단비보험_PC": "NPORC9", "암치료보험_PC": "NPOTKC1", "암치료비_PC": "NPORC132", "암환자보험_PC": "NPORC167", "어린이암보험_PC": "NPORC67", "여성암보험_PC": "NPORC10", "여성암보험비교_PC": "NPORC68", "여성암보험추천_PC": "NPORC69", "온라인암보험_PC": "NPORC70", "위암보험_PC": "NPORC134", "유방암보험_PC": "NPORC71", "유병자암보험_PC": "NPORC12", "인터넷암보험_PC": "NPORC15", "일반암보험_PC": "NPORC136", "자궁경부암보험_PC": "NPORC137", "재진단암보험_PC": "NPORC72", "저렴한암보험_PC": "NPORC73", "전립선암보험_PC": "NPORC171", "종신암보험_PC": "NPORC172", "청소년암보험_PC": "NPORC138", "추천암보험_PC": "NPORC139", "췌장암보험_PC": "NPORC173", "폐암보험_PC": "NPORC174", "표적항암치료비보험_PC": "NPORC259", "피부암보험_PC": "NPORC175", "항암치료보험_PC": "NPORC258", "혈액암보험_PC": "NPORC257", "환급형암보험_PC": "NPORC26", "01_100세만기암보험": "MNPORC85", "01_100세암보험": "MNPORC50", "01_20대남성암보험": "MNPORC90", "01_20대암보험": "MNPORC13", "01_30대암보험": "MNPORC23", "01_30대여성암보험": "MNPORC45", "01_40대남성암보험": "MNPORC91", "01_40대암보험": "MNPORC16", "01_40대암보험추천": "MNPORC08", "01_50대암보험": "MNPORC20", "01_50대암보험추천": "MNPORC256", "01_60세암보험": "MNPORC89", "01_60세이상암보험": "MNPORC51", "01_간편심사암보험": "MNPORC93", "01_간편암보험": "MNPORC113", "01_갑상선암보험": "MNPORC52", "01_갱신없는암보험": "MNPORC25", "01_갱신형암보험": "MNPORC53", "01_갱신형암보험가입": "MNPORC115", "01_계속받는암보험": "MNPORC54", "01_고액암보험": "MNPORC55", "01_고액암종류": "MNPORC75", "01_고혈압암보험": "MNPORC95", "01_난소암보험": "MNPORC96", "01_남자암보험": "MNPORC56", "01_노인암보험": "MNPORC29", "01_대장암보험": "MNPORC97", "01_만기환급암보험": "MNPORC98", "01_만기환급형암보험": "MNPORC24", "01_무갱신암보험": "MNPORC116", "01_무해지환급형암보험": "MNPORC117", "01_미니암보험": "MNPORC99", "01_보장성암보험": "MNPORC118", "01_부모님암보험": "MNPORC92", "01_비갱신100세암보험": "MNPORC100", "01_비갱신순수보장형암보험": "MNPORC105", "01_비갱신암보험": "MNPORC7", "01_비갱신암보험가격": "MNPORC57", "01_비갱신암보험가입순위": "MNPORC26", "01_비갱신암보험비교": "MNPORC34", "01_비갱신암보험추천": "MNPORC15", "01_비갱신형암보험": "MNPORC4", "01_비갱신형암보험가격": "MNPORC40", "01_비갱신형암보험가입순위": "MNPORC17", "01_비갱신형암보험비교": "MNPORC19", "01_비갱신형암보험순위": "MNPORC36", "01_비갱신형암보험추천": "MNPORC6", "01_생명보험암보험": "MNPORC119", "01_생활비받는암보험": "MNPORC120", "01_생활비주는암보험": "MNPORC58", "01_소멸성암보험": "MNPORC59", "01_소액암보험": "MNPORC121", "01_손해보험암보험": "MNPORC86", "01_순수보장형암보험": "MNPORC31", "01_순수암보험": "MNPORC44", "01_실버암보험": "MNPORC122", "01_실비암보험": "MNPORC47", "01_암보험": "MNPORC2", "01_암보험가격": "MNPORC5", "01_암보험가입": "MNPORC21", "01_암보험가입순위": "MNPORC42", "01_암보험가입시주의사항": "MNPORC123", "01_암보험가입연령": "MNPORC101", "01_암보험갱신형": "MNPORC102", "01_암보험갱신형비갱신형": "MNPORC30", "01_암보험견적": "MNPORC60", "01_암보험계산": "MNPORC61", "01_암보험금": "MNPORC48", "01_암보험료": "MNPORC28", "01_암보험만기환급형": "MNPORC103", "01_암보험면책기간": "MNPORC124", "01_암보험보장": "MNPORC37", "01_암보험보장범위": "MNPORC254", "01_암보험비갱신": "MNPORC35", "01_암보험비갱신형": "MNPORC1", "01_암보험비갱신형가입": "MNPORC125", "01_암보험비갱신형추천": "MNPORC62", "01_암보험비교": "MNPORC8", "01_암보험비교견적": "MNPORC63", "01_암보험비교사이트": "MNPORC248", "01_암보험상품": "MNPORC46", "01_암보험상품비교": "MNPORC64", "01_암보험상품추천": "MNPORC43", "01_암보험설계": "MNPORC104", "01_암보험순위": "MNPORC39", "01_암보험종류": "MNPORC12", "01_암보험종합견적": "MNPORC126", "01_암보험중복가입": "MNPORC106", "01_암보험중복보장": "MNPORC18", "01_암보험진단금": "MNPORC32", "01_암보험진단비": "MNPORC127", "01_암보험추천": "MNPORC3", "01_암보험추천가입": "MNPORC128", "01_암보험추천상품": "MNPORC11", "01_암보험회사": "MNPORC107", "01_암수술비": "MNPORC43", "01_암신규": "MNPORC251", "01_암신규1": "MNPORC1T", "01_암신규2": "MNPORC250", "01_암전용보험": "MNPORC253", "01_암진단금": "MNPORC65", "01_암진단금보험": "MNPORC38", "01_암진단보험": "MNPORC66", "01_암진단비보험": "MNPORC10", "01_암치료보험": "MNPOTKC1", "01_어린이암보험": "MNPORC67", "01_여성암보험": "MNPORC9", "01_여성암보험비교": "MNPORC68", "01_여성암보험추천": "MNPORC69", "01_여자암보험추천": "MNPORC87", "01_온라인암보험": "MNPORC70", "01_위암보험": "MNPORC132", "01_유방암보험": "MNPORC71", "01_유병자암보험": "MNPORC14", "01_유병자암보험가입": "MNPORC108", "01_인터넷암보험": "MNPORC22", "01_인터넷암보험가입": "MNPORC129", "01_일반암보험": "MNPORC109", "01_재진단암보험": "MNPORC72", "01_저렴한암보험": "MNPORC73", "01_전립선암보험": "MNPORC110", "01_종신암보험": "MNPORC130", "01_청소년암보험": "MNPORC111", "01_추천암보험": "MNPORC112", "01_췌장암보험": "MNPORC131", "01_표적항암치료비보험": "MNPORC259", "01_항암치료보험": "MNPORC258", "01_혈액암보험": "MNPORC257", "01_환급형암보험": "MNPORC49", "100세만기어린이보험_PC": "NPORA69", "30세어린이보험_PC": "NPORA67", "교육보험_PC": "NPORA17G", "무해지어린이보험_PC": "NPORA31", "보험어린이_PC": "NPORA32", "비갱신어린이보험_PC": "NPORA5", "비갱신어린이보험추천_PC": "NPORA71", "성인어린이보험_PC": "NPORA66", "아동보험_PC": "NPORA29", "아동실비보험_PC": "NPORA33", "아동치아보험_PC": "NPORA61", "아이들보험_PC": "NPORA34", "아이들실비보험_PC": "NPORA35", "아이보험_PC": "NPORA23", "아이보험추천_PC": "NPORA28", "아이실손보험_PC": "NPORA36", "어른이보험_PC": "NPORA37", "어린이건강보험_PC": "NPORA38", "어린이교육보험_PC": "NPORA18", "어린이보험_PC": "NPORA1G", "어린이보험가격_PC": "NPORA10", "어린이보험가입_PC": "NPORA13", "어린이보험가입나이_PC": "NPORA39", "어린이보험가입순위_PC": "NPORA24", "어린이보험갈아타기_PC": "NPORA41", "어린이보험나이_PC": "NPORA42", "어린이보험료_PC": "NPORA43", "어린이보험보장_PC": "NPORA44", "어린이보험비교_PC": "NPORA2", "어린이보험상품_PC": "NPORA19", "어린이보험설계_PC": "NPORA47", "어린이보험순위_PC": "NPORA8", "어린이보험실비_PC": "NPORA48", "어린이보험추천_PC": "NPORA7", "어린이보험환급형_PC": "NPORA70", "어린이상해보험_PC": "NPORA49", "어린이생명보험_PC": "NPORA16", "어린이손해보험_PC": "NPORA62", "어린이신규1_PC": "NPORA64", "어린이실비_PC": "NPORA25", "어린이실비보험_PC": "NPORA4", "어린이실비보험가격_PC": "NPORA26", "어린이실비보험비교_PC": "NPORA11", "어린이실손보험_PC": "NPORA6", "어린이실손보험추천_PC": "NPORA12", "어린이암보험추천_PC": "NPORA50", "어린이연금보험_PC": "NPORA20", "어린이의료실비_PC": "NPORA51", "어린이입원비보험_PC": "NPORA15", "어린이저축보험_PC": "NPORA21", "어린이종합보험_PC": "NPORA53", "어린이화재보험_PC": "NPORA54", "영유아보험_PC": "NPORA55", "유아보험_PC": "NPORA14", "유아실비보험_PC": "NPORA56", "유아실손보험_PC": "NPORA63", "인터넷어린이보험_PC": "NPORA57", "자녀교육보험_PC": "NPORA22", "자녀보험_PC": "NPORA3", "자녀학자금보험_PC": "NPORA58", "학생보험_PC": "NPORA59", "01_100세만기어린이보험": "MNPORA68", "01_30세어린이보험": "MNPORA66", "01_교육보험": "MNPORA17", "01_무해지어린이보험": "MNPORA31", "01_보험어린이": "MNPORA32", "01_비갱신어린이보험": "MNPORA3", "01_비갱신어린이보험추천": "MNPORA70", "01_성인어린이보험": "MNPORA65", "01_아동보험": "MNPORA29", "01_아동실비보험": "MNPORA33", "01_아이들보험": "MNPORA34", "01_아이들실비보험": "MNPORA35", "01_아이보험": "MNPORA23", "01_아이보험추천": "MNPORA28", "01_아이실손보험": "MNPORA36", "01_어른이보험": "MNPORA27", "01_어린이건강보험": "MNPORA38", "01_어린이교육보험": "MNPORA18", "01_어린이보험": "MNPORA1", "01_어린이보험30세": "MNPORA67", "01_어린이보험가격": "MNPORA7", "01_어린이보험가입": "MNPORA16", "01_어린이보험가입나이": "MNPORA39", "01_어린이보험가입방법": "MNPORA40", "01_어린이보험가입순위": "MNPORA24", "01_어린이보험가입연령": "MNPORA60", "01_어린이보험갈아타기": "MNPORA41", "01_어린이보험료": "MNPORA43", "01_어린이보험보장": "MNPORA44", "01_어린이보험보장기간": "MNPORA44", "01_어린이보험보장내용": "MNPORA46", "01_어린이보험비교": "MNPORA2", "01_어린이보험상품": "MNPORA19", "01_어린이보험설계": "MNPORA47", "01_어린이보험순위": "MNPORA11", "01_어린이보험실비": "MNPORA48", "01_어린이보험추천": "MNPORA6", "01_어린이보험환급형": "MNPORA69", "01_어린이상해보험": "MNPORA49", "01_어린이생명보험": "MNPORA10", "01_어린이손해보험": "MNPORA62", "01_어린이신규1": "MNPORA01T", "01_어린이실비": "MNPORA25", "01_어린이실비보험": "MNPORA5", "01_어린이실비보험가격": "MNPORA26", "01_어린이실비보험비교": "MNPORA12", "01_어린이실손보험": "MNPORA9", "01_어린이실손보험추천": "MNPORA13", "01_어린이암보험추천": "MNPORA50", "01_어린이연금보험": "MNPORA20", "01_어린이의료실비": "MNPORA51", "01_어린이의료실비보험": "MNPORA8", "01_어린이의료실비보험추천": "MNPORA52", "01_어린이입원비보험": "MNPORA14", "01_어린이저축보험": "MNPORA21", "01_어린이종합보험": "MNPORA53", "01_어린이화재보험": "MNPORA54", "01_영유아보험": "MNPORA55", "01_유아보험": "MNPORA15", "01_유아실비보험": "MNPORA56", "01_유아실손보험": "MNPORA63", "01_인터넷어린이보험": "MNPORA57", "01_자녀교육보험": "MNPORA22", "01_자녀보험": "MNPORA4", "01_자녀보험추천": "MNPORA30", "01_자녀학자금보험": "MNPORA58", "01_학생보험": "MNPORA59", "금니보험_PC": "NPORD70", "신경치료보험_PC": "NPORD71", "실속보장치아보험_PC": "NPORD42", "임플란트보장보험_PC": "NPORD74", "치과보험_PC": "NPORD2", "치아건강보험_PC": "NPORD73", "치아보험_PC": "NPORD1", "치아보험비교_PC": "NPORD7", "치아보험비교사이트_PC": "NPORD58", "치아보험임플란트_PC": "NPORD11", "치아보험추천_PC": "NPORD3", "치아신규1_PC": "NPORD60", "크라운치아보험_PC": "NPORD72", "01_금니보험": "MNPORD63", "01_무진단치아보험": "MNPORD48", "01_무진단형치아보험": "MNPORD18", "01_비갱신치아보험": "MNPORD15", "01_신경치료보험": "MNPORD64", "01_실속보장치아보험": "MNPORD42", "01_유치보험": "MNPORD61", "01_임플란트보장보험": "MNPORD68", "01_치과보험": "MNPORD2", "01_치과보험추천": "MNPORD4", "01_치과보험혜택": "MNPORD62", "01_치아건강보험": "MNPORD67", "01_치아교정보험": "MNPORD28", "01_치아보험": "MNPORD1", "01_치아보험가입조건": "MNPORD5", "01_치아보험비교": "MNPORD8", "01_치아보험비교사이트": "MNPORD58", "01_치아보험임플란트": "MNPORD10", "01_치아보험추천": "MNPORD3", "01_치아신규1": "MNPORD59", "01_크라운치아보험": "MNPORD66", "01_홈쇼핑치아보험": "MNPORD60", "24시간간병비_PC": "NPORCM47", "간병보험_PC": "NPORCM4", "간병보험료_PC": "NPORCM24", "간병보험추천_PC": "NPORCM7", "간병비_PC": "NPORCM25", "간병비보험_PC": "NPORCM6", "간병비보험료_PC": "NPORCM52", "간병비보험비교_PC": "NPORCM51", "간병비보험추천_PC": "NPORCM15", "간병비지원_PC": "NPORCM26", "간병인보험_PC": "NPORCM13", "간병인보험가격_PC": "NPORCM27", "간병인보험료_PC": "NPORCM28", "간병인보험비용_PC": "NPORCM29", "간병인보험추천_PC": "NPORCM18", "간병인지원보험_PC": "NPORCM30", "경증치매보험_PC": "NPORCM31", "고령자실비보험_PC": "NPORCM19", "노인간병보험_PC": "NPORCM54", "노인보험_PC": "NPORCM39", "노인보험비교_PC": "NPORCM20", "노인상해보험_PC": "NPORCM32", "노인실버보험_PC": "NPORCM41", "노인요양보험_PC": "NPORCM33", "노인장기요양보험_PC": "NPORCM11", "노인장기요양보험료_PC": "NPORCM34", "노인치매보험_PC": "NPORCM8", "명품치매보험_PC": "NPORCM48", "부모님보험_PC": "NPORCM42", "부모님보험추천_PC": "NPORCM14", "부모님실버보험_PC": "NPORCM44", "부모님치매보험_PC": "NPORCM9", "실버보험_PC": "NPORCM12", "실버보험비교_PC": "NPORCM21", "어르신보험_PC": "NPORCM49", "요양보험_PC": "NPORCM22", "유병자간병인보험_PC": "NPORCM53", "장기간병보험_PC": "NPORCM35", "장기노인요양보험_PC": "NPORCM36", "장기요양보험_PC": "NPORCM37", "치매간병_PC": "NPORCM38", "치매간병보험_PC": "NPORCM2", "치매간병비보험_PC": "NPORCM16", "치매간병인보험_PC": "NPORCM45", "치매보험_PC": "NPORCM1", "치매보험가격_PC": "NPORCM5", "치매보험가입연령_PC": "NPORCM46", "치매보험료_PC": "NPORCM50", "치매보험추천_PC": "NPORCM3", "치매신규1_PC": "NPORCM1T", "01_24시간간병비": "MNPORCM47", "01_간병보험": "MNPORCM4", "01_간병보험료": "MNPORCM25", "01_간병보험추천": "MNPORCM7", "01_간병비": "MNPORCM26", "01_간병비보험": "MNPORCM6", "01_간병비보험료": "MNPORCM52", "01_간병비보험비교": "MNPORCM51", "01_간병비보험추천": "MNPORCM15", "01_간병비지원": "MNPORCM27", "01_간병인보험": "MNPORCM13", "01_간병인보험가격": "MNPORCM28", "01_간병인보험료": "MNPORCM29", "01_간병인보험비용": "MNPORCM30", "01_간병인보험추천": "MNPORCM19", "01_간병인지원보험": "MNPORCM31", "01_경증치매보험": "MNPORCM32", "01_고령자실비보험": "MNPORCM20", "01_노인간병보험": "MNPORCM54", "01_노인보험": "MNPORCM40", "01_노인보험비교": "MNPORCM21", "01_노인보험상품": "MNPORCM41", "01_노인상해보험": "MNPORCM33", "01_노인실버보험": "MNPORCM42", "01_노인요양보험": "MNPORCM34", "01_노인장기요양보험": "MNPORCM11", "01_노인치매보험": "MNPORCM9", "01_명품치매보험": "MNPORCM48", "01_부모님보험": "MNPORCM43", "01_부모님보험상품": "MNPORCM44", "01_부모님보험추천": "MNPORCM14", "01_부모님실버보험": "MNPORCM45", "01_부모님치매보험": "MNPORCM8", "01_실버보험": "MNPORCM12", "01_실버보험비교": "MNPORCM22", "01_어르신보험": "MNPORCM49", "01_요양보험": "MNPORCM2", "01_유병자간병인보험": "MNPORCM53", "01_장기간병보험": "MNPORCM36", "01_장기노인요양보험": "MNPORCM37", "01_장기요양보험": "MNPORCM38", "01_치매간병": "MNPORCM39", "01_치매간병보험": "MNPORCM2", "01_치매간병비보험": "MNPORCM16", "01_치매간병인보험": "MNPORCM85", "01_치매보험": "MNPORCM0T", "01_치매보험가격": "MNPORCM5", "01_치매보험가입": "MNPORCM24", "01_치매보험가입연령": "MNPORCM46", "01_치매보험료": "MNPORCM50", "01_치매보험상품": "MNPORCM10", "01_치매보험추천": "MNPORCM3", "01_치매신규1": "MNPORCM1T", "보장분석신규1_PC": "NPORIA1T", "보험다이어트_PC": "NPORIA06", "보험리모델링_PC": "NPORIA01", "보험분석_PC": "NPORIA02", "보험상담_PC": "NPORIA08", "보험점검_PC": "NPORIA07", "보험정리_PC": "NPORIA03", "보험진단_PC": "NPORIA04", "보험컨설팅_PC": "NPORIA05", "01_보장분석신규1": "MNPORIA1T", "01_보험다이어트": "MNPORIA06", "01_보험리모델링": "MNPORIA01", "01_보험분석": "MNPORIA02", "01_보험상담": "MNPORIA08", "01_보험점검": "MNPORIA07", "01_보험정리": "MNPORIA03", "01_보험진단": "MNPORIA04", "01_보험컨설팅": "MNPORIA05", "2대진단비_PC": "NPORB246", "2대질병_PC": "NPORB203", "2대질환_PC": "NPORB205", "3대진단비_PC": "NPORB207", "3대진단비보험_PC": "NPORB90", "3대질병_PC": "NPORB208", "3대질병보장보험_PC": "NPORB39", "3대질병보험_PC": "NPORB40", "3대질병보험추천_PC": "NPORB91", "3대질환_PC": "NPORB209", "3대질환보험_PC": "NPORB245", "50대건강보험_PC": "NPORB310", "5대골절진단비_PC": "NPORB74", "64대질병수술비_PC": "NPORB307", "MRI보험_PC": "NPORB95", "MRI의료보험_PC": "NPORB96", "간편건강보험_PC": "NPORB99", "간편보험_PC": "NPORB42", "간편심사보험_PC": "NPORB75", "고혈압당뇨보험_PC": "NPORB104", "고혈압보험_PC": "NPORB46", "고혈압보험가입_PC": "NPORB105", "골절보험_PC": "NPORB47", "골절진단비_PC": "NPORB107", "관절보험_PC": "NPORB108", "뇌경색보험_PC": "NPORB110", "뇌경색진단비_PC": "NPORB256", "뇌관련보험_PC": "NPORB279", "뇌보험_PC": "NPORB215", "뇌졸중보장보험_PC": "NPORB280", "뇌졸중보험_PC": "NPORB111", "뇌졸중진단비_PC": "NPORB249", "뇌졸증보험_PC": "NPORB49", "뇌졸증심근경색보험_PC": "NPORB282", "뇌질환보험_PC": "NPORB50", "뇌출혈보험_PC": "NPORB112", "뇌혈관보험_PC": "NPORB51", "뇌혈관보험추천_PC": "NPORB285", "뇌혈관진단비_PC": "NPORB113", "뇌혈관질환보험_PC": "NPORB52", "뇌혈관질환보험추천_PC": "NPORB288", "뇌혈관질환진단비_PC": "NPORB216", "당뇨병보험_PC": "NPORB251", "당뇨보험_PC": "NPORB53", "당뇨진단보험_PC": "NPORB114", "당뇨환자보험_PC": "NPORB115", "디스크보험_PC": "NPORB120", "목디스크보험_PC": "NPORB121", "무릎수술보험_PC": "NPORB122", "백내장보험_PC": "NPORB309", "부모님건강보험_PC": "NPORB143", "부모님의료보험_PC": "NPORB145", "수술보험_PC": "NPORB244", "수술비보험비교_PC": "NPORB156", "수술비보험추천_PC": "NPORB157", "수술비특약_PC": "NPORB308", "수술입원비보험_PC": "NPORB158", "시니어보험_PC": "NPORB204", "심뇌혈관질환보험_PC": "NPORB267", "심장질환보험_PC": "NPORB162", "심혈관질환보험_PC": "NPORB82", "유병력자보험_PC": "NPORB239", "유병자건강보험_PC": "NPORB167", "유병자보험_PC": "NPORB306", "유병자보험가입_PC": "NPORB19", "유병자보험추천_PC": "NPORB168", "인터넷수술비보험_PC": "NPORB174", "일상생활보험_PC": "NPORB177", "입원비보장보험_PC": "NPORB34", "입원비보험비교_PC": "NPORB178", "입원비보험추천_PC": "NPORB179", "입원수술보험_PC": "NPORB180", "자궁근종보험_PC": "NPORB182", "진단보험_PC": "NPORB258", "진단비보험_PC": "NPORB85", "질병보장보험_PC": "NPORB296", "질병보험_PC": "NPORB297", "질병수술비_PC": "NPORB186", "질병수술비보험_PC": "NPORB187", "질병입원비보험_PC": "NPORB66", "질병후유장해_PC": "NPORB73", "질병후유장해보험_PC": "NPORB188", "척추측만증보험_PC": "NPORB189", "통원의료비_PC": "NPORB194", "특약보험_PC": "NPORB243", "허혈성뇌혈관질환보험_PC": "NPORB298", "허혈성심장질환보험_PC": "NPORB69", "허혈성심장질환진단비_PC": "NPORB247", "혈관질환보험_PC": "NPORB198", "20대운전자보험_PC": "NPORDR24", "교통사고운전자보험_PC": "NPORDR27", "상해보험_PC": "NPORDR6", "상해보험추천_PC": "NPORDR7", "상해후유장해_PC": "NPORDR8", "운전자보험_PC": "NPORDR1", "운전자보험가격_PC": "NPORDR2", "운전자보험가입방법_PC": "NPORDR22", "운전자보험만기환급_PC": "NPORDR15", "운전자보험변경_PC": "NPORDR16", "운전자보험보험료_PC": "NPORDR19", "운전자보험비갱신_PC": "NPORDR20", "운전자보험비교_PC": "NPORDR3", "운전자보험비교사이트_PC": "NPORDR13", "운전자보험상해_PC": "NPORDR5", "운전자보험설계_PC": "NPORDR14", "운전자보험중복가입_PC": "NPORDR18", "운전자보험확인_PC": "NPORDR21", "일반상해후유장해_PC": "NPORDR10", "자동차보험운전자보험_PC": "NPORDR11", "저렴한운전자보험_PC": "NPORDR17", "파워컨텐츠_위젯": "NPORWG9"};
+let INTYPE_MAP = {};
 let GROUP_CONTENT_URLS = {};
 // 블로그/랜딩 주소는 자주 안 바뀌므로 30일 캐시 사용 (매일 새로 안 받아옴, "데이터 새로고침" 누르면 강제 갱신)
 // 교체주기(renewalStatus 등)는 매일 바뀔 수 있어 daily 캐시 사용 (블로그/랜딩 주소도 같이 매일 갱신되지만
@@ -1101,6 +1063,7 @@ async function _loadGroupContentUrls(){
       await _setCached('group_content', rows);
     }
     const map = {};
+    const intypeMap = {};
     rows.forEach(r=>{
       const g = (r['광고그룹 이름']||'').trim();
       if(!g) return;
@@ -1109,11 +1072,22 @@ async function _loadGroupContentUrls(){
         publishedAt: r['publishedAt']||null, renewalDueAt: r['renewalDueAt']||null,
         daysRemaining: r['daysRemaining']||null, renewalStatus: r['renewalStatus']||null
       };
+      const it = (r['인타입']||'').trim();
+      if(it) intypeMap[g] = it;
     });
     GROUP_CONTENT_URLS = map;
-    // 이 fetch는 renderTable()보다 늦게 끝날 수 있어, 이미 그려진 테이블의 교체주기 배지를 새로고침해준다
+    INTYPE_MAP = intypeMap;
+    // 이 fetch는 renderTable()/분석보다 늦게 끝날 수 있어, 이미 그려진 테이블을 새로고침해준다
     if(typeof resultData!=='undefined' && resultData.length) renderTable();
-  }catch(e){ console.error('소재 링크 로드 실패', e); }
+  }catch(e){ console.error('소재/인타입 매핑 로드 실패', e); }
+}
+
+// 여러 부트스트랩 경로(초기 로드, 알림체크, 탭 전환 등)가 _apiAnalyze를 부르기 전에
+// INTYPE_MAP이 구글시트에서 준비될 때까지 기다리도록 공유하는 Promise (한 번만 fetch됨)
+let _intypeMapReadyPromise = null;
+function _ensureIntypeMapLoaded(){
+  if(!_intypeMapReadyPromise) _intypeMapReadyPromise = _loadGroupContentUrls();
+  return _intypeMapReadyPromise;
 }
 
 // 교체주기 임박 배지: due_15d/due_30d 등 "due_N d" 형식이면 남은 일수에 따라 빨강(<=15일)/노랑(<=30일), normal이면 초록
@@ -1421,6 +1395,23 @@ function _apiAnalyze(month,s){
       daily_raw:adRaw[g]||[],daily_sales_map:sITD[it]||{},is_unmapped:false
     });
   }
+  // CRM에 DB는 있는데 어떤 광고그룹의 인타입에도 연결되지 않은 코드 — 미매핑 그룹으로 표에 노출해
+  // (구글시트 매핑 누락/오타 등을 직접 찾아 연결할 수 있게 함)
+  const claimedCodes = new Set(Object.values(INTYPE_MAP));
+  Object.keys(sIT).forEach(it=>{
+    if(claimedCodes.has(it)) return;
+    const sv = sIT[it];
+    res.push({
+      group:`(미매핑) ${it}`,intype:it,cost:0,clicks:0,impressions:0,
+      db:sv.db,contracts:sv.contracts,performance:Math.round(sv.performance),
+      contracts_cum:sv.contracts_cum||0,performance_cum:Math.round(sv.performance_cum||0),
+      roas:null,cpc:null,cpd:null,
+      cvr:sv.db>0?Math.round(sv.contracts/sv.db*1000)/10:null,
+      dbcvr:null,avg_rank:null,rank_sum:0,rank_imp_sum:0,
+      camp:'',cat:'기타',media:'모바일',
+      daily_raw:[],daily_sales_map:sITD[it]||{},is_unmapped:true
+    });
+  });
   res.sort((a,b)=>(a.db===0?1:-1)-(b.db===0?1:-1)||b.db-a.db);
   return{result:res,ad_file:'파워컨텐츠 구글시트',sales_file:'RAW DB 구글시트',ad_count:pcR.length,sales_count:rawR.length};
 }
@@ -1519,19 +1510,6 @@ function _apiKeyword(month,s){
   return{result:res,file:'구글시트',count:res.length};
 }
 
-function _apiAdInfo(){
-  const ir=Object.entries(INTYPE_MAP).map(([g,it])=>{
-    const camp=GROUP_TO_CAMP[g]||'',meta=CAMP_META[camp]||{};
-    return{group:g,intype:it,media:meta.media||(g.endsWith('_PC')?'PC':'모바일'),cat:meta.cat||'',camp};
-  });
-  const kr=[];
-  for(const[g,kws]of Object.entries(KW_MAP)){
-    const it=INTYPE_MAP[g]||'-',camp=GROUP_TO_CAMP[g]||'',meta=CAMP_META[camp]||{};
-    for(const kw of kws)kr.push({group:g,intype:it,media:meta.media||(g.endsWith('_PC')?'PC':'모바일'),cat:meta.cat||'',keyword:kw});
-  }
-  return{intype_rows:ir,kw_rows:kr};
-}
-
 // ===== 전역 상태 =====
 let adData=[], salesData=[], resultData=[], filteredData=[];
 let sortCol='roas', sortAsc=false;
@@ -1565,9 +1543,8 @@ async function saveSnapshot(){
 loadMonths().then(async ()=>{
   const month = document.getElementById('month-select-all')?.value || '';
   setStatus('데이터 로드 중...','');
-  _loadGroupContentUrls();
   try{
-    const s = await loadAllSheets();
+    const [s] = await Promise.all([loadAllSheets(), _ensureIntypeMapLoaded()]);
     const [adData, kwRes, crmRes] = await Promise.all([
       Promise.resolve(_apiAnalyze(month, s)),
       Promise.resolve(_apiKeyword(month, s)),
@@ -1611,6 +1588,7 @@ function runAnalysis(){
     : (monthPc?.value || '');
 
   loadAllSheets().then(async s=>{
+    await _ensureIntypeMapLoaded();
     if(_currentMediaGroup === 'keyword'){
       const [data, crmRes] = await Promise.all([
         Promise.resolve(_apiKeyword(month, s)),
@@ -2078,34 +2056,6 @@ function downloadXLSX(){
   XLSX.utils.book_append_sheet(wb,ws,'광고성과분석');
   XLSX.writeFile(wb,'광고성과분석.xlsx');
 }
-function downloadAdInfo(){
-  // 광고그룹, 인타입, PC/모바일, 키워드 — 키워드 1개당 1행
-  const headers = ['광고그룹','인타입','PC/모바일','키워드'];
-  const rows = [];
-
-  // 인타입 맵 기준으로 전체 그룹 순회 (분석 결과 없어도 포함)
-  const allGroups = Object.keys(INTYPE_MAP);
-  allGroups.forEach(group => {
-    const intype = INTYPE_MAP[group] || '-';
-    const media = group.endsWith('_PC') ? 'PC' : '모바일';
-    const kws = KW_MAP[group] || [];
-    if(kws.length === 0){
-      rows.push([group, intype, media, '']);
-    } else {
-      kws.forEach(kw => {
-        rows.push([group, intype, media, kw]);
-      });
-    }
-  });
-
-  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-  ws['!cols'] = [{wch:28},{wch:18},{wch:10},{wch:20}];
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, '광고정보');
-  XLSX.writeFile(wb, '광고정보.xlsx');
-}
-
-
 // ===== 알림판 보종 필터 =====
 let alertCatFilter = 'all';
 function setAlertCat(val, btn){
@@ -2133,7 +2083,7 @@ function switchMediaGroup(group, btn){
   subtabsKw.style.display  = 'none';
 
   // 모든 패널 숨김
-  ['panel-alert','panel-cpc','panel-data','panel-adinfo','panel-daily','panel-kw-main','panel-kw-insight','panel-insight','panel-display'].forEach(id=>{
+  ['panel-alert','panel-cpc','panel-data','panel-daily','panel-kw-main','panel-kw-insight','panel-insight','panel-display'].forEach(id=>{
     const el = document.getElementById(id); if(el) el.classList.remove('show');
   });
 
@@ -2202,7 +2152,7 @@ function switchMediaGroup(group, btn){
 }
 
 function showPcPanel(tab){
-  ['panel-alert','panel-cpc','panel-data','panel-adinfo','panel-insight'].forEach(id=>{
+  ['panel-alert','panel-cpc','panel-data','panel-insight'].forEach(id=>{
     document.getElementById(id).classList.remove('show');
   });
   // 월선택: 성과 알림판, 전체 데이터만 표시
@@ -2214,7 +2164,6 @@ function showPcPanel(tab){
   if(tab==='insight') { document.getElementById('panel-insight').classList.add('show'); renderInsight(); }
   if(tab==='cpc')     { document.getElementById('panel-cpc').classList.add('show');     initCpcTab(); }
   if(tab==='data')    { document.getElementById('panel-data').classList.add('show'); renderDataChart(filteredData); }
-  if(tab==='adinfo')  { document.getElementById('panel-adinfo').classList.add('show');  loadAdInfo(); }
 }
 
 function switchTab(tab, btn){
@@ -3278,99 +3227,6 @@ function openDetailByGroup(groupName){
 }
 
 
-// ===== 광고정보 =====
-let adInfoData = null;
-let adInfoMode = 'intype'; // 'intype' or 'kw'
-
-async function loadAdInfo(){
-  if(adInfoData) { renderAdInfoTable(); return; }
-  adInfoData = _apiAdInfo();
-  renderAdInfoTable();
-}
-
-function switchAdInfo(mode, btn){
-  adInfoMode = mode;
-  document.querySelectorAll('#panel-adinfo .tab-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  renderAdInfoTable();
-}
-
-function renderAdInfoTable(){
-  if(!adInfoData) return;
-  const q = document.getElementById('adinfo-search').value.toLowerCase();
-  const media = document.getElementById('adinfo-media').value;
-  const cat = document.getElementById('adinfo-cat').value;
-
-  let rows, cols;
-  if(adInfoMode==='intype'){
-    rows = adInfoData.intype_rows.filter(r=>{
-      const mq = !q || r.group.toLowerCase().includes(q) || r.intype.toLowerCase().includes(q);
-      const mm = media==='all' || r.media===media;
-      const mc = cat==='all' || r.cat===cat;
-      return mq&&mm&&mc;
-    });
-    cols = ['광고그룹','인타입','PC/모바일','보종','캠페인'];
-    document.getElementById('adinfo-thead').innerHTML = '<tr>'+cols.map(c=>`<th>${c}</th>`).join('')+'</tr>';
-    document.getElementById('adinfo-tbody').innerHTML = rows.map(r=>`<tr>
-      <td style="font-weight:500">${r.group}</td>
-      <td style="font-family:monospace;font-size:12px;color:var(--muted)">${r.intype}</td>
-      <td>${r.media}</td>
-      <td>${r.cat||'-'}</td>
-      <td style="font-size:12px;color:var(--muted)">${r.camp||'-'}</td>
-    </tr>`).join('');
-  } else {
-    rows = adInfoData.kw_rows.filter(r=>{
-      const mq = !q || r.group.toLowerCase().includes(q) || r.intype.toLowerCase().includes(q) || r.keyword.toLowerCase().includes(q);
-      const mm = media==='all' || r.media===media;
-      const mc = cat==='all' || r.cat===cat;
-      return mq&&mm&&mc;
-    });
-    cols = ['광고그룹','인타입','PC/모바일','보종','키워드'];
-    document.getElementById('adinfo-thead').innerHTML = '<tr>'+cols.map(c=>`<th>${c}</th>`).join('')+'</tr>';
-    document.getElementById('adinfo-tbody').innerHTML = rows.map(r=>`<tr>
-      <td style="font-weight:500">${r.group}</td>
-      <td style="font-family:monospace;font-size:12px;color:var(--muted)">${r.intype}</td>
-      <td>${r.media}</td>
-      <td>${r.cat||'-'}</td>
-      <td>${r.keyword}</td>
-    </tr>`).join('');
-  }
-  document.getElementById('adinfo-count').textContent = rows.length+'개 항목';
-  window._adInfoFilteredRows = rows;
-}
-
-function downloadAdInfoCSV(){
-  if(!adInfoData) return;
-  const rows = window._adInfoFilteredRows || [];
-  const headers = adInfoMode==='intype'
-    ? ['광고그룹','인타입','PC/모바일','보종','캠페인']
-    : ['광고그룹','인타입','PC/모바일','보종','키워드'];
-  const body = rows.map(r => adInfoMode==='intype'
-    ? [r.group,r.intype,r.media,r.cat||'',r.camp||'']
-    : [r.group,r.intype,r.media,r.cat||'',r.keyword]);
-  const csv = [headers,...body].map(r=>r.join(',')).join('\n');
-  const blob = new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = adInfoMode==='intype'?'그룹별_인타입.csv':'그룹별_키워드.csv';
-  a.click();
-}
-
-function downloadAdInfoXLSX(){
-  if(!adInfoData) return;
-  const rows = window._adInfoFilteredRows || [];
-  const headers = adInfoMode==='intype'
-    ? ['광고그룹','인타입','PC/모바일','보종','캠페인']
-    : ['광고그룹','인타입','PC/모바일','보종','키워드'];
-  const body = rows.map(r => adInfoMode==='intype'
-    ? [r.group,r.intype,r.media,r.cat||'',r.camp||'']
-    : [r.group,r.intype,r.media,r.cat||'',r.keyword]);
-  const ws = XLSX.utils.aoa_to_sheet([headers,...body]);
-  ws['!cols'] = [{wch:25},{wch:15},{wch:8},{wch:10},{wch:30}];
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, adInfoMode==='intype'?'그룹별인타입':'그룹별키워드');
-  XLSX.writeFile(wb, adInfoMode==='intype'?'그룹별_인타입.xlsx':'그룹별_키워드.xlsx');
-}
 // ===== 중요도 높은 광고그룹 (파워컨텐츠 메인키워드 리스트) =====
 const KEY_GROUPS = new Set([
   "01_암보험|모바일","01_실비보험|모바일","01_실손보험|모바일","01_실비보험비교사이트|모바일",
@@ -3783,7 +3639,7 @@ function initDailyTab(){
   if(needCrm || needResult){
     const monthAll = document.getElementById('month-select-all');
     const month = monthAll?.value || '';
-    loadAllSheets().then(s=>{
+    Promise.all([loadAllSheets(), _ensureIntypeMapLoaded()]).then(([s])=>{
       const crmRes=_apiCrm(month,s);
       CRM_DATA=crmRes.crm_data||{};CRM_MEDIA_LIST=crmRes.media_list||[];KW_DAILY_COST=crmRes.kw_daily_cost||{};
       if(needResult){
@@ -4145,7 +4001,7 @@ function cpcPeriod(p){
   // 90일/전체: 모든 월 파일 합산 데이터 로드
   if(p === '90d' || p === 'all'){
     setStatus('멀티월 데이터 로드 중...','');
-    loadAllSheets().then(s=>{
+    Promise.all([loadAllSheets(), _ensureIntypeMapLoaded()]).then(([s])=>{
       const adData = _apiAnalyze('', s);
       if(adData && !adData.error){ _cpcAllData = adData.result; }
       setStatus('로드 완료','ok'); renderCpc();
@@ -4329,7 +4185,7 @@ function initCpcTab(){
   // resultData가 없으면 자동 로드
   if(!resultData.length && !_cpcAllData){
     setStatus('CPC 데이터 로드 중...','');
-    loadAllSheets().then(s=>{
+    Promise.all([loadAllSheets(), _ensureIntypeMapLoaded()]).then(([s])=>{
       const mon=document.getElementById('month-select')?.value||'';
       const adRes=_apiAnalyze(mon,s),crmRes=_apiCrm(mon,s);
       if(adRes&&!adRes.error){ resultData=adRes.result||[]; filteredData=[...resultData]; }
@@ -4649,7 +4505,7 @@ async function _checkDisplayAlerts(){
 async function _checkDashboardAlerts(){
   if(_alertsDismissedToday()) return;
   try {
-    const s = await loadAllSheets();
+    const [s] = await Promise.all([loadAllSheets(), _ensureIntypeMapLoaded()]);
     const [adRes, kwRes, dispAlerts] = await Promise.all([
       Promise.resolve(_apiAnalyze('', s)),
       Promise.resolve(_apiKeyword('', s)),
