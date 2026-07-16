@@ -291,6 +291,8 @@ button.run,.dl{box-shadow:none}
   <button class="media-group-tab" onclick="switchMediaGroup('display',this)">디스플레이</button>
 </nav>
 
+<div id="sheet-load-warning" style="display:none;background:#fef3c7;border-bottom:1px solid #fbbf24;color:#92400e;font-size:13px;padding:10px 24px;text-align:center;font-weight:500"></div>
+
 <div class="container">
   <!-- 전체 탭용 서브메뉴 -->
   <div class="main-tabs" id="subtabs-all">
@@ -1134,6 +1136,12 @@ const SHEETS_URLS = {
   // 파워컨텐츠 그룹별 소재(블로그/랜딩) 링크
   group_content:   'https://docs.google.com/spreadsheets/d/e/2PACX-1vSsBXKDYY2T7lRzlI0CJdVzcCCRElM5mb03D0ebTez0-cD5KDQY2In4kqVESmCRGHpmeEqna0__yjCH/pub?gid=384816739&single=true&output=csv',
 };
+// 로드 실패 시 사용자에게 보여줄 한글 이름 (구글 시트가 간헐적으로 응답을 멈추는 경우가 있어, 어떤 시트가 실패했는지 명시하기 위함)
+const SHEET_LABELS = {
+  raw:'CRM 원본(RAW)', raw_h2:'CRM 원본(하반기)',
+  pc_h1:'파워컨텐츠(상반기)', naver_h1:'네이버(상반기)', google_h1:'구글(상반기)', daum_h1:'다음(상반기)',
+  pc_h2:'파워컨텐츠(하반기)', naver_h2:'네이버(하반기)', google_h2:'구글(하반기)', daum_h2:'다음(하반기)',
+};
 const KW_INTYPE_MAP = {"DKAA": {"cat": "어린이보험", "media_name": "다음"}, "DKAB": {"cat": "보험", "media_name": "다음"}, "DKAC": {"cat": "암보험", "media_name": "다음"}, "DKAD": {"cat": "치아보험", "media_name": "다음"}, "DKAF": {"cat": "주택화재보험", "media_name": "다음"}, "DKAG": {"cat": "치매/간병", "media_name": "다음"}, "DKAJ": {"cat": "종신보험", "media_name": "다음"}, "DKAR": {"cat": "정기보험", "media_name": "다음"}, "DKAS": {"cat": "실비", "media_name": "다음"}, "DKAT": {"cat": "신생아보험", "media_name": "다음"}, "DKATLT1": {"cat": "신생아보험", "media_name": "다음"}, "DKAU": {"cat": "운전자보험", "media_name": "다음"}, "DKAV": {"cat": "보장분석", "media_name": "다음"}, "DKEA": {"cat": "어린이보험", "media_name": "다음"}, "DKEB": {"cat": "보험", "media_name": "다음"}, "DKEC": {"cat": "암보험", "media_name": "다음"}, "DKECL4": {"cat": "암보험", "media_name": "다음"}, "DKED": {"cat": "치아보험", "media_name": "다음"}, "DKEG": {"cat": "치매/간병", "media_name": "다음"}, "DKEJ": {"cat": "종신보험", "media_name": "다음"}, "DKER": {"cat": "정기보험", "media_name": "다음"}, "DKES": {"cat": "실비", "media_name": "다음"}, "DKESL1": {"cat": "실비", "media_name": "다음"}, "DKESL2": {"cat": "실비", "media_name": "다음"}, "DKET": {"cat": "신생아보험", "media_name": "다음"}, "DKMA": {"cat": "어린이보험", "media_name": "다음"}, "DKMB": {"cat": "보험", "media_name": "다음"}, "DKMC": {"cat": "암보험", "media_name": "다음"}, "DKMD": {"cat": "치아보험", "media_name": "다음"}, "DKMG": {"cat": "치매/간병", "media_name": "다음"}, "DKMS": {"cat": "실비", "media_name": "다음"}, "DKMT": {"cat": "신생아보험", "media_name": "다음"}, "GKAA": {"cat": "어린이보험", "media_name": "구글"}, "GKAB": {"cat": "보험", "media_name": "구글"}, "GKAC": {"cat": "암보험", "media_name": "구글"}, "GKAD": {"cat": "치아보험", "media_name": "구글"}, "GKAF": {"cat": "주택화재보험", "media_name": "구글"}, "GKAG": {"cat": "치매/간병", "media_name": "구글"}, "GKAJ": {"cat": "종신보험", "media_name": "구글"}, "GKAR": {"cat": "정기보험", "media_name": "구글"}, "GKAS": {"cat": "실비", "media_name": "구글"}, "GKAT": {"cat": "신생아보험", "media_name": "구글"}, "GKAU": {"cat": "운전자보험", "media_name": "구글"}, "GKAV": {"cat": "보장분석", "media_name": "구글"}, "GKEA": {"cat": "어린이보험", "media_name": "구글"}, "GKEB": {"cat": "보험", "media_name": "구글"}, "GKEC": {"cat": "암보험", "media_name": "구글"}, "GKED": {"cat": "치아보험", "media_name": "구글"}, "GKEG": {"cat": "치매/간병", "media_name": "구글"}, "GKEJ": {"cat": "종신보험", "media_name": "구글"}, "GKER": {"cat": "정기보험", "media_name": "구글"}, "GKES": {"cat": "실비", "media_name": "구글"}, "GKET": {"cat": "신생아보험", "media_name": "구글"}, "GKEV": {"cat": "보장분석", "media_name": "구글"}, "GKMA": {"cat": "어린이보험", "media_name": "구글"}, "GKMB": {"cat": "보험", "media_name": "구글"}, "GKMC": {"cat": "암보험", "media_name": "구글"}, "GKMD": {"cat": "치아보험", "media_name": "구글"}, "GKMG": {"cat": "치매/간병", "media_name": "구글"}, "GKMS": {"cat": "실비", "media_name": "구글"}, "GKMT": {"cat": "신생아보험", "media_name": "구글"}, "NKAA": {"cat": "어린이보험", "media_name": "네이버"}, "NKAAL1": {"cat": "어린이보험", "media_name": "네이버"}, "NKAAL2": {"cat": "어린이보험", "media_name": "네이버"}, "NKAAL3": {"cat": "어린이보험", "media_name": "네이버"}, "NKAAL4": {"cat": "어린이보험", "media_name": "네이버"}, "NKAALT1": {"cat": "어린이보험", "media_name": "네이버"}, "NKAB": {"cat": "보험", "media_name": "네이버"}, "NKABL1": {"cat": "보험", "media_name": "네이버"}, "NKABL2": {"cat": "보험", "media_name": "네이버"}, "NKABL3": {"cat": "보험", "media_name": "네이버"}, "NKABL4": {"cat": "보험", "media_name": "네이버"}, "NKAC": {"cat": "암보험", "media_name": "네이버"}, "NKACL1": {"cat": "암보험", "media_name": "네이버"}, "NKACL2": {"cat": "암보험", "media_name": "네이버"}, "NKACL3": {"cat": "암보험", "media_name": "네이버"}, "NKACL4": {"cat": "암보험", "media_name": "네이버"}, "NKAD": {"cat": "치아보험", "media_name": "네이버"}, "NKADL1": {"cat": "치아보험", "media_name": "네이버"}, "NKADL2": {"cat": "치아보험", "media_name": "네이버"}, "NKADL3": {"cat": "치아보험", "media_name": "네이버"}, "NKADL4": {"cat": "치아보험", "media_name": "네이버"}, "NKAF": {"cat": "주택화재보험", "media_name": "네이버"}, "NKAFL1": {"cat": "주택화재보험", "media_name": "네이버"}, "NKAFL2": {"cat": "주택화재보험", "media_name": "네이버"}, "NKAFL3": {"cat": "주택화재보험", "media_name": "네이버"}, "NKAFL4": {"cat": "주택화재보험", "media_name": "네이버"}, "NKAG": {"cat": "치매/간병", "media_name": "네이버"}, "NKAGL1": {"cat": "치매/간병", "media_name": "네이버"}, "NKAGL2": {"cat": "치매/간병", "media_name": "네이버"}, "NKAGL3": {"cat": "치매/간병", "media_name": "네이버"}, "NKAGL4": {"cat": "치매/간병", "media_name": "네이버"}, "NKAJ": {"cat": "종신보험", "media_name": "네이버"}, "NKAJL1": {"cat": "종신보험", "media_name": "네이버"}, "NKAJL2": {"cat": "종신보험", "media_name": "네이버"}, "NKAJL3": {"cat": "종신보험", "media_name": "네이버"}, "NKAJL4": {"cat": "종신보험", "media_name": "네이버"}, "NKAJLT1": {"cat": "종신보험", "media_name": "네이버"}, "NKAR": {"cat": "정기보험", "media_name": "네이버"}, "NKARL1": {"cat": "정기보험", "media_name": "네이버"}, "NKARL2": {"cat": "정기보험", "media_name": "네이버"}, "NKARL3": {"cat": "정기보험", "media_name": "네이버"}, "NKARL4": {"cat": "정기보험", "media_name": "네이버"}, "NKARLT1": {"cat": "정기보험", "media_name": "네이버"}, "NKAS": {"cat": "실비", "media_name": "네이버"}, "NKASL1": {"cat": "실비", "media_name": "네이버"}, "NKASL2": {"cat": "실비", "media_name": "네이버"}, "NKASL3": {"cat": "실비", "media_name": "네이버"}, "NKASL4": {"cat": "실비", "media_name": "네이버"}, "NKAT": {"cat": "신생아보험", "media_name": "네이버"}, "NKATL1": {"cat": "신생아보험", "media_name": "네이버"}, "NKATL2": {"cat": "신생아보험", "media_name": "네이버"}, "NKATL3": {"cat": "신생아보험", "media_name": "네이버"}, "NKATL4": {"cat": "신생아보험", "media_name": "네이버"}, "NKATLT1": {"cat": "신생아보험", "media_name": "네이버"}, "NKAU": {"cat": "운전자보험", "media_name": "네이버"}, "NKAUL1": {"cat": "운전자보험", "media_name": "네이버"}, "NKAUL2": {"cat": "운전자보험", "media_name": "네이버"}, "NKAUL3": {"cat": "운전자보험", "media_name": "네이버"}, "NKAUL4": {"cat": "운전자보험", "media_name": "네이버"}, "NKAV": {"cat": "보장분석", "media_name": "네이버"}, "NKAVL1": {"cat": "보장분석", "media_name": "네이버"}, "NKAVL2": {"cat": "보장분석", "media_name": "네이버"}, "NKAVL3": {"cat": "보장분석", "media_name": "네이버"}, "NKAVL4": {"cat": "보장분석", "media_name": "네이버"}, "NKEA": {"cat": "어린이보험", "media_name": "네이버"}, "NKEB": {"cat": "보험", "media_name": "네이버"}, "NKEC": {"cat": "암보험", "media_name": "네이버"}, "NKECL1": {"cat": "암보험", "media_name": "네이버"}, "NKECL2": {"cat": "암보험", "media_name": "네이버"}, "NKECL3": {"cat": "암보험", "media_name": "네이버"}, "NKED": {"cat": "치아보험", "media_name": "네이버"}, "NKEG": {"cat": "치매/간병", "media_name": "네이버"}, "NKEJ": {"cat": "종신보험", "media_name": "네이버"}, "NKER": {"cat": "정기보험", "media_name": "네이버"}, "NKES": {"cat": "실비", "media_name": "네이버"}, "NKESL1": {"cat": "실비", "media_name": "네이버"}, "NKESL2": {"cat": "실비", "media_name": "네이버"}, "NKESL3": {"cat": "실비", "media_name": "네이버"}, "NKET": {"cat": "신생아보험", "media_name": "네이버"}, "NKMA": {"cat": "어린이보험", "media_name": "네이버"}, "NKMB": {"cat": "보험", "media_name": "네이버"}, "NKMC": {"cat": "암보험", "media_name": "네이버"}, "NKMD": {"cat": "치아보험", "media_name": "네이버"}, "NKMG": {"cat": "치매/간병", "media_name": "네이버"}, "NKMS": {"cat": "실비", "media_name": "네이버"}, "NKMT": {"cat": "신생아보험", "media_name": "네이버"}, "TKAA": {"cat": "어린이보험", "media_name": "네이버"}, "TKAB": {"cat": "보험", "media_name": "네이버"}, "TKAC": {"cat": "암보험", "media_name": "네이버"}, "TKAD": {"cat": "치아보험", "media_name": "네이버"}, "TKAG": {"cat": "치매/간병", "media_name": "네이버"}, "TKAJ": {"cat": "종신보험", "media_name": "네이버"}, "TKAR": {"cat": "정기보험", "media_name": "네이버"}, "TKAS": {"cat": "실비", "media_name": "네이버"}, "TKAT": {"cat": "신생아보험", "media_name": "네이버"}, "TKEA": {"cat": "어린이보험", "media_name": "네이버"}, "TKEB": {"cat": "보험", "media_name": "네이버"}, "TKEC": {"cat": "암보험", "media_name": "네이버"}, "TKED": {"cat": "치아보험", "media_name": "네이버"}, "TKEG": {"cat": "치매/간병", "media_name": "네이버"}, "TKEJ": {"cat": "종신보험", "media_name": "네이버"}, "TKER": {"cat": "정기보험", "media_name": "네이버"}, "TKES": {"cat": "실비", "media_name": "네이버"}, "TKET": {"cat": "신생아보험", "media_name": "네이버"}, "TKMA": {"cat": "어린이보험", "media_name": "네이버"}, "TKMB": {"cat": "보험", "media_name": "네이버"}, "TKMC": {"cat": "암보험", "media_name": "네이버"}, "TKMD": {"cat": "치아보험", "media_name": "네이버"}, "TKMG": {"cat": "치매/간병", "media_name": "네이버"}, "TKMS": {"cat": "실비", "media_name": "네이버"}, "TKMT": {"cat": "신생아보험", "media_name": "네이버"}, "DKAJLT1": {"cat": "정기보험", "media_name": "다음"}, "DKEDL1": {"cat": "치아보험", "media_name": "다음"}, "DKABL3": {"cat": "보험", "media_name": "다음"}, "NKEDL1": {"cat": "치아보험", "media_name": "네이버"}, "NKEDL3": {"cat": "치아보험", "media_name": "네이버"}, "DKABL1": {"cat": "보험", "media_name": "다음"}, "NKESL4": {"cat": "실비", "media_name": "네이버"}, "ZKES": {"cat": "실비", "media_name": "네이버"}, "ZKEB": {"cat": "보험", "media_name": "네이버"}, "ZKESL1": {"cat": "실비", "media_name": "네이버"}, "ZKESL2": {"cat": "실비", "media_name": "네이버"}, "ZKESL3": {"cat": "실비", "media_name": "네이버"}, "ZKESL4": {"cat": "실비", "media_name": "네이버"}, "ZKEBL1": {"cat": "보험", "media_name": "네이버"}, "ZKEBL2": {"cat": "보험", "media_name": "네이버"}, "ZKEBL3": {"cat": "보험", "media_name": "네이버"}, "ZKEBL4": {"cat": "보험", "media_name": "네이버"}, "ZKEC": {"cat": "암보험", "media_name": "네이버"}, "ZKECL1": {"cat": "암보험", "media_name": "네이버"}, "ZKECL2": {"cat": "암보험", "media_name": "네이버"}, "ZKECL3": {"cat": "암보험", "media_name": "네이버"}, "ZKECL4": {"cat": "암보험", "media_name": "네이버"}, "ZKEA": {"cat": "어린이보험", "media_name": "네이버"}, "ZKEAL1": {"cat": "어린이보험", "media_name": "네이버"}, "ZKEAL2": {"cat": "어린이보험", "media_name": "네이버"}, "ZKEAL3": {"cat": "어린이보험", "media_name": "네이버"}, "ZKEAL4": {"cat": "어린이보험", "media_name": "네이버"}, "ZKAB": {"cat": "보험", "media_name": "네이버"}, "DKAALT1": {"cat": "어린이보험", "media_name": "다음"}, "NKEV": {"cat": "보장분석", "media_name": "네이버"}, "DKECL1": {"cat": "암보험", "media_name": "다음"}, "NKEDL4": {"cat": "치아보험", "media_name": "네이버"}, "DKABL2": {"cat": "보험", "media_name": "다음"}, "DKAVL2": {"cat": "보장분석", "media_name": "다음"}, "DKECL3": {"cat": "암보험", "media_name": "다음"}, "DKAVL3": {"cat": "보장분석", "media_name": "다음"}};
 const CAMP_CAT_MAP  = {"C01": "보험", "C02": "실비", "C03": "암보험", "C04": "치아보험", "C05": "신생아보험", "C06": "어린이보험", "C07": "치매/간병", "C08": "자동차보험", "C09": "운전자보험", "C10": "저축성보험", "C11": "생명보험", "C12": "종신보험", "C15": "정기보험", "C16": "보장분석", "C17": "주택화재보험"};
 
@@ -1186,6 +1194,20 @@ function _setLoadOverlay(show,msg,pct){
     if(me)me.textContent=msg||'';
     if(be)be.style.width=`${Math.round((pct||0)*100)}%`;
   }else el.style.display='none';
+}
+
+// 구글 시트 CSV export가 간헐적으로 응답 없이 멈추는 경우가 있어, 한 시트라도 무한정 기다리지 않도록 타임아웃을 건다
+function _fetchWithTimeout(url, ms){
+  const ctrl = new AbortController();
+  const timer = setTimeout(()=>ctrl.abort(), ms);
+  return fetch(url, {signal: ctrl.signal}).finally(()=>clearTimeout(timer));
+}
+function _showSheetLoadWarning(labels){
+  const el = document.getElementById('sheet-load-warning');
+  if(!el) return;
+  if(!labels || !labels.length){ el.style.display='none'; return; }
+  el.style.display='block';
+  el.textContent = `⚠️ 일부 데이터를 불러오지 못했습니다: ${labels.join(', ')} — ↻ 데이터 새로고침을 눌러 다시 시도해주세요.`;
 }
 
 // ===== IndexedDB 캐시 (용량 무제한) =====
@@ -1295,19 +1317,35 @@ async function _loadAllSheetsInner(){
   if(!daum2C) needFetch.push(['daum_h2',SHEETS_URLS.daum_h2, _TTL_DYNAMIC]);
 
   const fetched={};
+  const failedKeys=[];
   if(needFetch.length){
     let done=0;
     _setLoadOverlay(true,`데이터 로드 중... (${needFetch.length}개)`,0);
-    await Promise.all(needFetch.map(([key,url,ttl])=>
-      fetch(url).then(r=>r.text()).then(async t=>{
+    const results = await Promise.allSettled(needFetch.map(([key,url,ttl])=>
+      _fetchWithTimeout(url,20000).then(r=>r.text()).then(async t=>{
         const parsed=_pCSV(t);
         fetched[key]=parsed;
         await _setCached(key,parsed);
         done++;
         _setLoadOverlay(true,`${key} 완료 (${done}/${needFetch.length})`,done/needFetch.length);
+      }).catch(err=>{
+        done++;
+        _setLoadOverlay(true,`${key} 실패 (${done}/${needFetch.length})`,done/needFetch.length);
+        throw {key,err};
       })
     ));
+    for(const r of results){
+      if(r.status==='rejected'){
+        const {key,err} = r.reason;
+        failedKeys.push(key);
+        console.warn(`[adtool] 시트 로드 실패: ${key}`, err);
+        // 실패한 시트는 만료됐더라도 예전 캐시가 있으면 그거라도 써서 화면이 완전히 비지 않게 한다
+        const stale = await _idbGet(key);
+        if(stale) fetched[key] = stale.data;
+      }
+    }
   }
+  _showSheetLoadWarning(failedKeys.map(k=>SHEET_LABELS[k]||k));
 
   const get=key=>fetched[key]||null;
   const raw   = rawC  || get('raw')   || [];
@@ -5059,16 +5097,52 @@ function _buildCreativeHistoryMatrix(media){
       rowList.push({area, kw:k.kw, cellsByMonth});
     });
   });
-  rowList.sort((x,y)=> x.area.localeCompare(y.area,'ko') || (kwSortKey(x.kw)-kwSortKey(y.kw)) || x.kw.localeCompare(y.kw,'ko'));
 
-  return {months, rowList};
+  // 영역 단위로 묶고, 각 영역의 월별 합계(=소재 합산)를 따로 계산 — 접기/펼치기 부모 행에 쓰인다
+  const areaMap = {};
+  rowList.forEach(r=>{
+    if(!areaMap[r.area]) areaMap[r.area] = {area:r.area, kws:[]};
+    areaMap[r.area].kws.push({kw:r.kw, cellsByMonth:r.cellsByMonth});
+  });
+  const areaList = Object.values(areaMap).map(a=>{
+    const cellsByMonth = {};
+    months.forEach(ym=>{
+      let cost=0,imp=0,clk=0,db=0;
+      a.kws.forEach(k=>{
+        const c = k.cellsByMonth[ym];
+        if(!c) return;
+        cost+=c.cost; imp+=c.imp; clk+=c.clk; db+=c.db;
+      });
+      if(cost<=0 && imp<=0 && clk<=0 && db<=0){ cellsByMonth[ym] = null; return; }
+      const ctr = imp>0 ? Math.round(clk/imp*10000)/100 : null;
+      const dbcvr = clk>0 ? Math.round(db/clk*1000)/10 : null;
+      const cpd = (db>0 && cost>0) ? Math.round(cost/db) : null;
+      cellsByMonth[ym] = {cost,imp,clk,db,ctr,dbcvr,cpd};
+    });
+    a.kws.sort((x,y)=> (kwSortKey(x.kw)-kwSortKey(y.kw)) || x.kw.localeCompare(y.kw,'ko'));
+    return {area:a.area, cellsByMonth, kws:a.kws};
+  });
+  areaList.sort((x,y)=>x.area.localeCompare(y.area,'ko'));
+
+  return {months, areaList};
 }
 
+// 특정 월들에 대해 metric 기준 최고값의 월을 찾는다 (강조 표시용, 부모/자식 행 공용)
+function _bestMonthOf(cellsByMonth, months, metric, lowerIsBetter){
+  let bestYm=null, bestVal=null;
+  months.forEach(ym=>{
+    const c = cellsByMonth[ym];
+    const v = c ? c[metric] : null;
+    if(v===null || v===undefined) return;
+    if(bestVal===null || (lowerIsBetter ? v<bestVal : v>bestVal)){ bestVal=v; bestYm=ym; }
+  });
+  return bestYm;
+}
 function renderCreativeHistoryMatrix(){
   const thead = document.getElementById('creative-history-thead');
   const tbody = document.getElementById('creative-history-tbody');
   if(!thead || !tbody) return;
-  const {months, rowList} = _buildCreativeHistoryMatrix(_creativeHistoryMedia);
+  const {months, areaList} = _buildCreativeHistoryMatrix(_creativeHistoryMedia);
   const metric = _creativeHistoryMetric;
   const lowerIsBetter = metric === 'cpd';
   const fmtVal = v => v===null||v===undefined ? '-' : (metric==='cpd' ? v.toLocaleString()+'원' : v+'%');
@@ -5080,34 +5154,43 @@ function renderCreativeHistoryMatrix(){
   }
 
   thead.innerHTML = `<tr>
-    <th style="text-align:left;padding:8px 10px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border)">영역</th>
-    <th style="text-align:left;padding:8px 10px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border)">소재</th>
+    <th></th>
+    <th style="text-align:left;padding:8px 10px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border)">영역 (클릭 → 소재별 펼치기)</th>
     ${months.map(ym=>{
       const [y,mo] = ym.split('-');
       return `<th class="num" style="padding:8px 10px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border)">${parseInt(mo)}월</th>`;
     }).join('')}
   </tr>`;
 
-  tbody.innerHTML = rowList.map(k=>{
-    // 이 소재 행에서 가장 좋은 값 찾기 (강조 표시용)
-    let bestYm = null, bestVal = null;
-    months.forEach(ym=>{
-      const c = k.cellsByMonth[ym];
-      const v = c ? c[metric] : null;
-      if(v===null || v===undefined) return;
-      if(bestVal===null || (lowerIsBetter ? v<bestVal : v>bestVal)){ bestVal = v; bestYm = ym; }
-    });
-    return `<tr>
-      <td style="padding:8px 10px;font-size:12px;border-bottom:1px solid var(--border);color:var(--muted);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(k.area)}">${escHtml(k.area)}</td>
-      <td style="padding:8px 10px;font-size:12px;border-bottom:1px solid var(--border);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(k.kw)}">${escHtml(k.kw)}</td>
+  tbody.innerHTML = areaList.map((a,i)=>{
+    const rowCls = `hist-kwdet-${i}`;
+    const bestYm = _bestMonthOf(a.cellsByMonth, months, metric, lowerIsBetter);
+    const parentRow = `<tr style="cursor:pointer;font-weight:600" onclick="toggleDailyKwDetail('${rowCls}',this)">
+      <td class="dk-caret" style="color:var(--faint);text-align:center;padding:8px 10px;border-bottom:1px solid var(--border)">▸</td>
+      <td style="padding:8px 10px;font-size:12px;border-bottom:1px solid var(--border);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(a.area)}">${escHtml(a.area)}</td>
       ${months.map(ym=>{
-        const c = k.cellsByMonth[ym];
+        const c = a.cellsByMonth[ym];
         const v = c ? c[metric] : null;
         const isBest = ym===bestYm && v!==null;
         const style = isBest ? 'font-weight:700;color:#166534;background:#EAF3DE' : '';
         return `<td class="num" style="padding:8px 10px;font-size:12px;border-bottom:1px solid var(--border);${style}">${fmtVal(v)}</td>`;
       }).join('')}
     </tr>`;
+    const childRows = a.kws.map(k=>{
+      const kBestYm = _bestMonthOf(k.cellsByMonth, months, metric, lowerIsBetter);
+      return `<tr class="${rowCls}" style="display:none;background:var(--bg)">
+        <td></td>
+        <td style="padding-left:1.5rem;color:var(--muted);font-size:12px;border-bottom:1px solid var(--border);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(k.kw)}">${escHtml(k.kw)}</td>
+        ${months.map(ym=>{
+          const c = k.cellsByMonth[ym];
+          const v = c ? c[metric] : null;
+          const isBest = ym===kBestYm && v!==null;
+          const style = isBest ? 'font-weight:700;color:#166534;background:#EAF3DE' : '';
+          return `<td class="num" style="padding:8px 10px;font-size:12px;border-bottom:1px solid var(--border);${style}">${fmtVal(v)}</td>`;
+        }).join('')}
+      </tr>`;
+    }).join('');
+    return parentRow + childRows;
   }).join('') || `<tr><td colspan="${months.length+2}" style="padding:1.5rem;color:var(--faint);font-size:12px;text-align:center">이 매체에 소재 데이터가 없습니다.</td></tr>`;
 }
 
