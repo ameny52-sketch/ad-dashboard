@@ -544,6 +544,7 @@ button.run,.dl{box-shadow:none}
 
     <div id="display-content" style="display:none">
       <div id="display-summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:1rem"></div>
+      <div id="sales-compare-display" style="display:none;margin-bottom:1rem"></div>
       <div class="cpc-chart-card" style="margin-bottom:1rem">
         <div class="cpc-chart-title">
           <span id="display-chart-title-text">영역별 광고비 추이</span>
@@ -5775,6 +5776,12 @@ function renderDisplayTab(){
 
   const hasIntype = areaList.some(a=>a.hasIntype);
   renderDisplaySummary(areaList, hasIntype);
+  renderSalesCompare('sales-compare-display', areaList.map(a=>({
+    ...a,
+    performance: a.perf ?? 0,
+    performance_cum: a.perf_cum ?? 0,
+    cost: a.cost || 0
+  })));
   renderDisplayAreaTable(areaList);
   renderDisplayCharts(areaList, mediaRows, crmRows, monSel);
 }
