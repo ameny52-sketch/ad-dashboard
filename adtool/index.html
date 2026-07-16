@@ -5198,6 +5198,7 @@ function renderCreativeHistoryMatrix(){
 
 // 팀 내부 소재별 효율 엑셀에 그대로 붙여넣을 수 있는 형태의 CSV — 매체 Total → 영역별 Total → 영역 안 소재별, 항목(지표)이 세로로 나열
 // 비율 지표는 그 엑셀처럼 소수(0.35 = 35%) 그대로 두고 반올림하지 않는다 (반올림하면 붙여넣었을 때 값이 미묘하게 달라짐)
+// 계약수/계약률/평가보험료/평가업적比광고비는 cumKey가 있어 "영역별 성과" 표의 당월/누적 토글(_displayAreaCumMode)에 따라 둘 중 하나만 나간다
 const MEDIA_EXPORT_METRICS = [
   {key:'imp', label:'Imps'},
   {key:'clk', label:'Click'},
@@ -5206,14 +5207,10 @@ const MEDIA_EXPORT_METRICS = [
   {key:'db', label:'DB'},
   {key:'cpd', label:'DB단가'},
   {key:'dbcvr', label:'DB전환율'},
-  {key:'contracts', label:'계약수'},
-  {key:'contracts_cum', label:'계약수(누적)'},
-  {key:'cvr', label:'계약률'},
-  {key:'cvr_cum', label:'계약률(누적)'},
-  {key:'perf', label:'평가보험료'},
-  {key:'perf_cum', label:'평가보험료(누적)'},
-  {key:'roas', label:'평가업적比광고비'},
-  {key:'roas_cum', label:'평가업적比광고비(누적)'},
+  {key:'contracts', cumKey:'contracts_cum', label:'계약수'},
+  {key:'cvr', cumKey:'cvr_cum', label:'계약률'},
+  {key:'perf', cumKey:'perf_cum', label:'평가보험료'},
+  {key:'roas', cumKey:'roas_cum', label:'평가업적比광고비'},
 ];
 // 계약수(누적)/평가보험료(누적)은 CRM의 "계약수(누적)"/"평가업적(누적)" 필드 — 그 달 이후에도 계속 전환되는 후행 계약까지 반영된 값
 function _deriveExportMetrics(sums){
@@ -5314,17 +5311,19 @@ function _addSums(a,b){
   return {cost:a.cost+b.cost, imp:a.imp+b.imp, clk:a.clk+b.clk, db:a.db+b.db, contracts:a.contracts+b.contracts, perf:a.perf+b.perf, contracts_cum:a.contracts_cum+b.contracts_cum, perf_cum:a.perf_cum+b.perf_cum};
 }
 // 매체 Total → 영역 Total → 그 영역의 소재별, 항목이 세로로 나열된 행 목록을 만든다 ("영역" 칸은 블록의 첫 항목 행에만 채움 — 엑셀 원본과 동일)
-function _buildMediaExportRows(media){
+// cumMode는 "영역별 성과" 표의 당월/누적 토글과 동일 — 계약수/계약률/평가보험료/평가업적比광고비만 그에 따라 당월값 또는 누적값 하나만 나간다
+function _buildMediaExportRows(media, cumMode){
   const {months, areas, kwSortKey} = _buildMediaExportSums(media);
   const areaNames = Object.keys(areas).sort((a,b)=>a.localeCompare(b,'ko'));
 
   const rows = [];
   const pushBlock = (label, monthSums) => {
     MEDIA_EXPORT_METRICS.forEach((m,i)=>{
+      const useCum = cumMode && m.cumKey;
       rows.push({
         area: i===0 ? label : '',
-        metric: m.label,
-        values: months.map(ym=>_deriveExportMetrics(monthSums[ym])[m.key]),
+        metric: useCum ? m.label+'(누적)' : m.label,
+        values: months.map(ym=>_deriveExportMetrics(monthSums[ym])[useCum ? m.cumKey : m.key]),
       });
     });
   };
@@ -5363,7 +5362,7 @@ function _csvCell(v){
   return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
 }
 function downloadMediaCsv(media){
-  const {months, rows} = _buildMediaExportRows(media);
+  const {months, rows} = _buildMediaExportRows(media, _displayAreaCumMode);
   if(!months.length){ alert('이 매체는 다운로드할 데이터가 없습니다.'); return; }
   const header = ['영역','항목', ...months.map(ym=>ym.replace('-',''))];
   const lines = [header, ...rows.map(r=>[r.area, r.metric, ...r.values])];
