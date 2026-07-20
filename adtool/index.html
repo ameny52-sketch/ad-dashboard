@@ -1323,8 +1323,16 @@ async function _loadAllSheetsInner(){
   if(needFetch.length){
     let done=0;
     _setLoadOverlay(true,`데이터 로드 중... (${needFetch.length}개)`,0);
+    // 같은 스프레드시트(gid만 다름)에 여러 시트가 동시에 몰리면 그중 하나가 응답 없이 멈추는 경우가 있어,
+    // 첫 시도가 실패하면 잠깐(2초) 쉬었다가 한 번 더 재시도한다 — 몰림이 가라앉은 뒤 재요청하면 거의 항상 바로 성공한다
+    const fetchWithRetry = (key, url) =>
+      _fetchWithTimeout(url,20000).then(r=>r.text()).catch(async err=>{
+        console.warn(`[adtool] ${key} 1차 실패, 2초 후 재시도`, err);
+        await new Promise(r=>setTimeout(r,2000));
+        return _fetchWithTimeout(url,20000).then(r=>r.text());
+      });
     const results = await Promise.allSettled(needFetch.map(([key,url,ttl])=>
-      _fetchWithTimeout(url,20000).then(r=>r.text()).then(async t=>{
+      fetchWithRetry(key,url).then(async t=>{
         const parsed=_pCSV(t);
         fetched[key]=parsed;
         await _setCached(key,parsed);
