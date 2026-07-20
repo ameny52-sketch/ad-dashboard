@@ -4028,12 +4028,24 @@ function makeMonthTotal(label, rows){
 function fmtN(v){ return v!=null?Math.round(v).toLocaleString():'-'; }
 
 function downloadDailyCsv(){
-  const rows=[['구분','DB수','계약수','계약율','환산료','광고비','DB단가','환산비광고비(누적)']];
+  const thead = document.getElementById('daily-thead');
+  const groupRow = thead && thead.rows[0], subRow = thead && thead.rows[1];
+  const header = ['구분'];
+  if(groupRow && subRow){
+    const subLabels = [...subRow.cells].map(c=>c.textContent.trim());
+    let subIdx = 0;
+    [...groupRow.cells].slice(1).forEach(gc=>{
+      const groupName = gc.textContent.trim();
+      const span = gc.colSpan || 1;
+      for(let i=0;i<span;i++){ header.push(`${groupName}_${subLabels[subIdx]||''}`); subIdx++; }
+    });
+  }
+  const rows=[header];
   document.querySelectorAll('#daily-tbody tr').forEach(tr=>{
     const cells=[...tr.querySelectorAll('td')].map(td=>td.innerText.trim());
     rows.push(cells);
   });
-  const csv=rows.map(r=>r.join(',')).join('\n');
+  const csv=rows.map(r=>r.map(_csvCell).join(',')).join('\n');
   const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='Daily_DB현황.csv'; a.click();
 }
