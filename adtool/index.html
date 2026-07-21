@@ -1180,6 +1180,9 @@ function _filterMon(rows,col,monthLabel){
   return rows.filter(r=>_normDS(r[col]||'').startsWith(pfx));
 }
 function _cN(v){return parseFloat(String(v).replace(/,/g,'').trim()||'0')||0;}
+// raw_2026.csv는 매체/세부매체/인타입/상담등록일 등 기준으로 이미 집계된 파일이라, 한 행이 DB 1건이 아니라
+// DB수 컬럼에 합산된 건수를 담고 있다 — DB를 셀 땐 항상 행 개수(++) 대신 이 값을 더해야 한다
+function _dbCount(r){return Math.round(_cN(r['DB수']))||1;}
 
 function _setLoadOverlay(show,msg,pct){
   const el=document.getElementById('loading-overlay');if(!el)return;
@@ -1379,13 +1382,13 @@ function _apiAnalyze(month,s){
   const sIT={},sITD={};
   rawR.forEach(r=>{
     const it=(r['인타입']||'').trim();if(!it||it==='0')return;
-    const cnt=Math.round(_cN(r['계약수'])),perf=_cN(r['평가업적']);
+    const dbn=_dbCount(r),cnt=Math.round(_cN(r['계약수'])),perf=_cN(r['평가업적']);
     const cC=Math.round(_cN(r['계약수(누적)'])),pC=_cN(r['평가업적(누적)']);
     const dt=_normDK(r['상담등록일']||'');
     if(!sIT[it])sIT[it]={db:0,contracts:0,performance:0,contracts_cum:0,performance_cum:0};
-    sIT[it].db++;sIT[it].contracts+=cnt;sIT[it].performance+=perf;sIT[it].contracts_cum+=cC;sIT[it].performance_cum+=pC;
+    sIT[it].db+=dbn;sIT[it].contracts+=cnt;sIT[it].performance+=perf;sIT[it].contracts_cum+=cC;sIT[it].performance_cum+=pC;
     if(!sITD[it])sITD[it]={};if(!sITD[it][dt])sITD[it][dt]={db:0,contracts:0,performance:0,contracts_cum:0,performance_cum:0};
-    sITD[it][dt].db++;sITD[it][dt].contracts+=cnt;sITD[it][dt].performance+=perf;sITD[it][dt].contracts_cum+=cC;sITD[it][dt].performance_cum+=pC;
+    sITD[it][dt].db+=dbn;sITD[it][dt].contracts+=cnt;sITD[it][dt].performance+=perf;sITD[it][dt].contracts_cum+=cC;sITD[it][dt].performance_cum+=pC;
   });
   const res=[];
   for(const[g,ad]of Object.entries(adG)){
@@ -1429,7 +1432,7 @@ function _apiAnalyze(month,s){
     });
   });
   res.sort((a,b)=>(a.db===0?1:-1)-(b.db===0?1:-1)||b.db-a.db);
-  return{result:res,ad_file:'파워컨텐츠 구글시트',sales_file:'RAW DB 구글시트',ad_count:pcR.length,sales_count:rawR.length};
+  return{result:res,ad_file:'파워컨텐츠 정적파일',sales_file:'RAW DB 정적파일',ad_count:pcR.length,sales_count:rawR.length};
 }
 
 function _apiCrm(month,s){
@@ -1440,10 +1443,10 @@ function _apiCrm(month,s){
   const dm={},ms=new Set();
   rawR.forEach(r=>{
     const dr=r['상담등록일']||'',med=r['광고매체세부']||'';if(!dr||!med)return;
-    const dk=_normDK(dr),cnt=Math.round(_cN(r['계약수'])),perf=_cN(r['평가업적']);
+    const dk=_normDK(dr),dbn=_dbCount(r),cnt=Math.round(_cN(r['계약수'])),perf=_cN(r['평가업적']);
     const cC=Math.round(_cN(r['계약수(누적)'])),pC=_cN(r['평가업적(누적)']);
     ms.add(med);if(!dm[dk])dm[dk]={};if(!dm[dk][med])dm[dk][med]={db:0,contracts:0,perf:0,contracts_cum:0,perf_cum:0};
-    const x=dm[dk][med];x.db++;x.contracts+=cnt;x.perf+=perf;x.contracts_cum+=cC;x.perf_cum+=pC;
+    const x=dm[dk][med];x.db+=dbn;x.contracts+=cnt;x.perf+=perf;x.contracts_cum+=cC;x.perf_cum+=pC;
   });
   const kdc={};
   const addC=(ds,mk,cost)=>{const k=_normDK(_normDS(ds));if(!kdc[k])kdc[k]={naver:0,google:0,daum:0};kdc[k][mk]=(kdc[k][mk]||0)+cost;};
@@ -1490,7 +1493,7 @@ function _apiKeyword(month,s){
   addAd(gR,'구글','일','캠페인',true);addAd(dR,'다음','시작일','캠페인',true);
   rawR.forEach(r=>{
     const sub=r['광고매체세부']||'',it=r['인타입']||'',site=r['SITE_URL']||'',kw=r['키워드']||'';
-    const cnt=Math.round(_cN(r['계약수'])),perf=_cN(r['평가업적']);
+    const dbn=_dbCount(r),cnt=Math.round(_cN(r['계약수'])),perf=_cN(r['평가업적']);
     const cC=Math.round(_cN(r['계약수(누적)'])),pC=_cN(r['평가업적(누적)']);
     const dm=r['상담등록일']||'';const mm=dm.match(/(\d{4})-(\d{2})-(\d{2})/);if(!mm)return;
     const dk=`${mm[1]}.${mm[2]}.${mm[3]}.`;
@@ -1500,14 +1503,14 @@ function _apiKeyword(month,s){
     if(sub==='네이버'){if(!kw||UKW.test(kw))return;key=`${kw}||네이버||${device}`;}
     else{const code=c2c[cat]||'';key=`${code}||${sub}||${device}`;}
     if(!rm[key])rm[key]={keyword:sub==='네이버'?kw:cat,intype:it,sub_media:sub,device,cat,db:0,contracts:0,perf:0,contracts_cum:0,perf_cum:0,daily:{},cost:null,clicks:null,impressions:null,intype_detail:{}};
-    const x=rm[key];x.db++;x.contracts+=cnt;x.perf+=perf;x.contracts_cum+=cC;x.perf_cum+=pC;
+    const x=rm[key];x.db+=dbn;x.contracts+=cnt;x.perf+=perf;x.contracts_cum+=cC;x.perf_cum+=pC;
     if(!x.daily[dk])x.daily[dk]={cost:0,clicks:0,impressions:0,db:0,contracts:0,perf:0};
-    x.daily[dk].db++;x.daily[dk].contracts+=cnt;x.daily[dk].perf+=perf;
+    x.daily[dk].db+=dbn;x.daily[dk].contracts+=cnt;x.daily[dk].perf+=perf;
     if(sub!=='네이버'){
       const id=x.intype_detail;if(!id[it])id[it]={intype:it,cat,db:0,contracts:0,perf:0,daily:{}};
-      id[it].db++;id[it].contracts+=cnt;id[it].perf+=perf;
+      id[it].db+=dbn;id[it].contracts+=cnt;id[it].perf+=perf;
       if(!id[it].daily[dk])id[it].daily[dk]={db:0,contracts:0,perf:0};
-      id[it].daily[dk].db++;id[it].daily[dk].contracts+=cnt;id[it].daily[dk].perf+=perf;
+      id[it].daily[dk].db+=dbn;id[it].daily[dk].contracts+=cnt;id[it].daily[dk].perf+=perf;
     }
   });
   const res=Object.values(rm).map(r=>{
@@ -4502,7 +4505,7 @@ async function _checkDisplayAlerts(){
         const code=(r['인타입']||'').trim();
         if(!code || !codes.has(code)) return;
         if(_normDS(r['상담등록일']||'')!==latest) return;
-        db++;
+        db+=_dbCount(r);
       });
       return {cost, db, date:latest};
     }
@@ -4671,8 +4674,9 @@ function renderDisplayInsight(){
     if(!media) return;
     const md = mediaDates[media];
     const d = _normDS(r['상담등록일']||'');
-    if(d===md.today) agg[media].today.db++;
-    else if(d===md.yesterday) agg[media].yesterday.db++;
+    const dbn=_dbCount(r);
+    if(d===md.today) agg[media].today.db+=dbn;
+    else if(d===md.yesterday) agg[media].yesterday.db+=dbn;
   });
 
   function calc(b){
@@ -4751,7 +4755,7 @@ function renderDisplayInsight(){
     if(!g) return;
     if(insightMonSel && !_normDS(r['상담등록일']||'').startsWith(insightMonSel)) return;
     const key = `${g.media}||${g.area}`;
-    dbAgg[key].db++;
+    dbAgg[key].db+=_dbCount(r);
     dbAgg[key].contracts += Math.round(_cN(r['계약수']));
     dbAgg[key].perf += _cN(r['평가업적']);
     dbAgg[key].contracts_cum += Math.round(_cN(r['계약수(누적)']));
@@ -4920,7 +4924,7 @@ function _buildCreativeRankingThisMonth(){
     if(!target) return;
     if(!_normDS(r['상담등록일']||'').startsWith(curMonth)) return;
     const k = areas[target.areaKey].kws[target.kw];
-    k.db++;
+    k.db+=_dbCount(r);
     k.contracts += Math.round(_cN(r['계약수']));
     k.perf += _cN(r['평가업적']);
   });
@@ -5050,7 +5054,7 @@ function _buildCreativeHistoryMatrix(media){
     if(!ym) return;
     const k = areas[target.area].kws[target.kw];
     if(!k.months[ym]) k.months[ym] = {cost:0,imp:0,clk:0,db:0,contracts:0,perf:0};
-    k.months[ym].db++;
+    k.months[ym].db+=_dbCount(r);
     k.months[ym].contracts += Math.round(_cN(r['계약수']));
     k.months[ym].perf += _cN(r['평가업적']);
   });
@@ -5263,7 +5267,7 @@ function _buildMediaExportSums(media){
     if(!ym) return;
     const k = areas[target.area].kws[target.kw];
     if(!k.months[ym]) k.months[ym] = {cost:0,imp:0,clk:0,db:0,contracts:0,perf:0,contracts_cum:0,perf_cum:0};
-    k.months[ym].db++;
+    k.months[ym].db+=_dbCount(r);
     k.months[ym].contracts += Math.round(_cN(r['계약수']));
     k.months[ym].perf += _cN(r['평가업적']);
     k.months[ym].contracts_cum += Math.round(_cN(r['계약수(누적)']));
@@ -5465,7 +5469,7 @@ function _displayBuildChartSeries(areaList, mediaRows, crmRows, monSel){
     if(!area) return;
     const b = data[area.area] && data[area.area][p];
     if(!b) return;
-    b.db++;
+    b.db+=_dbCount(r);
   });
 
   return {periods, data, byMonth};
@@ -5666,7 +5670,7 @@ function renderDisplayTab(){
         if(!codes.has((r['인타입']||'').trim())) return;
         // 월 필터가 걸려있으면 그 코드가 다른 달에도 쓰인 경우까지 잡히지 않도록 상담일도 같이 맞춘다
         if(monSel && !_normDS(r['상담등록일']||'').startsWith(monSel)) return;
-        db++; contracts+=Math.round(_cN(r['계약수'])); perf+=_cN(r['평가업적']);
+        db+=_dbCount(r); contracts+=Math.round(_cN(r['계약수'])); perf+=_cN(r['평가업적']);
         contracts_cum+=Math.round(_cN(r['계약수(누적)'])); perf_cum+=_cN(r['평가업적(누적)']);
       });
     }
@@ -5955,7 +5959,7 @@ function _renderCreativeDaily(info, monSel){
       const d = _normDS(r['상담등록일']||'');
       if(!d.startsWith(monSel)) return;
       if(!byDate[d]) byDate[d] = {date:d, cost:0, imp:0, clk:0, snd:0, db:0};
-      byDate[d].db++;
+      byDate[d].db+=_dbCount(r);
       totalContracts += Math.round(_cN(r['계약수']));
     });
   }
