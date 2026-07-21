@@ -1074,7 +1074,8 @@ async function _loadGroupContentUrls(){
       map[g] = {
         blog: r['블로그주소']||null, landing: r['랜딩']||null,
         publishedAt: r['publishedAt']||null, renewalDueAt: r['renewalDueAt']||null,
-        daysRemaining: r['daysRemaining']||null, renewalStatus: r['renewalStatus']||null
+        daysRemaining: r['daysRemaining']||null, renewalStatus: r['renewalStatus']||null,
+        groupId: (r['광고그룹 ID']||'').trim()||null
       };
       const it = (r['인타입']||'').trim();
       if(it) intypeMap[g] = it;
@@ -1912,6 +1913,7 @@ function openDetail(idx){
   const isValidUrl = u => u && u !== '#N/A';
   const blogUrl = contentUrls && isValidUrl(contentUrls.blog) ? contentUrls.blog : null;
   const landingUrl = contentUrls && isValidUrl(contentUrls.landing) ? contentUrls.landing : null;
+  const adminUrl = contentUrls && contentUrls.groupId ? `https://ads.naver.com/manage/ad-accounts/2069889/sa/adgroups/${contentUrls.groupId}` : null;
   const renewalDot = _renewalBadge(r.group);
   const renewalText = contentUrls && contentUrls.renewalStatus
     ? (contentUrls.renewalStatus === 'normal' ? `정상 (D-${contentUrls.daysRemaining||'?'})`
@@ -1919,7 +1921,7 @@ function openDetail(idx){
       : contentUrls.renewalStatus)
     : null;
   const contentBody = document.getElementById('modal-content-links');
-  if(blogUrl || landingUrl || renewalText){
+  if(blogUrl || landingUrl || adminUrl || renewalText){
     contentBody.innerHTML = `
       <div style="margin-bottom:.5rem;display:flex;align-items:center;gap:6px">
         <span style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">소재</span>
@@ -1928,6 +1930,7 @@ function openDetail(idx){
       <div style="display:flex;flex-wrap:wrap;gap:6px">
         ${blogUrl?`<a href="${escHtml(blogUrl)}" target="_blank" rel="noopener" style="font-size:12px;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:3px 8px;color:var(--accent);text-decoration:none">📝 블로그</a>`:''}
         ${landingUrl?`<a href="${escHtml(landingUrl)}" target="_blank" rel="noopener" style="font-size:12px;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:3px 8px;color:var(--accent);text-decoration:none">🔗 랜딩</a>`:''}
+        ${adminUrl?`<a href="${escHtml(adminUrl)}" target="_blank" rel="noopener" style="font-size:12px;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:3px 8px;color:var(--accent);text-decoration:none">⚙️ 광고그룹 관리</a>`:''}
       </div>`;
   } else {
     contentBody.innerHTML = '';
