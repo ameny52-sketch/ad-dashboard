@@ -3271,6 +3271,28 @@ let CRM_MEDIA_LIST = [];
 let CRM_DATA = {};
 let KW_DAILY_COST = {};  // {date_key: {naver, google, daum}}
 
+// Daily DB 현황(전체 탭)은 자체 월 선택기를 갖고 있어 다른 탭이 로드해둔 "이번달만"짜리
+// resultData/CRM_DATA와 무관하게 전체 기간 데이터가 필요하다 — 한 번만 불러와 캐시한다.
+let _dailyAllData = null;
+let _dailyAllDataPromise = null;
+async function _ensureDailyAllMonthsLoaded(){
+  if(_dailyAllData) return _dailyAllData;
+  if(_dailyAllDataPromise) return _dailyAllDataPromise;
+  _dailyAllDataPromise = (async()=>{
+    const [s] = await Promise.all([loadAllSheets(), _ensureIntypeMapLoaded()]);
+    const adData = _apiAnalyze('', s);
+    const crmRes = _apiCrm('', s);
+    _dailyAllData = {
+      resultData: (adData && !adData.error) ? (adData.result||[]) : [],
+      crmData: crmRes.crm_data || {},
+      crmMediaList: crmRes.media_list || [],
+      kwDailyCost: crmRes.kw_daily_cost || {},
+    };
+    return _dailyAllData;
+  })().catch(e=>{ console.warn('Daily DB 현황 전체기간 데이터 로드 실패:', e); _dailyAllDataPromise=null; throw e; });
+  return _dailyAllDataPromise;
+}
+
 // 애드온컴퍼니(디스플레이 전체 매체 합산) 일별 광고비 — Daily DB 현황의 애드온컴퍼니 광고비 컬럼 자동 채우기용
 let _displayDailyCost = null; // {date_key: 합산 광고비}
 // 초기 부팅 시 알림 체크(_checkDisplayAlerts)와 일별 광고비 채우기(_loadDisplayDailyCost)가
@@ -3339,13 +3361,13 @@ function toggleDailyMedia(m){
   _dailySaveHidden(); renderDailyMediaToggle(); renderDaily();
 }
 function setDailyMediaAll(show){
-  const crmMedias = CRM_MEDIA_LIST.filter(m=>m!=='파워컨텐츠'&&m!=='네이버'&&m!=='구글'&&m!=='다음');
+  const crmMedias = (_dailyAllData?.crmMediaList||CRM_MEDIA_LIST).filter(m=>m!=='파워컨텐츠'&&m!=='네이버'&&m!=='구글'&&m!=='다음');
   _dailyHiddenMedias = show ? new Set() : new Set(['파워컨텐츠', '키워드', ...crmMedias]);
   _dailySaveHidden(); renderDailyMediaToggle(); renderDaily();
 }
 function renderDailyMediaToggle(){
   const el = document.getElementById('daily-media-toggle'); if(!el) return;
-  const crmMedias = CRM_MEDIA_LIST.filter(m=>m!=='파워컨텐츠'&&m!=='네이버'&&m!=='구글'&&m!=='다음');
+  const crmMedias = (_dailyAllData?.crmMediaList||CRM_MEDIA_LIST).filter(m=>m!=='파워컨텐츠'&&m!=='네이버'&&m!=='구글'&&m!=='다음');
   const toggleMedias = ['파워컨텐츠', '키워드', ...crmMedias];
   const hiddenCount = toggleMedias.filter(m=>_dailyHiddenMedias.has(m)).length;
   el.innerHTML = toggleMedias.map(m=>{
@@ -3675,8 +3697,10 @@ function initDailyTab(){
   _initDailyTabCore();
 }
 
-function _initDailyTabCore(){
-  if(!Object.keys(CRM_DATA).length && !resultData.length){
+async function _initDailyTabCore(){
+  await _ensureDailyAllMonthsLoaded().catch(()=>{});
+  const d = _dailyAllData;
+  if(!Object.keys(d?.crmData||CRM_DATA).length && !(d?.resultData||resultData).length){
     document.getElementById('daily-no-data').style.display='block';
     document.getElementById('daily-table-card').style.display='none';
     return;
@@ -3711,8 +3735,9 @@ function _initDailyTabCore(){
 
 function getDailyMonths(){
   const monthSet = new Set();
+  const d = _dailyAllData;
   // 파워컨텐츠 daily_raw에서 추출
-  resultData.forEach(r=>{
+  (d?.resultData||resultData).forEach(r=>{
     (r.daily_raw||[]).forEach(d=>{
       if(d.date){
         const parts = d.date.split('.');
@@ -3723,14 +3748,14 @@ function getDailyMonths(){
     });
   });
   // CRM_DATA에서도 추출 (전체 탭 등)
-  Object.keys(CRM_DATA).forEach(dateKey=>{
+  Object.keys(d?.crmData||CRM_DATA).forEach(dateKey=>{
     const parts = dateKey.split('.');
     if(parts.length>=3 && parts[0].length===4){
       monthSet.add(parts[0]+'년 '+parseInt(parts[1])+'월');
     }
   });
   // KW_DAILY_COST에서도 추출
-  Object.keys(KW_DAILY_COST).forEach(dateKey=>{
+  Object.keys(d?.kwDailyCost||KW_DAILY_COST).forEach(dateKey=>{
     const parts = dateKey.split('.');
     if(parts.length>=3 && parts[0].length===4){
       monthSet.add(parts[0]+'년 '+parseInt(parts[1])+'월');
@@ -3761,17 +3786,20 @@ function parseDailyDate(dateStr){
 }
 
 function renderDaily(){
+  const _d = _dailyAllData;
+  const _resultData = _d?.resultData||resultData, _crmData = _d?.crmData||CRM_DATA,
+        _kwDailyCost = _d?.kwDailyCost||KW_DAILY_COST, _crmMediaList = _d?.crmMediaList||CRM_MEDIA_LIST;
   // CRM_DATA 또는 resultData 중 하나라도 있으면 렌더
-  if(!resultData.length && !Object.keys(CRM_DATA).length && !Object.keys(KW_DAILY_COST).length) return;
+  if(!_resultData.length && !Object.keys(_crmData).length && !Object.keys(_kwDailyCost).length) return;
   const selMonth = document.getElementById('daily-month-sel').value;
   renderDailyMediaToggle();
-  const crmMedias = CRM_MEDIA_LIST.filter(m=>m!=='파워컨텐츠'&&m!=='네이버'&&m!=='구글'&&m!=='다음'&&!_dailyHiddenMedias.has(m));
+  const crmMedias = _crmMediaList.filter(m=>m!=='파워컨텐츠'&&m!=='네이버'&&m!=='구글'&&m!=='다음'&&!_dailyHiddenMedias.has(m));
   const showPc = !_dailyHiddenMedias.has('파워컨텐츠');
   const kwMedias = _dailyHiddenMedias.has('키워드') ? [] : ['네이버','구글','다음'];
   const allMedias = [...kwMedias, ...crmMedias];
 
   const dayMap = {};
-  resultData.forEach(r=>{
+  _resultData.forEach(r=>{
     (r.daily_raw||[]).forEach(d=>{
       const pd = parseDailyDate(d.date);
       if(!pd) return;
@@ -3791,7 +3819,7 @@ function renderDaily(){
       dayMap[pd.key].pc_perf_cum += (sv.performance_cum||0);
     });
   });
-  [...Object.keys(CRM_DATA), ...Object.keys(KW_DAILY_COST)].forEach(key=>{
+  [...Object.keys(_crmData), ...Object.keys(_kwDailyCost)].forEach(key=>{
     const pd = parseDailyDate(key);
     if(!pd) return;
     if(selMonth && pd.monthLabel !== selMonth) return;
@@ -3843,9 +3871,9 @@ function renderDaily(){
     const pc_cost=item.pc_cost||0, pc_db=item.pc_db||0;
     const pc_con  = cum ? (item.pc_con_cum||0)  : (item.pc_con||0);
     const pc_perf = cum ? (item.pc_perf_cum||0) : (item.pc_perf||0);
-    const kwC = key?(KW_DAILY_COST[key]||{}):(item.kwCost||{});
+    const kwC = key?(_kwDailyCost[key]||{}):(item.kwCost||{});
     const naverCost=kwC.naver||0, googleCost=kwC.google||0, daumCost=kwC.daum||0;
-    const crmDay = isMonthTotal?(item.crmTotals||{}):(key?(CRM_DATA[key]||{}):{});
+    const crmDay = isMonthTotal?(item.crmTotals||{}):(key?(_crmData[key]||{}):{});
     const conKey = cum?'contracts_cum':'contracts', perfKey = cum?'perf_cum':'perf';
     const naverDb  = isMonthTotal?(item.kwDb?.naver||0) :(crmDay['네이버']||{}).db||0;
     const naverCon = isMonthTotal?((cum?item.kwCon_cum?.naver:item.kwCon?.naver)||0) :(crmDay['네이버']||{})[conKey]||0;
@@ -3929,6 +3957,8 @@ function makeDayRow(d){
 }
 
 function makeMonthTotal(label, rows){
+  const _d = _dailyAllData;
+  const _crmData = _d?.crmData||CRM_DATA, _kwDailyCost = _d?.kwDailyCost||KW_DAILY_COST, _crmMediaList = _d?.crmMediaList||CRM_MEDIA_LIST;
   let pc_db=0,pc_con=0,pc_perf=0,pc_cost=0,pc_con_cum=0,pc_perf_cum=0;
   const kwCost = {naver:0,google:0,daum:0};
   const kwDb   = {naver:0,google:0,daum:0};
@@ -3936,7 +3966,7 @@ function makeMonthTotal(label, rows){
   const kwPerf = {naver:0,google:0,daum:0};
   const kwCon_cum  = {naver:0,google:0,daum:0};
   const kwPerf_cum = {naver:0,google:0,daum:0};
-  const crmMedias = CRM_MEDIA_LIST.filter(m=>m!=='파워컨텐츠'&&m!=='네이버'&&m!=='구글'&&m!=='다음');
+  const crmMedias = _crmMediaList.filter(m=>m!=='파워컨텐츠'&&m!=='네이버'&&m!=='구글'&&m!=='다음');
   const crmTotals = {};
   const crmCost = {};
   crmMedias.forEach(m=>{ crmTotals[m]={db:0,contracts:0,perf:0,contracts_cum:0,perf_cum:0}; crmCost[m]=0; });
@@ -3949,13 +3979,13 @@ function makeMonthTotal(label, rows){
     pc_con_cum  +=(d.pc_con_cum||0);
     pc_perf_cum +=(d.pc_perf_cum||0);
     const key = d.pd ? d.pd.key : null;
-    if(key && KW_DAILY_COST[key]){
-      kwCost.naver  += KW_DAILY_COST[key].naver||0;
-      kwCost.google += KW_DAILY_COST[key].google||0;
-      kwCost.daum   += KW_DAILY_COST[key].daum||0;
+    if(key && _kwDailyCost[key]){
+      kwCost.naver  += _kwDailyCost[key].naver||0;
+      kwCost.google += _kwDailyCost[key].google||0;
+      kwCost.daum   += _kwDailyCost[key].daum||0;
     }
     if(key && _displayDailyCost && _displayDailyCost[key]) crmCost['애드온컴퍼니'] = (crmCost['애드온컴퍼니']||0) + _displayDailyCost[key];
-    const crmDay = key ? (CRM_DATA[key]||{}) : {};
+    const crmDay = key ? (_crmData[key]||{}) : {};
     // 네이버/구글/다음 DB 집계
     kwDb.naver   += (crmDay['네이버']||{}).db||0;
     kwCon.naver  += (crmDay['네이버']||{}).contracts||0;
