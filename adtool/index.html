@@ -1118,31 +1118,23 @@ const CAMP_META = {"1. 보험_PC_C01": {"cat": "보험", "media": "PC"}, "1. 실
 
 
 
-// ===== GOOGLE SHEETS 데이터 파이프라인 =====
+// ===== 데이터 파이프라인 =====
 const SHEETS_URLS = {
-  // 매일 업데이트 (Google Sheets fetch)
-  raw:       'https://docs.google.com/spreadsheets/d/e/2PACX-1vRD6UGcu_s9R-2ipS2hZd3FHQqdENCC0eMoMDT7KFi8HDI2OpHpeUx8oFccO9VKVoZxVqBldS_1dJnS/pub?gid=0&single=true&output=csv',
-  raw_h2:    'https://docs.google.com/spreadsheets/d/e/2PACX-1vSsBXKDYY2T7lRzlI0CJdVzcCCRElM5mb03D0ebTez0-cD5KDQY2In4kqVESmCRGHpmeEqna0__yjCH/pub?gid=0&single=true&output=csv',
-  pc_h2:     'https://docs.google.com/spreadsheets/d/e/2PACX-1vSsBXKDYY2T7lRzlI0CJdVzcCCRElM5mb03D0ebTez0-cD5KDQY2In4kqVESmCRGHpmeEqna0__yjCH/pub?gid=1365383205&single=true&output=csv',
-  naver_h2:  'https://docs.google.com/spreadsheets/d/e/2PACX-1vSsBXKDYY2T7lRzlI0CJdVzcCCRElM5mb03D0ebTez0-cD5KDQY2In4kqVESmCRGHpmeEqna0__yjCH/pub?gid=950838081&single=true&output=csv',
-  google_h2: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSsBXKDYY2T7lRzlI0CJdVzcCCRElM5mb03D0ebTez0-cD5KDQY2In4kqVESmCRGHpmeEqna0__yjCH/pub?gid=1054227530&single=true&output=csv',
-  daum_h2:   'https://docs.google.com/spreadsheets/d/e/2PACX-1vSsBXKDYY2T7lRzlI0CJdVzcCCRElM5mb03D0ebTez0-cD5KDQY2In4kqVESmCRGHpmeEqna0__yjCH/pub?gid=673868856&single=true&output=csv',
-  // 상반기 광고비: GitHub Pages 정적 파일 (변경 없음)
-  pc_h1:     'data/pc_h1.csv',
-  naver_h1:  'data/naver_h1.csv',
-  google_h1: 'data/google_h1.csv',
-  daum_h1:   'data/daum_h1.csv',
-  // 디스플레이(뉴미디어) 탭: 준비되면 구글시트 published-CSV 링크로 교체
-  display_report:  'https://docs.google.com/spreadsheets/d/e/2PACX-1vSsBXKDYY2T7lRzlI0CJdVzcCCRElM5mb03D0ebTez0-cD5KDQY2In4kqVESmCRGHpmeEqna0__yjCH/pub?gid=1459905386&single=true&output=csv',   // raw_통합 광고 리포트 (날짜,매체명,상품명,소재명,노출수,클릭수,발송수,비용,인타입)
+  // 매체별 광고비 + CRM 원본: GitHub Pages 정적 파일 (굿리치_자동화 스크립트가 매일 갱신·커밋)
+  raw:    'data/raw_2026.csv',
+  pc:     'data/pc_2026.csv',
+  naver:  'data/naver_2026.csv',
+  google: 'data/google_2026.csv',
+  daum:   'data/daum_2026.csv',
+  // 디스플레이(뉴미디어) 탭
+  display_report:  'data/display_2026.csv',   // 통합 광고 리포트 (날짜,매체명,상품명,소재명,노출수,클릭수,발송수,비용,인타입)
   display_intype:  'data/display_intype.csv',   // 인타입 참조표 (인타입,매체,월,영역,소재,보종)
-  // 파워컨텐츠 그룹별 소재(블로그/랜딩) 링크
+  // 파워컨텐츠 그룹별 소재(블로그/랜딩) 링크: 자동화 대상 아님, 구글시트 라이브 유지
   group_content:   'https://docs.google.com/spreadsheets/d/e/2PACX-1vSsBXKDYY2T7lRzlI0CJdVzcCCRElM5mb03D0ebTez0-cD5KDQY2In4kqVESmCRGHpmeEqna0__yjCH/pub?gid=384816739&single=true&output=csv',
 };
-// 로드 실패 시 사용자에게 보여줄 한글 이름 (구글 시트가 간헐적으로 응답을 멈추는 경우가 있어, 어떤 시트가 실패했는지 명시하기 위함)
+// 로드 실패 시 사용자에게 보여줄 한글 이름 (정적 파일도 네트워크/파싱 오류로 실패할 수 있어, 어떤 파일이 실패했는지 명시하기 위함)
 const SHEET_LABELS = {
-  raw:'CRM 원본(RAW)', raw_h2:'CRM 원본(하반기)',
-  pc_h1:'파워컨텐츠(상반기)', naver_h1:'네이버(상반기)', google_h1:'구글(상반기)', daum_h1:'다음(상반기)',
-  pc_h2:'파워컨텐츠(하반기)', naver_h2:'네이버(하반기)', google_h2:'구글(하반기)', daum_h2:'다음(하반기)',
+  raw:'CRM 원본', pc:'파워컨텐츠', naver:'네이버', google:'구글', daum:'다음',
 };
 const KW_INTYPE_MAP = {"DKAA": {"cat": "어린이보험", "media_name": "다음"}, "DKAB": {"cat": "보험", "media_name": "다음"}, "DKAC": {"cat": "암보험", "media_name": "다음"}, "DKAD": {"cat": "치아보험", "media_name": "다음"}, "DKAF": {"cat": "주택화재보험", "media_name": "다음"}, "DKAG": {"cat": "치매/간병", "media_name": "다음"}, "DKAJ": {"cat": "종신보험", "media_name": "다음"}, "DKAR": {"cat": "정기보험", "media_name": "다음"}, "DKAS": {"cat": "실비", "media_name": "다음"}, "DKAT": {"cat": "신생아보험", "media_name": "다음"}, "DKATLT1": {"cat": "신생아보험", "media_name": "다음"}, "DKAU": {"cat": "운전자보험", "media_name": "다음"}, "DKAV": {"cat": "보장분석", "media_name": "다음"}, "DKEA": {"cat": "어린이보험", "media_name": "다음"}, "DKEB": {"cat": "보험", "media_name": "다음"}, "DKEC": {"cat": "암보험", "media_name": "다음"}, "DKECL4": {"cat": "암보험", "media_name": "다음"}, "DKED": {"cat": "치아보험", "media_name": "다음"}, "DKEG": {"cat": "치매/간병", "media_name": "다음"}, "DKEJ": {"cat": "종신보험", "media_name": "다음"}, "DKER": {"cat": "정기보험", "media_name": "다음"}, "DKES": {"cat": "실비", "media_name": "다음"}, "DKESL1": {"cat": "실비", "media_name": "다음"}, "DKESL2": {"cat": "실비", "media_name": "다음"}, "DKET": {"cat": "신생아보험", "media_name": "다음"}, "DKMA": {"cat": "어린이보험", "media_name": "다음"}, "DKMB": {"cat": "보험", "media_name": "다음"}, "DKMC": {"cat": "암보험", "media_name": "다음"}, "DKMD": {"cat": "치아보험", "media_name": "다음"}, "DKMG": {"cat": "치매/간병", "media_name": "다음"}, "DKMS": {"cat": "실비", "media_name": "다음"}, "DKMT": {"cat": "신생아보험", "media_name": "다음"}, "GKAA": {"cat": "어린이보험", "media_name": "구글"}, "GKAB": {"cat": "보험", "media_name": "구글"}, "GKAC": {"cat": "암보험", "media_name": "구글"}, "GKAD": {"cat": "치아보험", "media_name": "구글"}, "GKAF": {"cat": "주택화재보험", "media_name": "구글"}, "GKAG": {"cat": "치매/간병", "media_name": "구글"}, "GKAJ": {"cat": "종신보험", "media_name": "구글"}, "GKAR": {"cat": "정기보험", "media_name": "구글"}, "GKAS": {"cat": "실비", "media_name": "구글"}, "GKAT": {"cat": "신생아보험", "media_name": "구글"}, "GKAU": {"cat": "운전자보험", "media_name": "구글"}, "GKAV": {"cat": "보장분석", "media_name": "구글"}, "GKEA": {"cat": "어린이보험", "media_name": "구글"}, "GKEB": {"cat": "보험", "media_name": "구글"}, "GKEC": {"cat": "암보험", "media_name": "구글"}, "GKED": {"cat": "치아보험", "media_name": "구글"}, "GKEG": {"cat": "치매/간병", "media_name": "구글"}, "GKEJ": {"cat": "종신보험", "media_name": "구글"}, "GKER": {"cat": "정기보험", "media_name": "구글"}, "GKES": {"cat": "실비", "media_name": "구글"}, "GKET": {"cat": "신생아보험", "media_name": "구글"}, "GKEV": {"cat": "보장분석", "media_name": "구글"}, "GKMA": {"cat": "어린이보험", "media_name": "구글"}, "GKMB": {"cat": "보험", "media_name": "구글"}, "GKMC": {"cat": "암보험", "media_name": "구글"}, "GKMD": {"cat": "치아보험", "media_name": "구글"}, "GKMG": {"cat": "치매/간병", "media_name": "구글"}, "GKMS": {"cat": "실비", "media_name": "구글"}, "GKMT": {"cat": "신생아보험", "media_name": "구글"}, "NKAA": {"cat": "어린이보험", "media_name": "네이버"}, "NKAAL1": {"cat": "어린이보험", "media_name": "네이버"}, "NKAAL2": {"cat": "어린이보험", "media_name": "네이버"}, "NKAAL3": {"cat": "어린이보험", "media_name": "네이버"}, "NKAAL4": {"cat": "어린이보험", "media_name": "네이버"}, "NKAALT1": {"cat": "어린이보험", "media_name": "네이버"}, "NKAB": {"cat": "보험", "media_name": "네이버"}, "NKABL1": {"cat": "보험", "media_name": "네이버"}, "NKABL2": {"cat": "보험", "media_name": "네이버"}, "NKABL3": {"cat": "보험", "media_name": "네이버"}, "NKABL4": {"cat": "보험", "media_name": "네이버"}, "NKAC": {"cat": "암보험", "media_name": "네이버"}, "NKACL1": {"cat": "암보험", "media_name": "네이버"}, "NKACL2": {"cat": "암보험", "media_name": "네이버"}, "NKACL3": {"cat": "암보험", "media_name": "네이버"}, "NKACL4": {"cat": "암보험", "media_name": "네이버"}, "NKAD": {"cat": "치아보험", "media_name": "네이버"}, "NKADL1": {"cat": "치아보험", "media_name": "네이버"}, "NKADL2": {"cat": "치아보험", "media_name": "네이버"}, "NKADL3": {"cat": "치아보험", "media_name": "네이버"}, "NKADL4": {"cat": "치아보험", "media_name": "네이버"}, "NKAF": {"cat": "주택화재보험", "media_name": "네이버"}, "NKAFL1": {"cat": "주택화재보험", "media_name": "네이버"}, "NKAFL2": {"cat": "주택화재보험", "media_name": "네이버"}, "NKAFL3": {"cat": "주택화재보험", "media_name": "네이버"}, "NKAFL4": {"cat": "주택화재보험", "media_name": "네이버"}, "NKAG": {"cat": "치매/간병", "media_name": "네이버"}, "NKAGL1": {"cat": "치매/간병", "media_name": "네이버"}, "NKAGL2": {"cat": "치매/간병", "media_name": "네이버"}, "NKAGL3": {"cat": "치매/간병", "media_name": "네이버"}, "NKAGL4": {"cat": "치매/간병", "media_name": "네이버"}, "NKAJ": {"cat": "종신보험", "media_name": "네이버"}, "NKAJL1": {"cat": "종신보험", "media_name": "네이버"}, "NKAJL2": {"cat": "종신보험", "media_name": "네이버"}, "NKAJL3": {"cat": "종신보험", "media_name": "네이버"}, "NKAJL4": {"cat": "종신보험", "media_name": "네이버"}, "NKAJLT1": {"cat": "종신보험", "media_name": "네이버"}, "NKAR": {"cat": "정기보험", "media_name": "네이버"}, "NKARL1": {"cat": "정기보험", "media_name": "네이버"}, "NKARL2": {"cat": "정기보험", "media_name": "네이버"}, "NKARL3": {"cat": "정기보험", "media_name": "네이버"}, "NKARL4": {"cat": "정기보험", "media_name": "네이버"}, "NKARLT1": {"cat": "정기보험", "media_name": "네이버"}, "NKAS": {"cat": "실비", "media_name": "네이버"}, "NKASL1": {"cat": "실비", "media_name": "네이버"}, "NKASL2": {"cat": "실비", "media_name": "네이버"}, "NKASL3": {"cat": "실비", "media_name": "네이버"}, "NKASL4": {"cat": "실비", "media_name": "네이버"}, "NKAT": {"cat": "신생아보험", "media_name": "네이버"}, "NKATL1": {"cat": "신생아보험", "media_name": "네이버"}, "NKATL2": {"cat": "신생아보험", "media_name": "네이버"}, "NKATL3": {"cat": "신생아보험", "media_name": "네이버"}, "NKATL4": {"cat": "신생아보험", "media_name": "네이버"}, "NKATLT1": {"cat": "신생아보험", "media_name": "네이버"}, "NKAU": {"cat": "운전자보험", "media_name": "네이버"}, "NKAUL1": {"cat": "운전자보험", "media_name": "네이버"}, "NKAUL2": {"cat": "운전자보험", "media_name": "네이버"}, "NKAUL3": {"cat": "운전자보험", "media_name": "네이버"}, "NKAUL4": {"cat": "운전자보험", "media_name": "네이버"}, "NKAV": {"cat": "보장분석", "media_name": "네이버"}, "NKAVL1": {"cat": "보장분석", "media_name": "네이버"}, "NKAVL2": {"cat": "보장분석", "media_name": "네이버"}, "NKAVL3": {"cat": "보장분석", "media_name": "네이버"}, "NKAVL4": {"cat": "보장분석", "media_name": "네이버"}, "NKEA": {"cat": "어린이보험", "media_name": "네이버"}, "NKEB": {"cat": "보험", "media_name": "네이버"}, "NKEC": {"cat": "암보험", "media_name": "네이버"}, "NKECL1": {"cat": "암보험", "media_name": "네이버"}, "NKECL2": {"cat": "암보험", "media_name": "네이버"}, "NKECL3": {"cat": "암보험", "media_name": "네이버"}, "NKED": {"cat": "치아보험", "media_name": "네이버"}, "NKEG": {"cat": "치매/간병", "media_name": "네이버"}, "NKEJ": {"cat": "종신보험", "media_name": "네이버"}, "NKER": {"cat": "정기보험", "media_name": "네이버"}, "NKES": {"cat": "실비", "media_name": "네이버"}, "NKESL1": {"cat": "실비", "media_name": "네이버"}, "NKESL2": {"cat": "실비", "media_name": "네이버"}, "NKESL3": {"cat": "실비", "media_name": "네이버"}, "NKET": {"cat": "신생아보험", "media_name": "네이버"}, "NKMA": {"cat": "어린이보험", "media_name": "네이버"}, "NKMB": {"cat": "보험", "media_name": "네이버"}, "NKMC": {"cat": "암보험", "media_name": "네이버"}, "NKMD": {"cat": "치아보험", "media_name": "네이버"}, "NKMG": {"cat": "치매/간병", "media_name": "네이버"}, "NKMS": {"cat": "실비", "media_name": "네이버"}, "NKMT": {"cat": "신생아보험", "media_name": "네이버"}, "TKAA": {"cat": "어린이보험", "media_name": "네이버"}, "TKAB": {"cat": "보험", "media_name": "네이버"}, "TKAC": {"cat": "암보험", "media_name": "네이버"}, "TKAD": {"cat": "치아보험", "media_name": "네이버"}, "TKAG": {"cat": "치매/간병", "media_name": "네이버"}, "TKAJ": {"cat": "종신보험", "media_name": "네이버"}, "TKAR": {"cat": "정기보험", "media_name": "네이버"}, "TKAS": {"cat": "실비", "media_name": "네이버"}, "TKAT": {"cat": "신생아보험", "media_name": "네이버"}, "TKEA": {"cat": "어린이보험", "media_name": "네이버"}, "TKEB": {"cat": "보험", "media_name": "네이버"}, "TKEC": {"cat": "암보험", "media_name": "네이버"}, "TKED": {"cat": "치아보험", "media_name": "네이버"}, "TKEG": {"cat": "치매/간병", "media_name": "네이버"}, "TKEJ": {"cat": "종신보험", "media_name": "네이버"}, "TKER": {"cat": "정기보험", "media_name": "네이버"}, "TKES": {"cat": "실비", "media_name": "네이버"}, "TKET": {"cat": "신생아보험", "media_name": "네이버"}, "TKMA": {"cat": "어린이보험", "media_name": "네이버"}, "TKMB": {"cat": "보험", "media_name": "네이버"}, "TKMC": {"cat": "암보험", "media_name": "네이버"}, "TKMD": {"cat": "치아보험", "media_name": "네이버"}, "TKMG": {"cat": "치매/간병", "media_name": "네이버"}, "TKMS": {"cat": "실비", "media_name": "네이버"}, "TKMT": {"cat": "신생아보험", "media_name": "네이버"}, "DKAJLT1": {"cat": "정기보험", "media_name": "다음"}, "DKEDL1": {"cat": "치아보험", "media_name": "다음"}, "DKABL3": {"cat": "보험", "media_name": "다음"}, "NKEDL1": {"cat": "치아보험", "media_name": "네이버"}, "NKEDL3": {"cat": "치아보험", "media_name": "네이버"}, "DKABL1": {"cat": "보험", "media_name": "다음"}, "NKESL4": {"cat": "실비", "media_name": "네이버"}, "ZKES": {"cat": "실비", "media_name": "네이버"}, "ZKEB": {"cat": "보험", "media_name": "네이버"}, "ZKESL1": {"cat": "실비", "media_name": "네이버"}, "ZKESL2": {"cat": "실비", "media_name": "네이버"}, "ZKESL3": {"cat": "실비", "media_name": "네이버"}, "ZKESL4": {"cat": "실비", "media_name": "네이버"}, "ZKEBL1": {"cat": "보험", "media_name": "네이버"}, "ZKEBL2": {"cat": "보험", "media_name": "네이버"}, "ZKEBL3": {"cat": "보험", "media_name": "네이버"}, "ZKEBL4": {"cat": "보험", "media_name": "네이버"}, "ZKEC": {"cat": "암보험", "media_name": "네이버"}, "ZKECL1": {"cat": "암보험", "media_name": "네이버"}, "ZKECL2": {"cat": "암보험", "media_name": "네이버"}, "ZKECL3": {"cat": "암보험", "media_name": "네이버"}, "ZKECL4": {"cat": "암보험", "media_name": "네이버"}, "ZKEA": {"cat": "어린이보험", "media_name": "네이버"}, "ZKEAL1": {"cat": "어린이보험", "media_name": "네이버"}, "ZKEAL2": {"cat": "어린이보험", "media_name": "네이버"}, "ZKEAL3": {"cat": "어린이보험", "media_name": "네이버"}, "ZKEAL4": {"cat": "어린이보험", "media_name": "네이버"}, "ZKAB": {"cat": "보험", "media_name": "네이버"}, "DKAALT1": {"cat": "어린이보험", "media_name": "다음"}, "NKEV": {"cat": "보장분석", "media_name": "네이버"}, "DKECL1": {"cat": "암보험", "media_name": "다음"}, "NKEDL4": {"cat": "치아보험", "media_name": "네이버"}, "DKABL2": {"cat": "보험", "media_name": "다음"}, "DKAVL2": {"cat": "보장분석", "media_name": "다음"}, "DKECL3": {"cat": "암보험", "media_name": "다음"}, "DKAVL3": {"cat": "보장분석", "media_name": "다음"}};
 const CAMP_CAT_MAP  = {"C01": "보험", "C02": "실비", "C03": "암보험", "C04": "치아보험", "C05": "신생아보험", "C06": "어린이보험", "C07": "치매/간병", "C08": "자동차보험", "C09": "운전자보험", "C10": "저축성보험", "C11": "생명보험", "C12": "종신보험", "C15": "정기보험", "C16": "보장분석", "C17": "주택화재보험"};
@@ -1215,8 +1207,7 @@ function _showSheetLoadWarning(labels){
 // ===== IndexedDB 캐시 (용량 무제한) =====
 const _IDB_NAME='adtool_cache_v4';
 const _IDB_STORE='sheets';
-const _TTL_STATIC=30*24*60*60*1000;  // 상반기 광고비: 30일
-const _TTL_DYNAMIC='daily';           // RAW + 하반기: 날짜 바뀌면 자동 갱신
+const _TTL_DYNAMIC='daily';           // 매체별 광고비 + RAW: 날짜 바뀌면 자동 갱신
 
 function _openIDB(){
   return new Promise((res,rej)=>{
@@ -1292,39 +1283,20 @@ async function loadAllSheets(){
 async function _loadAllSheetsInner(){
   _setLoadOverlay(true,'캐시 확인 중...',0);
 
-  // IndexedDB에서 각 시트 개별 확인
-  const [rawC,raw2C,pcC,navC,gooC,daumC,pc2C,nav2C,goo2C,daum2C]=await Promise.all([
-    _getCached('raw',_TTL_DYNAMIC),
-    _getCached('raw_h2',_TTL_DYNAMIC),
-    _getCached('pc_h1',_TTL_STATIC),
-    _getCached('naver_h1',_TTL_STATIC),
-    _getCached('google_h1',_TTL_STATIC),
-    _getCached('daum_h1',_TTL_STATIC),
-    _getCached('pc_h2',_TTL_DYNAMIC),
-    _getCached('naver_h2',_TTL_DYNAMIC),
-    _getCached('google_h2',_TTL_DYNAMIC),
-    _getCached('daum_h2',_TTL_DYNAMIC),
-  ]);
+  // IndexedDB에서 각 정적 파일 개별 확인 (raw/pc/naver/google/daum — 매체별 연간 통합 CSV)
+  const KEYS = ['raw','pc','naver','google','daum'];
+  const cachedList = await Promise.all(KEYS.map(k=>_getCached(k,_TTL_DYNAMIC)));
+  const cachedByKey = {};
+  KEYS.forEach((k,i)=>cachedByKey[k]=cachedList[i]);
 
-  const needFetch=[];
-  if(!rawC)   needFetch.push(['raw',   SHEETS_URLS.raw,      _TTL_DYNAMIC]);
-  if(!raw2C)  needFetch.push(['raw_h2',SHEETS_URLS.raw_h2,   _TTL_DYNAMIC]);
-  if(!pcC)    needFetch.push(['pc_h1', SHEETS_URLS.pc_h1,    _TTL_STATIC]);
-  if(!navC)   needFetch.push(['naver_h1',SHEETS_URLS.naver_h1,_TTL_STATIC]);
-  if(!gooC)   needFetch.push(['google_h1',SHEETS_URLS.google_h1,_TTL_STATIC]);
-  if(!daumC)  needFetch.push(['daum_h1',SHEETS_URLS.daum_h1, _TTL_STATIC]);
-  if(!pc2C)   needFetch.push(['pc_h2', SHEETS_URLS.pc_h2,    _TTL_DYNAMIC]);
-  if(!nav2C)  needFetch.push(['naver_h2',SHEETS_URLS.naver_h2,_TTL_DYNAMIC]);
-  if(!goo2C)  needFetch.push(['google_h2',SHEETS_URLS.google_h2,_TTL_DYNAMIC]);
-  if(!daum2C) needFetch.push(['daum_h2',SHEETS_URLS.daum_h2, _TTL_DYNAMIC]);
+  const needFetch = KEYS.filter(k=>!cachedByKey[k]).map(k=>[k,SHEETS_URLS[k],_TTL_DYNAMIC]);
 
   const fetched={};
   const failedKeys=[];
   if(needFetch.length){
     let done=0;
     _setLoadOverlay(true,`데이터 로드 중... (${needFetch.length}개)`,0);
-    // 같은 스프레드시트(gid만 다름)에 여러 시트가 동시에 몰리면 그중 하나가 응답 없이 멈추는 경우가 있어,
-    // 첫 시도가 실패하면 잠깐(2초) 쉬었다가 한 번 더 재시도한다 — 몰림이 가라앉은 뒤 재요청하면 거의 항상 바로 성공한다
+    // 첫 시도가 실패하면 잠깐(2초) 쉬었다가 한 번 더 재시도한다
     const fetchWithRetry = (key, url) =>
       _fetchWithTimeout(url,20000).then(r=>r.text()).catch(async err=>{
         console.warn(`[adtool] ${key} 1차 실패, 2초 후 재시도`, err);
@@ -1348,8 +1320,8 @@ async function _loadAllSheetsInner(){
       if(r.status==='rejected'){
         const {key,err} = r.reason;
         failedKeys.push(key);
-        console.warn(`[adtool] 시트 로드 실패: ${key}`, err);
-        // 실패한 시트는 만료됐더라도 예전 캐시가 있으면 그거라도 써서 화면이 완전히 비지 않게 한다
+        console.warn(`[adtool] 데이터 로드 실패: ${key}`, err);
+        // 실패한 파일은 만료됐더라도 예전 캐시가 있으면 그거라도 써서 화면이 완전히 비지 않게 한다
         const stale = await _idbGet(key);
         if(stale) fetched[key] = stale.data;
       }
@@ -1357,27 +1329,17 @@ async function _loadAllSheetsInner(){
   }
   _showSheetLoadWarning(failedKeys.map(k=>SHEET_LABELS[k]||k));
 
-  const get=key=>fetched[key]||null;
-  const raw   = rawC  || get('raw')   || [];
-  const raw2  = raw2C || get('raw_h2')|| [];
-  const pc1   = pcC   || get('pc_h1') || [];
-  const nav1  = navC  || get('naver_h1')|| [];
-  const goo1  = gooC  || get('google_h1')|| [];
-  const daum1 = daumC || get('daum_h1')|| [];
-  const pc2   = pc2C  || get('pc_h2') || [];
-  const nav2  = nav2C || get('naver_h2')|| [];
-  const goo2  = goo2C || get('google_h2')|| [];
-  const daum2 = daum2C|| get('daum_h2')|| [];
+  const get=key=>cachedByKey[key]||fetched[key]||[];
 
-  _setLoadOverlay(true,'병합 중...',0.95);
+  _setLoadOverlay(true,'정리 중...',0.95);
   await new Promise(r=>setTimeout(r,10));
 
   _sheetsParsed={
-    raw:   [...raw,  ...raw2],
-    pc:    [...pc1,  ...pc2],
-    naver: [...nav1, ...nav2],
-    google:[...goo1, ...goo2],
-    daum:  [...daum1,...daum2],
+    raw:    get('raw'),
+    pc:     get('pc'),
+    naver:  get('naver'),
+    google: get('google'),
+    daum:   get('daum'),
   };
   _setLoadOverlay(false);
   return _sheetsParsed;
