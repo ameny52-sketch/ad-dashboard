@@ -453,6 +453,20 @@ button.run,.dl{box-shadow:none}
     <div id="kw-metrics" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:1rem"></div>
     <div id="sales-compare-kw" style="display:none;margin-bottom:1rem"></div>
 
+    <!-- 일별 추이 차트 (매체별 누적) -->
+    <div class="cpc-chart-card" style="margin-bottom:1rem">
+      <div class="cpc-chart-title"><span id="kw-chart-title-text">일별 광고비 추이 (매체별)</span></div>
+      <div class="tab-bar" id="kw-chart-tabs" style="margin:0 0 .75rem">
+        <button class="tab-btn active" onclick="switchKwChartMetric('cost',this)">광고비</button>
+        <button class="tab-btn" onclick="switchKwChartMetric('db',this)">DB수</button>
+        <button class="tab-btn" onclick="switchKwChartMetric('cpd',this)">DB단가</button>
+        <button class="tab-btn" onclick="switchKwChartMetric('ctr',this)">CTR</button>
+        <button class="tab-btn" onclick="switchKwChartMetric('dbcvr',this)">DB전환율</button>
+      </div>
+      <div style="position:relative;height:260px"><canvas id="kw-chart-single"></canvas></div>
+      <div style="font-size:11px;color:var(--faint);margin-top:6px">그래프의 날짜를 클릭하면 그 날의 매체별(네이버/구글/다음) 데이터를 볼 수 있습니다</div>
+    </div>
+
     <!-- 테이블 -->
     <div class="table-card">
       <div class="table-header">
@@ -1489,6 +1503,9 @@ function _apiKeyword(month,s){
       const code=exC(camp)||guC(camp),cat=CAMP_CAT_MAP[code]||'기타',key=`${code}||${mName}||${device}`;
       if(!rm[key])rm[key]={keyword:cat,intype:'',sub_media:mName,device,cat,db:0,contracts:0,perf:0,contracts_cum:0,perf_cum:0,daily:{},cost:0,clicks:0,impressions:0,intype_detail:{}};
       rm[key].cost+=cost;rm[key].clicks+=clk;rm[key].impressions+=imp;
+      const dk=_normDK(dt);
+      if(!rm[key].daily[dk])rm[key].daily[dk]={cost:0,clicks:0,impressions:0,db:0,contracts:0,perf:0};
+      rm[key].daily[dk].cost+=cost;rm[key].daily[dk].clicks+=clk;rm[key].daily[dk].impressions+=imp;
     });
   };
   addAd(gR,'구글','일','캠페인',true);addAd(dR,'다음','시작일','캠페인',true);
@@ -3087,6 +3104,199 @@ function showDailyGroupBreakdown(date, rows){
   document.getElementById('daily-group-modal-bg').style.display = 'flex';
 }
 
+// ===== 키워드 데이터현황 탭: 일별 추이 차트 (매체별 누적) + 날짜 클릭 → 매체별 상세 =====
+let _kwChartInstance = null;
+let _kwChartMetric = 'cost';
+let _kwChartLastRows = null;
+const KW_CHART_MEDIA_COLORS = {네이버:'#03c75a', 구글:'#4285f4', 다음:'#ff6b57'};
+
+// 키워드는 매체(네이버/구글/다음)별로 나눠 봐야 의미가 있어서, 파워컨텐츠 차트(전체 합산 단일 시리즈)와 달리
+// 날짜별로 매체 3개를 각각 합산한다. 빈 날짜도 0으로 채워 기간 전체를 빈틈없이 보여준다
+function _buildKwDailySeriesByMedia(rows){
+  const medias = ['네이버','구글','다음'];
+  const empty = () => ({네이버:{cost:0,imp:0,clk:0,db:0},구글:{cost:0,imp:0,clk:0,db:0},다음:{cost:0,imp:0,clk:0,db:0}});
+  const byDateMedia = {};
+  rows.forEach(r=>{
+    if(!medias.includes(r.sub_media)) return;
+    Object.entries(r.daily||{}).forEach(([dk,v])=>{
+      if(!byDateMedia[dk]) byDateMedia[dk] = empty();
+      byDateMedia[dk][r.sub_media].cost += v.cost||0;
+      byDateMedia[dk][r.sub_media].imp  += v.impressions||0;
+      byDateMedia[dk][r.sub_media].clk  += v.clicks||0;
+      byDateMedia[dk][r.sub_media].db   += v.db||0;
+    });
+  });
+  const known = Object.keys(byDateMedia).sort();
+  if(!known.length) return {dates:[], byDateMedia};
+
+  const toDate = k=>{ const m=k.match(/(\d+)\.(\d+)\.(\d+)/); return m?new Date(+m[1],+m[2]-1,+m[3]):null; };
+  const dates = [];
+  const cur = toDate(known[0]), end = toDate(known[known.length-1]);
+  while(cur && cur<=end){
+    const key = `${cur.getFullYear()}.${String(cur.getMonth()+1).padStart(2,'0')}.${String(cur.getDate()).padStart(2,'0')}.`;
+    dates.push(key);
+    if(!byDateMedia[key]) byDateMedia[key] = empty();
+    cur.setDate(cur.getDate()+1);
+  }
+  return {dates, byDateMedia};
+}
+
+function renderKwChart(rows){
+  _kwChartLastRows = rows;
+  if(!window.Chart){
+    if(!_dataChartJsLoading){
+      _dataChartJsLoading = true;
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js';
+      s.onload = () => { renderKwChart(rows); };
+      document.head.appendChild(s);
+    }
+    return;
+  }
+
+  const {dates, byDateMedia} = _buildKwDailySeriesByMedia(rows);
+  const metric = _DATA_CHART_METRICS[_kwChartMetric] || _DATA_CHART_METRICS.cost;
+  const titleEl = document.getElementById('kw-chart-title-text');
+  if(titleEl) titleEl.textContent = `일별 ${metric.label} 추이 (매체별)`;
+
+  const ctx = document.getElementById('kw-chart-single')?.getContext('2d');
+  if(!ctx) return;
+  if(_kwChartInstance) _kwChartInstance.destroy();
+  if(!dates.length) return;
+
+  const medias = ['네이버','구글','다음'];
+  const valueOf = (b) => {
+    if(_kwChartMetric==='cost')   return b.cost;
+    if(_kwChartMetric==='db')     return b.db;
+    if(_kwChartMetric==='cpd')    return b.db>0 ? Math.round(b.cost/b.db) : null;
+    if(_kwChartMetric==='ctr')    return b.imp>0 ? Math.round(b.clk/b.imp*10000)/100 : null;
+    if(_kwChartMetric==='dbcvr')  return b.clk>0 ? Math.round(b.db/b.clk*1000)/10 : null;
+    return null;
+  };
+
+  // 광고비/DB수는 매체를 더한 값이 의미있어 누적 막대로, DB단가/CTR/DB전환율은 비율이라 매체별 개별 선으로 비교한다
+  const stackable = metric.type==='bar';
+  const datasets = medias.map(m=>{
+    const data = dates.map(d=>valueOf(byDateMedia[d][m]));
+    return stackable
+      ? {type:'bar', label:m, data, backgroundColor:KW_CHART_MEDIA_COLORS[m], stack:'total'}
+      : {type:'line', label:m, data, borderColor:KW_CHART_MEDIA_COLORS[m], backgroundColor:KW_CHART_MEDIA_COLORS[m], tension:0.3, spanGaps:true};
+  });
+
+  const fmtVal = v => v===null||v===undefined ? '-' : (metric.unit==='%' ? v+'%' : v.toLocaleString()+(metric.unit==='원'?'원':''));
+  _kwChartInstance = new Chart(ctx, {
+    type: metric.type,
+    data: {labels: dates, datasets},
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      interaction: {mode:'index', intersect:false},
+      plugins:{
+        legend:{display:true, labels:{boxWidth:10,font:{size:11}}},
+        tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${fmtVal(c.parsed.y)}`}}
+      },
+      scales:{
+        x:{stacked:stackable, grid:{display:false},ticks:{font:{size:10},color:'#888',maxRotation:0,autoSkip:true}},
+        y:{stacked:stackable, ticks:{callback:v=>metric.unit==='%'?v+'%':v.toLocaleString(),font:{size:10},color:'#888'},grid:{color:'rgba(0,0,0,0.05)'}}
+      },
+      onClick: (evt, elements) => {
+        if(!elements.length) return;
+        const idx = elements[0].index;
+        showDailyMediaBreakdown(dates[idx], rows);
+      }
+    }
+  });
+}
+
+function switchKwChartMetric(metric, btn){
+  document.querySelectorAll('#kw-chart-tabs .tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  _kwChartMetric = metric;
+  if(_kwChartLastRows) renderKwChart(_kwChartLastRows);
+}
+
+// 날짜 클릭 시 그 날의 매체별(네이버/구글/다음) 데이터를 팝업으로 표시 (기존 daily-group-modal 껄 재사용)
+const DAILY_MEDIA_MODAL_COLS = [
+  {key:'media', label:'매체'},
+  {key:'cost', label:'광고비', num:true, fmt:v=>v.toLocaleString()+'원'},
+  {key:'imp', label:'노출수', num:true, fmt:v=>v.toLocaleString()},
+  {key:'clicks', label:'클릭수', num:true, fmt:v=>v.toLocaleString()},
+  {key:'cpc', label:'CPC', num:true, fmt:v=>v!==null?v.toLocaleString()+'원':'-'},
+  {key:'ctr', label:'CTR', num:true, fmt:v=>v!==null?v+'%':'-'},
+  {key:'db', label:'DB수', num:true, fmt:v=>v.toLocaleString()+'건'},
+  {key:'cpd', label:'DB단가', num:true, fmt:v=>v!==null?v.toLocaleString()+'원':'-'},
+  {key:'dbcvr', label:'DB전환율', num:true, fmt:v=>v!==null?v+'%':'-'},
+];
+let _dailyMediaModalRows = [];
+let _dailyMediaModalDate = '';
+let _dailyMediaModalSortCol = 'cost';
+let _dailyMediaModalSortAsc = false;
+
+function sortDailyMediaModal(col){
+  if(_dailyMediaModalSortCol===col) _dailyMediaModalSortAsc=!_dailyMediaModalSortAsc;
+  else{ _dailyMediaModalSortCol=col; _dailyMediaModalSortAsc=false; }
+  _renderDailyMediaModalTable();
+}
+
+function _renderDailyMediaModalTable(){
+  const col = _dailyMediaModalSortCol, asc = _dailyMediaModalSortAsc;
+  const list = _dailyMediaModalRows;
+  document.getElementById('daily-group-modal-title').textContent = `${_dailyMediaModalDate} — 매체별 상세`;
+  const body = document.getElementById('daily-group-modal-body');
+  if(!list.length){
+    body.innerHTML = `<div style="padding:2rem;text-align:center;color:var(--faint);font-size:12px">해당 날짜에 데이터가 없습니다.</div>`;
+    return;
+  }
+  const sorted = [...list].sort((a,b)=>{
+    let av=a[col], bv=b[col];
+    if(av===null) av = asc?Infinity:-Infinity;
+    if(bv===null) bv = asc?Infinity:-Infinity;
+    if(typeof av==='string') return asc?av.localeCompare(bv):bv.localeCompare(av);
+    return asc?av-bv:bv-av;
+  });
+  body.innerHTML = `
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr>
+          ${DAILY_MEDIA_MODAL_COLS.map(c=>{
+            const arrow = c.key===col ? (asc?' ↑':' ↓') : '';
+            return `<th style="text-align:${c.num?'right':'left'};padding:8px 10px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border);cursor:pointer;white-space:nowrap" onclick="sortDailyMediaModal('${c.key}')">${c.label}${arrow}</th>`;
+          }).join('')}
+        </tr></thead>
+        <tbody>
+          ${sorted.map(g=>`<tr>
+            ${DAILY_MEDIA_MODAL_COLS.map(c=>{
+              if(c.key==='media') return `<td style="padding:8px 10px;font-size:12px;border-bottom:1px solid var(--border)">${escHtml(g.media)}</td>`;
+              return `<td style="text-align:right;padding:8px 10px;font-size:12px;border-bottom:1px solid var(--border)">${c.fmt(g[c.key])}</td>`;
+            }).join('')}
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function showDailyMediaBreakdown(date, rows){
+  const medias = ['네이버','구글','다음'];
+  const list = medias.map(m=>{
+    let cost=0, clicks=0, imp=0, db=0;
+    rows.filter(r=>r.sub_media===m).forEach(r=>{
+      const d = (r.daily||{})[date];
+      if(!d) return;
+      cost += d.cost||0; clicks += d.clicks||0; imp += d.impressions||0; db += d.db||0;
+    });
+    const ctr = imp>0 ? Math.round(clicks/imp*10000)/100 : null;
+    const cpc = clicks>0 ? Math.round(cost/clicks) : null;
+    const dbcvr = clicks>0 ? Math.round(db/clicks*1000)/10 : null;
+    const cpd = db>0 ? Math.round(cost/db) : null;
+    return {media:m, cost, clicks, imp, db, cpc, cpd, ctr, dbcvr};
+  }).filter(g=>g.cost>0 || g.db>0 || g.clicks>0 || g.imp>0);
+
+  _dailyMediaModalRows = list;
+  _dailyMediaModalDate = date;
+  _renderDailyMediaModalTable();
+  document.getElementById('daily-group-modal-bg').style.display = 'flex';
+}
+
 function showInsightDetail(key){
   // 최근 7일 데이터 집계
   const dayMap2 = {};
@@ -3493,6 +3703,7 @@ function renderKwTable(){
   // 정렬된 데이터 저장 (드릴다운용 + 성과 진단용)
   window.kwSortedData = sorted;
   window.kwData = rows;  // 성과 진단에서 사용
+  renderKwChart(rows);
 
   document.getElementById('kw-row-count').textContent = rows.length+'개';
 
@@ -4582,8 +4793,10 @@ async function _checkDashboardAlerts(){
       if(pc && pc.cpd>DASHBOARD_ALERT_RULES.pcCpd) alerts.push({label:'파워컨텐츠', date:pc.date, text:`전체 평균 DB단가 ${pc.cpd.toLocaleString()}원 (기준 ${DASHBOARD_ALERT_RULES.pcCpd.toLocaleString()}원 초과)`});
     }
     if(kwRes && !kwRes.error){
-      const kw = _latestDayCpdFromRows(kwRes.result, 'kw');
-      if(kw && kw.cpd>DASHBOARD_ALERT_RULES.kwCpd) alerts.push({label:'키워드', date:kw.date, text:`전체 평균 DB단가 ${kw.cpd.toLocaleString()}원 (기준 ${DASHBOARD_ALERT_RULES.kwCpd.toLocaleString()}원 초과)`});
+      // 구글/다음은 일별 광고비가 daily에 채워지지 않아 전체 평균을 내면 비용이 빠져 실제보다 낮게 잡힌다 —
+      // 성과 진단 탭과 동일하게 일별 데이터가 정확한 네이버만으로 판단한다
+      const kw = _latestDayCpdFromRows(kwRes.result.filter(r=>r.sub_media==='네이버'), 'kw');
+      if(kw && kw.cpd>DASHBOARD_ALERT_RULES.kwCpd) alerts.push({label:'키워드(네이버)', date:kw.date, text:`DB단가 ${kw.cpd.toLocaleString()}원 (기준 ${DASHBOARD_ALERT_RULES.kwCpd.toLocaleString()}원 초과)`});
     }
 
     if(!alerts.length) return;
