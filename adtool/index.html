@@ -247,7 +247,7 @@ body{
 .app-main-nav .media-group-tab.active{background:#101828;color:#fff;box-shadow:0 10px 20px rgba(15,23,42,.16)}
 .container{max-width:1680px;padding:0 22px 46px}
 .card,.table-card,.alert-section,.cpc-chart-card,.cpc-metric,.metric,.sales-cmp-card{border-color:var(--border);border-radius:18px;box-shadow:var(--shadow-sm);background:rgba(255,255,255,.96)}
-.main-tabs{background:rgba(255,255,255,.92);border:1px solid var(--border);border-radius:20px;padding:7px;margin-bottom:8px;box-shadow:var(--shadow-sm);align-items:center;gap:4px;flex-wrap:wrap}
+.main-tabs{background:rgba(255,255,255,.92);border:1px solid var(--border);border-radius:20px;padding:7px;margin-bottom:8px;box-shadow:var(--shadow-sm);align-items:center;gap:4px;flex-wrap:wrap;position:sticky;top:70px;z-index:150;backdrop-filter:blur(10px)}
 .main-tab{border:0;border-radius:14px;padding:10px 16px;margin:0;color:#595959;background:transparent;font-weight:850;border-bottom:0;transition:.15s ease}
 .main-tab:hover{background:#f1f5f9;color:#111827}
 .main-tab.active,.main-tab.alert.active{background:#101828;color:#fff;border-bottom:0;box-shadow:0 8px 16px rgba(15,23,42,.13)}
@@ -3770,8 +3770,7 @@ function renderKwTable(){
   // 바디 - 현재 페이지만 렌더
   document.getElementById('kw-tbody').innerHTML = pageRows.map((r,i)=>{
     const globalIdx = (kwPage-1)*KW_PAGE_SIZE + i;
-    const clickable = (r.sub_media === '구글' || r.sub_media === '다음') && r.intype_detail && r.intype_detail.length > 0
-      ? 'onclick="openKwDetail(kwSortedData[' + globalIdx + '])" style="cursor:pointer;"' : '';
+    const clickable = 'onclick="openKwDetail(kwSortedData[' + globalIdx + '])" style="cursor:pointer;"';
     const mediaPill = r.sub_media==='네이버'
       ? '<span style="font-size:11px;padding:2px 7px;border-radius:4px;background:#e8f5e9;color:#1b5e20;font-weight:600">네이버</span>'
       : r.sub_media==='구글'
@@ -3817,13 +3816,60 @@ function renderKwTable(){
   kwRendered = true;
 }
 
+// 날짜별 daily 객체 → 일별 상세 테이블 HTML (파워컨텐츠 openDetail의 일별 테이블과 같은 지표 구성)
+function _kwDailyDetailTableHtml(r){
+  const daily = r.daily || {};
+  const dates = Object.keys(daily).sort();
+  if(!dates.length) return `<div style="padding:1rem;color:var(--faint);font-size:12px">일별 데이터 없음</div>`;
+  const fmt = v => v!=null ? v.toLocaleString() : '-';
+  const fmtP = v => v!=null ? v+'%' : '-';
+  const rows = dates.map(dk=>{
+    const d = daily[dk];
+    const cost=d.cost||0, clicks=d.clicks||0, imp=d.impressions||0, db=d.db||0, contracts=d.contracts||0, perf=d.perf||0;
+    const ctr = imp>0 ? Math.round(clicks/imp*1000)/10 : null;
+    const cpc = clicks>0 ? Math.round(cost/clicks) : null;
+    const roas = perf>0 && cost>0 ? Math.round(cost/perf*100) : null;
+    const cpd = db>0 && cost>0 ? Math.round(cost/db) : null;
+    const dbcvr = clicks>0 ? Math.round(db/clicks*1000)/10 : null;
+    const cvr = db>0 ? Math.round(contracts/db*1000)/10 : null;
+    return `<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:7px 10px;font-size:12px">${dk}</td>
+      <td style="padding:7px 10px;text-align:right">${cost.toLocaleString()}</td>
+      <td style="padding:7px 10px;text-align:right">${clicks.toLocaleString()}</td>
+      <td style="padding:7px 10px;text-align:right">${imp.toLocaleString()}</td>
+      <td style="padding:7px 10px;text-align:right">${fmtP(ctr)}</td>
+      <td style="padding:7px 10px;text-align:right">${fmt(cpc)}</td>
+      <td style="padding:7px 10px;text-align:right;font-weight:600">${db.toLocaleString()}</td>
+      <td style="padding:7px 10px;text-align:right">${contracts.toLocaleString()}</td>
+      <td style="padding:7px 10px;text-align:right">${Math.round(perf).toLocaleString()}</td>
+      <td style="padding:7px 10px;text-align:right">${roas!=null?roas.toLocaleString()+'%':'-'}</td>
+      <td style="padding:7px 10px;text-align:right">${fmt(cpd)}</td>
+      <td style="padding:7px 10px;text-align:right">${fmtP(dbcvr)}</td>
+      <td style="padding:7px 10px;text-align:right">${fmtP(cvr)}</td>
+    </tr>`;
+  }).join('');
+  return `
+    <div style="overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead>
+        <tr style="background:#fafaf8">
+          ${['날짜','광고비(원)','클릭수','노출수','CTR(%)','CPC(원)','DB수','계약수','평가업적(원)','ROAS(%)','DB단가(원)','DB전환율(%)','계약률(%)'].map((h,i)=>
+            `<th style="padding:7px 10px;text-align:${i===0?'left':'right'};font-size:11px;font-weight:600;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap">${h}</th>`
+          ).join('')}
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+    </div>`;
+}
+
 function openKwDetail(r){
   const modal = document.getElementById('kw-modal-bg');
   document.getElementById('kw-modal-title').textContent =
-    `${r.keyword} · ${r.sub_media} · ${r.device} — 인타입 상세`;
+    `${r.keyword} · ${r.sub_media} · ${r.device} — 상세`;
 
   const details = r.intype_detail || [];
-  const rows = details.map(d=>{
+  const intypeRows = details.map(d=>{
     const cvrStyle = d.cvr!=null&&d.cvr>=10?'color:#dc2626;font-weight:600':'';
     return `<tr style="border-bottom:1px solid var(--border)">
       <td style="padding:7px 10px;font-family:monospace;font-size:12px;font-weight:500">${d.intype}</td>
@@ -3834,8 +3880,8 @@ function openKwDetail(r){
       <td style="padding:7px 10px;text-align:right">${d.perf?Math.round(d.perf).toLocaleString():'-'}</td>
     </tr>`;
   }).join('');
-
-  document.getElementById('kw-modal-body').innerHTML = `
+  const intypeSection = !details.length ? '' : `
+    <div style="margin:1rem 0 .5rem;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">인타입별 상세</div>
     <table style="width:100%;border-collapse:collapse;font-size:12px">
       <thead>
         <tr style="background:#fafaf8">
@@ -3847,8 +3893,14 @@ function openKwDetail(r){
           <th style="padding:7px 10px;text-align:right;font-size:11px;font-weight:600;color:var(--muted);border-bottom:1px solid var(--border)">환산료</th>
         </tr>
       </thead>
-      <tbody>${rows}</tbody>
+      <tbody>${intypeRows}</tbody>
     </table>`;
+
+  document.getElementById('kw-modal-body').innerHTML = `
+    <div style="margin-bottom:.5rem;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">일별 상세</div>
+    ${_kwDailyDetailTableHtml(r)}
+    ${intypeSection}
+  `;
 
   modal.style.display = 'flex';
 }
