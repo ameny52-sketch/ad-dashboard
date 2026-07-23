@@ -1307,7 +1307,9 @@ async function _loadAllSheetsInner(){
   const cachedByKey = {};
   KEYS.forEach((k,i)=>cachedByKey[k]=cachedList[i]);
 
-  const needFetch = KEYS.filter(k=>!cachedByKey[k]).map(k=>[k,SHEETS_URLS[k],_TTL_DYNAMIC]);
+  // 캐시된 값이 빈 배열이면(네트워크 순간 오류 등으로 파싱 결과가 비어 저장된 경우) 유효한 캐시로 치지 않고 다시 받아온다 —
+  // 안 그러면 그 날 하루 종일 빈 화면으로 고정되고 "데이터 새로고침"을 눌러야만 복구된다
+  const needFetch = KEYS.filter(k=>!cachedByKey[k] || !cachedByKey[k].length).map(k=>[k,SHEETS_URLS[k],_TTL_DYNAMIC]);
 
   const fetched={};
   const failedKeys=[];
@@ -1325,7 +1327,8 @@ async function _loadAllSheetsInner(){
       fetchWithRetry(key,url).then(async t=>{
         const parsed=_pCSV(t);
         fetched[key]=parsed;
-        await _setCached(key,parsed);
+        // 빈 배열은 캐시에 저장하지 않는다 — 그대로 저장하면 다음 방문 때도 "유효한 캐시"로 보여 계속 빈 화면이 된다
+        if(parsed.length) await _setCached(key,parsed);
         done++;
         _setLoadOverlay(true,`${key} 완료 (${done}/${needFetch.length})`,done/needFetch.length);
       }).catch(err=>{
@@ -1347,7 +1350,8 @@ async function _loadAllSheetsInner(){
   }
   _showSheetLoadWarning(failedKeys.map(k=>SHEET_LABELS[k]||k));
 
-  const get=key=>cachedByKey[key]||fetched[key]||[];
+  // 캐시값이 빈 배열이면(=needFetch에 포함돼 다시 받아온 경우) 그 빈 캐시 대신 새로 받은 값을 써야 한다
+  const get=key=>(cachedByKey[key]&&cachedByKey[key].length ? cachedByKey[key] : fetched[key]) || [];
 
   _setLoadOverlay(true,'정리 중...',0.95);
   await new Promise(r=>setTimeout(r,10));
